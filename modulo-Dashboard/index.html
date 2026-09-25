@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard TI - Sistema de Tickets</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Iconos -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-icon"><i class="fa-solid fa-ticket"></i></span>
+        <span>Sistema TI</span>
+      </div>
+
+      <div class="profile">
+        <div class="avatar">AD</div>
+        <div>
+          <strong>Admin Admin</strong>
+          <small>Administrador</small>
+        </div>
+      </div>
+
+      <div class="menu-title">MENÚ</div>
+
+      <nav class="menu">
+        <a href="#" class="active">
+          <i class="fa-solid fa-gauge-high"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="#">
+          <i class="fa-solid fa-plus"></i>
+          <span>Crear Ticket</span>
+        </a>
+        <a href="#">
+          <i class="fa-solid fa-chart-column"></i>
+          <span>Reportes</span>
+        </a>
+
+        <a href="#">
+          <i class="fa-solid fa-users"></i>
+          <span>Clientes</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <div>Sistema de Gestión TI</div>
+
+        <div class="user-area">
+          <div class="user-avatar">AD</div>
+          <span>Admin Admin</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+      </header>
+
+      <section class="content">
+
+        <div class="page-heading">
+          <div>
+            <h1>Dashboard de Reportes</h1>
+            <p>Resumen general de incidencias y solicitudes del área de TI</p>
+          </div>
+
+          <div class="breadcrumb">
+            <i class="fa-solid fa-house"></i>
+            <span>/</span>
+            <strong>Reportes</strong>
+          </div>
+        </div>
+
+        <!-- SUMMARY CARDS -->
+        <section class="stats-grid">
+
+          <article class="stat-card">
+            <div class="stat-icon orange">
+              <i class="fa-solid fa-ticket"></i>
+            </div>
+            <div class="stat-info">
+              <span>REPORTES REGISTRADOS</span>
+              <strong>124</strong>
+              <small><i class="fa-solid fa-arrow-up"></i> 12% este mes</small>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon cyan">
+              <i class="fa-solid fa-user-check"></i>
+            </div>
+            <div class="stat-info">
+              <span>ASIGNADOS</span>
+              <strong>28</strong>
+              <small>22.6% del total</small>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon blue">
+              <i class="fa-solid fa-flask"></i>
+            </div>
+            <div class="stat-info">
+              <span>EN PROCESO</span>
+              <strong>17</strong>
+              <small>Requieren atención</small>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon green">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="stat-info">
+              <span>FINALIZADOS</span>
+              <strong>71</strong>
+              <small>57.3% del total</small>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-icon red">
+              <i class="fa-solid fa-ban"></i>
+            </div>
+            <div class="stat-info">
+              <span>CANCELADOS</span>
+              <strong>8</strong>
+              <small>6.5% del total</small>
+            </div>
+          </article>
+
+        </section>
+
+        <!-- REPORT PANELS -->
+        <section class="reports-grid">
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Resumen de Reportes</h2>
+                <p>Distribución de tickets por estado</p>
+              </div>
+              <button class="filter-btn">
+                Este mes <i class="fa-solid fa-chevron-down"></i>
+              </button>
+            </div>
+
+            <div class="bars">
+              <div class="bar-row">
+                <div class="bar-label">
+                  <span>Registrados</span><strong>124</strong>
+                </div>
+                <div class="bar-track"><div class="bar-fill orange-fill" style="width:100%"></div></div>
+              </div>
+
+              <div class="bar-row">
+                <div class="bar-label">
+                  <span>Asignados</span><strong>28</strong>
+                </div>
+                <div class="bar-track"><div class="bar-fill cyan-fill" style="width:22.6%"></div></div>
+              </div>
+
+              <div class="bar-row">
+                <div class="bar-label">
+                  <span>En proceso</span><strong>17</strong>
+                </div>
+                <div class="bar-track"><div class="bar-fill blue-fill" style="width:13.7%"></div></div>
+              </div>
+
+              <div class="bar-row">
+                <div class="bar-label">
+                  <span>Finalizados</span><strong>71</strong>
+                </div>
+                <div class="bar-track"><div class="bar-fill green-fill" style="width:57.3%"></div></div>
+              </div>
+
+              <div class="bar-row">
+                <div class="bar-label">
+                  <span>Cancelados</span><strong>8</strong>
+                </div>
+                <div class="bar-track"><div class="bar-fill red-fill" style="width:6.5%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2>Reportes por Prioridad</h2>
+                <p>Clasificación de incidencias</p>
+              </div>
+            </div>
+
+            <div class="priority-list">
+              <div class="priority-item">
+                <div class="priority-name">
+                  <span class="dot critical"></span>
+                  Crítica
+                </div>
+                <strong>19</strong>
+                <span class="percentage">15.3%</span>
+              </div>
+
+              <div class="priority-item">
+                <div class="priority-name">
+                  <span class="dot high"></span>
+                  Alta
+                </div>
+                <strong>31</strong>
+                <span class="percentage">25.0%</span>
+              </div>
+
+              <div class="priority-item">
+                <div class="priority-name">
+                  <span class="dot medium"></span>
+                  Media
+                </div>
+                <strong>49</strong>
+                <span class="percentage">39.5%</span>
+              </div>
+
+              <div class="priority-item">
+                <div class="priority-name">
+                  <span class="dot low"></span>
+                  Baja
+                </div>
+                <strong>25</strong>
+                <span class="percentage">20.2%</span>
+              </div>
+            </div>
+
+            <div class="priority-total">
+              <span>Total de reportes</span>
+              <strong>124</strong>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- RECENT TICKETS -->
+        <section class="panel tickets-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Reportes Recientes</h2>
+              <p>Últimas incidencias registradas en el área de TI</p>
+            </div>
+
+            <button class="outline-btn">
+              <i class="fa-solid fa-filter"></i> Filtrar
+            </button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>N.º REPORTE</th>
+                  <th>USUARIO</th>
+                  <th>ASUNTO</th>
+                  <th>ÁREA</th>
+                  <th>CATEGORÍA</th>
+                  <th>PRIORIDAD</th>
+                  <th>ESTATUS</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td><span class="ticket-id">INC-117</span></td>
+                  <td>Luis Porras</td>
+                  <td>Instalación de licencia antivirus ESET</td>
+                  <td>SISTEMAS</td>
+                  <td>Software</td>
+                  <td><span class="priority critical-tag">Crítico</span></td>
+                  <td><span class="status done">Finalizado</span></td>
+                </tr>
+
+                <tr>
+                  <td><span class="ticket-id">INC-116</span></td>
+                  <td>María Torres</td>
+                  <td>No cuenta con la paquetería Office</td>
+                  <td>SISTEMAS</td>
+                  <td>Instalación</td>
+                  <td><span class="priority low-tag">Baja</span></td>
+                  <td><span class="status assigned">Asignado</span></td>
+                </tr>
+
+                <tr>
+                  <td><span class="ticket-id">INC-115</span></td>
+                  <td>Carlos Díaz</td>
+                  <td>Falla en conexión de red interna</td>
+                  <td>REDES</td>
+                  <td>Conectividad</td>
+                  <td><span class="priority critical-tag">Crítico</span></td>
+                  <td><span class="status registered">Registrado</span></td>
+                </tr>
+
+                <tr>
+                  <td><span class="ticket-id">REQ-114</span></td>
+                  <td>Ana Sánchez</td>
+                  <td>No puedo utilizar la opción de fotocopias</td>
+                  <td>SOPORTE</td>
+                  <td>Impresoras</td>
+                  <td><span class="priority medium-tag">Media</span></td>
+                  <td><span class="status registered">Registrado</span></td>
+                </tr>
+
+                <tr>
+                  <td><span class="ticket-id">INC-113</span></td>
+                  <td>Pedro López</td>
+                  <td>Problemas para iniciar sesión</td>
+                  <td>SISTEMAS</td>
+                  <td>Accesos</td>
+                  <td><span class="priority high-tag">Alta</span></td>
+                  <td><span class="status process">En proceso</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-footer">
+            <span>Mostrando 5 de 124 reportes</span>
+            <div class="pagination">
+              <button>‹</button>
+              <button class="current">1</button>
+              <button>2</button>
+              <button>3</button>
+              <button>›</button>
+            </div>
+          </div>
+        </section>
+
+      </section>
+    </main>
+  </div>
+
+</body>
+</html>
