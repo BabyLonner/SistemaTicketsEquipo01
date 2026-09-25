@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mesa de Ayuda TI · Iniciar sesión</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <main id="vista-login" class="login">
+    <section class="login__marca" aria-hidden="true">
+      <div class="marca">
+        <span class="marca__logo">TI</span>
+        <span class="marca__nombre">Mesa de Ayuda</span>
+      </div>
+
+      <h1 class="login__titulo">Cada incidencia,<br>con responsable y estado.</h1>
+
+      <ul class="cola">
+        <li class="ticket">
+          <span class="ticket__id">#1042</span>
+          <span class="ticket__asunto">Impresora del 2.º piso sin conexión</span>
+          <span class="estado estado--abierto">Abierto</span>
+        </li>
+        <li class="ticket">
+          <span class="ticket__id">#1039</span>
+          <span class="ticket__asunto">Restablecer acceso al correo</span>
+          <span class="estado estado--proceso">En proceso</span>
+        </li>
+        <li class="ticket">
+          <span class="ticket__id">#1035</span>
+          <span class="ticket__asunto">Instalar antivirus en laboratorio B</span>
+          <span class="estado estado--cerrado">Resuelto</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="login__form-zona">
+      <form id="form-login" class="form" novalidate>
+        <h2 class="form__titulo">Iniciar sesión</h2>
+        <p class="form__sub">Ingresa con la cuenta que te asignó el administrador.</p>
+
+        <div class="campo">
+          <label for="login-email">Correo</label>
+          <input type="email" id="login-email" name="email" autocomplete="username" placeholder="nombre@empresa.com" required>
+          <small class="campo__error" data-error-for="login-email"></small>
+        </div>
+
+        <div class="campo">
+          <label for="login-password">Contraseña</label>
+          <div class="campo__pass">
+            <input type="password" id="login-password" name="password" autocomplete="current-password" required>
+            <button type="button" class="btn-ver" data-toggle="login-password" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
+          <small class="campo__error" data-error-for="login-password"></small>
+        </div>
+
+        <div id="login-alerta" class="alerta" role="alert" hidden></div>
+
+        <button type="submit" id="btn-login" class="btn btn--primario">Iniciar sesión</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="vista-panel" class="panel" hidden>
+    <header class="barra">
+      <div class="marca marca--oscura">
+        <span class="marca__logo">TI</span>
+        <span class="marca__nombre">Mesa de Ayuda</span>
+      </div>
+      <div class="barra__usuario">
+        <div class="barra__datos">
+          <strong id="panel-nombre"></strong>
+          <span id="panel-rol" class="rol"></span>
+        </div>
+        <button id="btn-logout" class="btn btn--linea">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <main class="panel__contenido">
+      <section class="bienvenida">
+        <h1 id="bienvenida-titulo"></h1>
+        <p id="bienvenida-texto"></p>
+        <p class="sesion-info">Tu sesión vence a las <span id="panel-expira"></span>.</p>
+      </section>
+
+      <section id="seccion-admin" class="admin" hidden>
+        <div class="admin__col">
+          <h2>Registrar usuario</h2>
+          <form id="form-registro" class="form form--compacto" novalidate>
+            <div class="campo">
+              <label for="reg-nombre">Nombre completo</label>
+              <input type="text" id="reg-nombre" required>
+              <small class="campo__error" data-error-for="reg-nombre"></small>
+            </div>
+            <div class="campo">
+              <label for="reg-email">Correo</label>
+              <input type="email" id="reg-email" required>
+              <small class="campo__error" data-error-for="reg-email"></small>
+            </div>
+            <div class="campo">
+              <label for="reg-password">Contraseña temporal</label>
+              <div class="campo__pass">
+                <input type="password" id="reg-password" autocomplete="new-password" required>
+                <button type="button" class="btn-ver" data-toggle="reg-password" aria-label="Mostrar contraseña">Mostrar</button>
+              </div>
+              <small class="campo__ayuda">Mínimo 8 caracteres, con al menos una letra y un número.</small>
+              <small class="campo__error" data-error-for="reg-password"></small>
+            </div>
+            <div class="campo">
+              <label for="reg-rol">Rol</label>
+              <select id="reg-rol" required>
+                <option value="">Selecciona un rol</option>
+                <option value="Administrador">Administrador</option>
+                <option value="Técnico">Técnico</option>
+                <option value="Solicitante">Solicitante</option>
+              </select>
+              <small class="campo__error" data-error-for="reg-rol"></small>
+            </div>
+            <div id="registro-alerta" class="alerta" role="status" hidden></div>
+            <button type="submit" class="btn btn--primario">Registrar usuario</button>
+          </form>
+        </div>
+
+        <div class="admin__col admin__col--ancha">
+          <h2>Usuarios</h2>
+          <div class="tabla-envoltura">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th><span class="sr-only">Acción</span></th>
+                </tr>
+              </thead>
+              <tbody id="tabla-usuarios"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="JS/auth.js"></script>
+  <script src="JS/app.js"></script>
+</body>
+</html>
