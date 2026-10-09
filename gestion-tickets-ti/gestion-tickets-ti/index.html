@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mesa de ayuda TI · Asignación, estados e historial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="barra">
+    <div class="barra__marca">
+      <span class="barra__logo" aria-hidden="true">TI</span>
+      <div>
+        <h1 class="barra__titulo">Mesa de ayuda TI</h1>
+        <p class="barra__subtitulo">Asignación de técnicos, estados e historial de tickets</p>
+      </div>
+    </div>
+    <button type="button" class="btn btn--fantasma" id="btnReiniciar">Restablecer datos de ejemplo</button>
+  </header>
+
+  <main class="layout">
+
+    <!-- ===== Lista de tickets ===== -->
+    <aside class="lista" aria-label="Lista de tickets">
+      <div class="lista__cabecera">
+        <h2 class="lista__titulo">Tickets</h2>
+        <span class="lista__contador" id="contadorTickets">0</span>
+      </div>
+
+      <label class="buscador">
+        <span class="sr-only">Buscar ticket</span>
+        <input type="search" id="inputBusqueda" placeholder="Buscar por código, título o solicitante">
+      </label>
+
+      <div class="filtros" role="group" aria-label="Filtrar por estado" id="filtros">
+        <button type="button" class="filtro activo" data-estado="Todos">Todos</button>
+        <button type="button" class="filtro" data-estado="Abierto">Abierto</button>
+        <button type="button" class="filtro" data-estado="En proceso">En proceso</button>
+        <button type="button" class="filtro" data-estado="Resuelto">Resuelto</button>
+        <button type="button" class="filtro" data-estado="Cerrado">Cerrado</button>
+      </div>
+
+      <ul class="lista__items" id="listaTickets"></ul>
+    </aside>
+
+    <!-- ===== Detalle del ticket ===== -->
+    <section class="detalle" id="detalle" aria-live="polite">
+      <!-- Se llena desde JS/app.js -->
+    </section>
+
+  </main>
+
+  <!-- Aviso flotante de confirmación -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="JS/data.js"></script>
+  <script src="JS/app.js"></script>
+</body>
+</html>

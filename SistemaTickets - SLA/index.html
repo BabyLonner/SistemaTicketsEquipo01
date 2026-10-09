@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Desk - SLA y Semáforo Visual</title>
+    <!-- Enlace al archivo CSS externo -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Panel lateral -->
+    <aside class="sidebar">
+        <h2>≡ Help Desk</h2>
+        <ul>
+            <li class="active">Tickets</li>
+            <li>Templates</li>
+            <li>Knowledgebase</li>
+            <li>Categories</li>
+        </ul>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="main-content">
+        <!-- Botones de estado[cite: 1] -->
+        <div class="filters">
+            <button class="btn-filter btn-active">Open tickets <b id="count-open">0</b></button>
+            <button class="btn-filter">Assigned to me 5</button>
+            <button class="btn-filter btn-due-soon">Due soon <b id="count-due">0</b></button>
+            <button class="btn-filter btn-overdue">Overdue <b id="count-overdue">0</b></button>
+        </div>
+
+        <!-- Tabla[cite: 1] -->
+        <table>
+            <thead>
+                <tr>
+                    <th><input type="checkbox"></th>
+                    <th>TRACKING ID</th>
+                    <th>UPDATED</th>
+                    <th>NAME</th>
+                    <th>SUBJECT</th>
+                    <th>STATUS</th>
+                    <th>LAST REPLIER</th>
+                    <th>PRIORITY</th>
+                </tr>
+            </thead>
+            <tbody id="tickets-tbody">
+                <!-- JavaScript inyectará las filas aquí -->
+            </tbody>
+        </table>
+    </main>
+
+    <!-- Enlace al archivo JS externo (defer asegura que cargue después del HTML) -->
+    <script src="js/app.js" defer></script>
+</body>
+</html>
