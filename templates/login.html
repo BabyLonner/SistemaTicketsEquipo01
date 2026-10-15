@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block titulo %}Iniciar sesión{% endblock %}
+{% block main_class %}container-xl px-3 px-lg-5 py-4 py-lg-5 flex-grow-1 d-flex align-items-center{% endblock %}
+
+{% block contenido %}
+<div class="row g-5 align-items-center w-100 mx-0">
+  <section class="col-lg-6 d-flex flex-column gap-3">
+    <span class="eyebrow">acceso al sistema</span>
+    <h1 class="login__title">Reporta, sigue y resuelve incidencias en un solo lugar</h1>
+    <p class="login__lead">Plataforma de soporte de TI compartida por las seis empresas del grupo.</p>
+    {% if demo %}
+    <div class="d-flex flex-column gap-2 mt-2">
+      <span class="small fw-semibold">Prueba con un perfil</span>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="pill pill--lg pill--administrador" data-demo-correo="ana.diaz@empresa.pe">Administrador</button>
+        <button type="button" class="pill pill--lg pill--tecnico" data-demo-correo="luis.ramos@empresa.pe">Técnico</button>
+        <button type="button" class="pill pill--lg pill--solicitante" data-demo-correo="jorge.paredes@empresa.pe">Solicitante</button>
+      </div>
+      <span class="small text-secondary">Contraseña de las cuentas de prueba: demo1234</span>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="col-lg-6 d-flex justify-content-center" aria-labelledby="titulo-login">
+    <div class="card login__card w-100">
+      <div class="card-body d-flex flex-column gap-3">
+        <div>
+          <h2 class="login__card-title" id="titulo-login">Iniciar sesión</h2>
+          <p class="text-secondary small mb-0">Usa las credenciales que te asignó el administrador.</p>
+        </div>
+
+        <!-- Igual que en clase: el formulario se envía con fetch a /procesar_login (ver static/js/app.js) -->
+        <form id="loginForm" class="d-flex flex-column gap-3" novalidate>
+          <input type="hidden" name="next" value="{{ siguiente }}">
+          <div>
+            <label class="form-label" for="email">Correo corporativo</label>
+            <input class="form-control" type="email" id="email" name="email"
+                   placeholder="nombre@empresa.com" autocomplete="username" autofocus>
+            <div class="invalid-feedback"></div>
+          </div>
+          <div>
+            <label class="form-label" for="password">Contraseña</label>
+            <input class="form-control" type="password" id="password" name="password"
+                   placeholder="••••••••" autocomplete="current-password">
+            <div class="invalid-feedback"></div>
+          </div>
+          <div class="form-check d-flex align-items-center gap-2 min-touch">
+            <input class="form-check-input mt-0" type="checkbox" id="recordar" name="recordar" value="1">
+            <label class="form-check-label" for="recordar">Mantener la sesión iniciada</label>
+          </div>
+          <button class="btn btn-primary btn-lg w-100" type="submit">Ingresar</button>
+          <div id="mensajeLogin" class="alert alert-rojo py-2 mb-0" role="alert" hidden></div>
+        </form>
+
+        <div class="note">
+          <i class="bi bi-lock" aria-hidden="true"></i>
+          <span>Las cuentas las crea el administrador. Si olvidaste tu contraseña, solicítale un restablecimiento.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -63,7 +63,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"correo\": \"ana.diaz@empresa.pe\",\n  \"password\": \"demo1234\"\n}",
+              "raw": "{\n  \"email\": \"ana.diaz@empresa.pe\",\n  \"password\": \"demo1234\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -179,7 +179,7 @@
             "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"María López\",\n  \"correo\": \"maria.lopez@empresa.pe\",\n  \"password\": \"temporal123\",\n  \"rol\": \"Solicitante\",\n  \"empresa\": \"EPSEL\",\n  \"area\": \"Comercial\",\n  \"activo\": true\n}",
+              "raw": "{\n  \"nombre\": \"María López\",\n  \"email\": \"maria.lopez@empresa.pe\",\n  \"password\": \"temporal123\",\n  \"rol\": \"Solicitante\",\n  \"empresa\": \"EPSEL\",\n  \"area\": \"Comercial\",\n  \"activo\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -1,0 +1,77 @@
+{% if usuario %}
+<header class="app-header sticky-top">
+  <nav class="navbar navbar-expand-xl" aria-label="Navegación principal">
+    <div class="container-fluid px-3 px-lg-4 gap-2">
+      <a class="navbar-brand brand" href="{{ url_for('dashboard') }}">
+        <span class="brand__logo"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span>
+        <span class="brand__name">Mesa de Ayuda TI</span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu-principal"
+              aria-controls="menu-principal" aria-expanded="false" aria-label="Abrir menú">
+        <i class="bi bi-list" aria-hidden="true"></i>
+      </button>
+
+      <div class="collapse navbar-collapse gap-3" id="menu-principal">
+        <ul class="navbar-nav nav-pastel me-auto gap-1 py-2 py-xl-0">
+          {% for id, texto, endpoint in menu %}
+          <li class="nav-item">
+            <a class="nav-link{% if seccion == id %} active{% endif %}" href="{{ url_for(endpoint) }}"
+               {% if seccion == id %}aria-current="page"{% endif %}>{{ texto }}</a>
+          </li>
+          {% endfor %}
+        </ul>
+
+        <div class="header-tools d-flex align-items-center gap-3 flex-wrap pb-3 pb-xl-0">
+          <form class="empresa-select d-flex align-items-center gap-2" method="post"
+                action="{{ url_for('elegir_empresa') }}" data-autoenviar>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="volver" value="{{ request.full_path }}">
+            <label class="small fw-medium mb-0" for="empresa-global">Empresa</label>
+            <select class="form-select form-select-sm rounded-pill" id="empresa-global" name="empresa">
+              <option value="">Todas las empresas</option>
+              {% for e in empresas %}
+              <option value="{{ e }}" {% if e == empresa_actual %}selected{% endif %}>{{ e }}</option>
+              {% endfor %}
+            </select>
+            <noscript><button class="btn btn-sm btn-outline-primary" type="submit">Aplicar</button></noscript>
+          </form>
+
+          <a class="icon-btn icon-btn--blanco position-relative" id="campana" href="{{ url_for('notificaciones') }}"
+             aria-label="Notificaciones{% if notif_pendientes %}, {{ notif_pendientes }} sin leer{% endif %}">
+            <i class="bi bi-bell" aria-hidden="true"></i>
+            <span class="badge-campana" id="campana-badge" {% if not notif_pendientes %}hidden{% endif %}>
+              {{ notif_pendientes if notif_pendientes < 10 else '9+' }}
+            </span>
+          </a>
+
+          <div class="d-flex align-items-center gap-2">
+            <span class="avatar avatar--primario">{{ usuario.iniciales }}</span>
+            <span class="d-flex flex-column lh-sm">
+              <span class="user__name">{{ usuario.nombre }}</span>
+              <span class="user__role">{{ usuario.rol }}</span>
+            </span>
+          </div>
+
+          <form method="post" action="{{ url_for('cerrar_sesion') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="icon-btn" type="submit" aria-label="Cerrar sesión" title="Cerrar sesión">
+              <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+{% else %}
+<header class="app-header">
+  <div class="container-fluid px-3 px-lg-4 d-flex align-items-center justify-content-between gap-3 header-min">
+    <a class="brand" href="{{ url_for('login') }}">
+      <span class="brand__logo"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span>
+      <span class="brand__name">Mesa de Ayuda TI</span>
+    </a>
+    <p class="mb-0 small d-none d-md-block">Soporte técnico para las 6 empresas del grupo</p>
+  </div>
+</header>
+{% endif %}

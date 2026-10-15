@@ -1,31 +1,79 @@
 # Mesa de Ayuda TI
 
-Sistema de gestión de tickets de TI para las 6 empresas del grupo.
-Flask + Bootstrap 5 + JWT + SQLAlchemy.
+Sistema de tickets de TI para las 6 empresas del grupo.
+Flask + MySQL (PyMySQL) + Bootstrap 5, con la misma organización que trabajamos en clase.
 
-## Instalación
+## Estructura
 
-Necesitas Python 3.10 o superior.
-
-```bash
-python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Linux o Mac
-
-pip install -r requirements.txt
-copy .env.example .env         # en Linux o Mac: cp .env.example .env
+```
+mesa-ayuda-ti/
+├── app.py                         Aplicación principal: app = Flask(__name__) y las rutas @app.route
+├── bd.py                          obtenerconexion() con PyMySQL
+├── api.py                         Rutas de la API REST (/api/...)
+├── seguridad.py                   JWT y decorador @requiere_sesion("Rol")
+├── controlador_usuarios.py        Consultas SQL de usuarios
+├── controlador_tickets.py         Consultas SQL de tickets, fotos e historial
+├── controlador_notificaciones.py  Consultas SQL de notificaciones
+├── controlador_reportes.py        Dashboard (GROUP BY), Excel y PDF
+├── utilidades.py                  Listas fijas, cálculo del SLA y manejo de fotos
+├── cargar_datos.py                Carga datos de prueba
+├── crear_admin.py                 Crea un administrador
+├── sql/
+│   └── mesa_ayuda_ti.sql          Script de la base de datos
+├── templates/
+│   ├── base.html                  Estructura común (incluye header y footer)
+│   ├── _header.html               Encabezado común
+│   ├── _footer.html               Pie de página común
+│   ├── _toasts.html               Mensajes emergentes
+│   ├── _macros.html               Etiquetas de estado, prioridad y SLA
+│   ├── login.html
+│   ├── dashboard.html
+│   ├── tickets.html
+│   ├── nuevo_ticket.html
+│   ├── detalle_ticket.html
+│   ├── notificaciones.html
+│   ├── usuarios.html
+│   └── error.html
+├── static/
+│   ├── css/style.css
+│   ├── js/app.js                  Login con fetch, campana, fechas relativas
+│   ├── js/nuevo_ticket.js         Vista previa de fotos
+│   ├── js/dashboard.js            Gráficos con Chart.js
+│   └── img/
+├── uploads/                       Fotos de evidencia (no son públicas como /static)
+└── postman/                       Colección para probar la API
 ```
 
-Abre `.env` y cambia `SECRET_KEY` y `JWT_SECRET_KEY` por textos largos y secretos.
+## Cómo ejecutarlo
 
-## Primer arranque
+1. Enciende **Apache y MySQL** en XAMPP.
+2. En phpMyAdmin, pestaña **SQL**, pega y ejecuta el contenido de `sql/mesa_ayuda_ti.sql`.
+   Crea la base `mesa_ayuda_ti` con sus tablas.
+3. Instala las librerías (dentro de tu `.venv`, como en clase):
 
-```bash
-flask --app run seed     # crea la base de datos con datos de prueba
-python run.py            # abre http://127.0.0.1:5000
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Cuentas de prueba (contraseña `demo1234` en todas):
+4. Carga los datos de prueba:
+
+   ```bash
+   python cargar_datos.py
+   ```
+
+5. Ejecuta la aplicación:
+
+   ```bash
+   flask --app app run --debug
+   ```
+
+   o también `python app.py`. Luego abre http://127.0.0.1:5000
+
+Si tu MySQL tiene contraseña o usa otro puerto, cámbialo en `bd.py`.
+
+### Cuentas de prueba
+
+Todas usan la contraseña `demo1234`.
 
 | Correo | Rol |
 |---|---|
@@ -33,49 +81,17 @@ Cuentas de prueba (contraseña `demo1234` en todas):
 | luis.ramos@empresa.pe | Técnico |
 | jorge.paredes@empresa.pe | Solicitante |
 
-Para crear tu propio administrador sin datos de prueba:
-
-```bash
-flask --app run crear-admin
-```
-
-`flask --app run seed` **borra todo** y vuelve a cargar los datos de prueba.
-
-## Estructura
-
-```
-run.py                     Punto de entrada
-config.py                  Configuración (lee el archivo .env)
-app/
-  __init__.py              Crea la aplicación
-  models.py                Tablas: users, tickets, ticket_fotos, ticket_historial,
-                           notificaciones, tokens_revocados
-  auth.py                  JWT, cierre de sesión y decorador @protegido("Rol")
-  servicios.py             Reglas del negocio (las usan la web y la API)
-  sla.py                   Cálculo del semáforo
-  archivos.py              Validación MIME, carpeta /uploads y miniaturas
-  reportes.py              Excel (openpyxl) y PDF (ReportLab)
-  web.py                   Rutas de las páginas
-  api.py                   API REST en /api
-  comandos.py              flask seed y flask crear-admin
-  templates/               HTML con Jinja y Bootstrap
-    base.html              Estructura común
-    partials/_header.html  Encabezado (igual en todas las páginas)
-    partials/_footer.html  Pie de página (igual en todas las páginas)
-  static/css/styles.css    Tema pastel sobre Bootstrap
-  static/js/               app.js (común), nuevo-ticket.js, dashboard.js
-uploads/                   Fotos de evidencia y miniaturas
-postman/                   Colección para probar la API
-```
+`python cargar_datos.py` **borra todo** y vuelve a cargar los datos de prueba.
+Para empezar sin ellos, usa `python crear_admin.py`.
 
 ## Cómo cumple cada módulo
 
-1. **Autenticación y usuarios.** JWT con Flask-JWT-Extended. En la web viaja en una cookie HttpOnly con protección CSRF; en la API, en el header `Authorization: Bearer`. Contraseñas con bcrypt. Al cerrar sesión, el token se guarda en `tokens_revocados` y deja de servir. El decorador `@protegido("Administrador")` está en `app/auth.py`.
-2. **Tickets con evidencias.** `request.files`, máximo 3 fotos, solo JPG o PNG. Se revisa el tipo MIME y además se abre la imagen con Pillow para confirmar que es real. Se guardan en `/uploads` con nombre aleatorio y miniatura de 240 px.
-3. **Asignación, estados e historial.** Tabla `ticket_historial` con FK, fecha y texto obligatorio. Cambiar estado sin comentario devuelve error. La línea de tiempo muestra fechas relativas ("hace 3 h") con JavaScript.
-4. **SLA y semáforo.** Alta 4 h, Media 24 h, Baja 72 h. Verde, amarillo (desde el 75 % del plazo) o rojo. El listado se ordena por urgencia y avisa cuando hay tickets vencidos o por vencer.
-5. **Notificaciones.** Se crean al asignar, cambiar estado o comentar. La campana consulta `/api/notificaciones/contador` con `fetch` cada minuto. Se pueden marcar una por una o todas a la vez.
-6. **Dashboard, reportes y API.** Conteos con `GROUP BY`, gráficos con Chart.js, filtros por fecha, área y responsable, exportación a Excel y PDF. La API está documentada en `postman/`.
+1. **Autenticación y usuarios.** El login se envía con `fetch` a `/procesar_login`, igual que en clase. Las contraseñas se guardan cifradas con bcrypt. Se usa JWT (Flask-JWT-Extended): en la web va en una cookie protegida y en la API, en el header `Authorization`. Al cerrar sesión, el token se guarda en `tokens_revocados` y deja de servir. El decorador `@requiere_sesion("Administrador")` está en `seguridad.py`.
+2. **Tickets con evidencias.** Las fotos llegan por `request.files`, máximo 3, solo JPG o PNG. Se revisa el tipo MIME y además se abre la imagen para confirmar que es real. Se guardan en `uploads/` con una miniatura.
+3. **Asignación, estados e historial.** Tabla `ticket_historial` con FK, fecha y texto obligatorio. Cambiar de estado sin comentario muestra un error. La línea de tiempo muestra fechas relativas ("hace 3 h") con JavaScript.
+4. **SLA y semáforo.** Alta 4 h, Media 24 h, Baja 72 h. El color pasa a amarillo al 75 % del plazo y a rojo al vencer. El listado se ordena por urgencia y avisa de los tickets vencidos o por vencer.
+5. **Notificaciones.** Se crean al asignar, cambiar de estado o comentar. La campana consulta `/api/notificaciones/contador` con `fetch` cada minuto. Se pueden marcar una por una o todas a la vez.
+6. **Dashboard, reportes y API.** Conteos con `GROUP BY`, gráficos con Chart.js, filtros por fecha, área y responsable, y exportación con openpyxl y ReportLab. La API está documentada en `postman/`.
 
 ## Permisos
 
@@ -93,31 +109,9 @@ postman/                   Colección para probar la API
 2. Con la app corriendo, ejecuta **Autenticación > Iniciar sesión**. El token se guarda solo.
 3. Prueba las demás peticiones. Cambia `ticket_id` y `usuario_id` en las variables de la colección.
 
-## Usar PostgreSQL
-
-```bash
-pip install psycopg2-binary
-```
-
-En `.env`:
-
-```
-DATABASE_URL=postgresql://usuario:clave@localhost:5432/mesa_ayuda
-```
-
-Crea la base vacía en PostgreSQL y ejecuta `flask --app run seed`. Las tablas se crean solas.
-
 ## Ajustes rápidos
 
-- Tiempos por prioridad y umbral del amarillo: `app/sla.py`.
-- Empresas, áreas y categorías: `app/constantes.py`.
-- Colores: variables al inicio de `app/static/css/styles.css`.
-- Correo de soporte del pie: `CORREO_SOPORTE` en `.env`.
-- Ocultar las cuentas de prueba del login: `MOSTRAR_CUENTAS_DEMO=0` en `.env`.
-
-## Antes de publicarlo
-
-- Cambia `SECRET_KEY` y `JWT_SECRET_KEY`.
-- Pon `MOSTRAR_CUENTAS_DEMO=0`.
-- Si usas HTTPS, pon `COOKIE_SECURE=1`.
-- No uses `python run.py` en producción: usa un servidor como Gunicorn o Waitress.
+- Conexión a MySQL: `bd.py`.
+- Claves secretas, correo de soporte y botones de prueba del login: inicio de `app.py`.
+- Tiempos del SLA, empresas, áreas y categorías: `utilidades.py`.
+- Colores: variables al inicio de `static/css/style.css`.

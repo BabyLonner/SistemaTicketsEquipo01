@@ -1,11 +1,7 @@
-Flask==3.0.3
-Flask-SQLAlchemy==3.1.1
-Flask-JWT-Extended==4.6.0
-Flask-Bcrypt==1.0.1
-openpyxl==3.1.5
-reportlab==4.2.2
-Pillow==10.4.0
-python-dotenv==1.0.1
-tzdata
-# Para usar PostgreSQL en lugar de SQLite, instala también:
-# psycopg2-binary==2.9.9
+Flask
+Flask-JWT-Extended
+PyMySQL
+bcrypt
+openpyxl
+reportlab
+Pillow
