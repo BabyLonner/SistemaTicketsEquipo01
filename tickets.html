@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tickets · Mesa de Ayuda TI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSS/estilos.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="index.html">
+      <span class="marca__icono"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M9 10h6M9 14h6"/></svg></span>
+      <span class="marca__nombre">Mesa de Ayuda TI</span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a href="dashboard.html" class="nav__link">Dashboard</a>
+      <a href="tickets.html" class="nav__link is-activo" aria-current="page">Tickets</a>
+      <a href="nuevo_ticket.html" class="nav__link">Nuevo ticket</a>
+      <a href="usuarios.html" class="nav__link">Usuarios</a>
+    </nav>
+    <div class="topbar__derecha">
+      <label class="selector-empresa">
+        <span>Empresa</span>
+        <select class="select select--pill"><option>Todas las empresas</option><option>Grupo M&amp;M</option><option>EPSEL</option><option>Agrofutura</option><option>Angel Divino Bus</option><option>Robotic Air Systems</option><option>Atlántica</option></select>
+      </label>
+      <a href="notificaciones.html" class="campana" aria-label="Notificaciones: 3 sin leer">
+        <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="campana__badge">3</span>
+      </a>
+      <div class="perfil">
+        <span class="avatar avatar--primario">AD</span>
+        <span class="perfil__datos"><strong>Ana Díaz</strong><small>Administrador</small></span>
+      </div>
+      <a href="index.html" class="icon-link" aria-label="Cerrar sesión" title="Cerrar sesión"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></a>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <div class="encabezado">
+      <div>
+        <h1 class="titulo">Tickets</h1>
+        <p class="subtitulo">47 tickets en total · ordenados por urgencia</p>
+      </div>
+      <a href="nuevo_ticket.html" class="btn btn--primario">+ Nuevo ticket</a>
+    </div>
+
+    <div class="alerta alerta--peligro" role="status">
+      <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <span>1 ticket venció su plazo y 2 están por vencer.</span>
+      <a href="#" class="alerta__enlace">Ver urgentes</a>
+    </div>
+
+    <div class="barra-filtros barra-filtros--suelta">
+      <label class="buscador">
+        <span class="sr-only">Buscar</span>
+        <svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input class="input" type="search" placeholder="Buscar por código o asunto">
+      </label>
+      <select class="select" aria-label="Estado"><option>Todos los estados</option><option>Abierto</option><option>En proceso</option><option>Resuelto</option><option>Cerrado</option></select>
+      <select class="select" aria-label="Prioridad"><option>Todas las prioridades</option><option>Alta</option><option>Media</option><option>Baja</option></select>
+      <select class="select" aria-label="Técnico"><option>Todos los técnicos</option><option>Luis Ramos</option><option>Carla Mendoza</option><option>Pedro Salazar</option></select>
+    </div>
+
+    <section class="tarjeta tarjeta--sin-padding">
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr><th>foto</th><th>código</th><th>asunto</th><th>solicitante</th><th>técnico</th><th>prioridad</th><th>estado</th><th>tiempo (SLA)</th></tr>
+          </thead>
+          <tbody>
+            <tr class="fila-enlace fila--roja" data-href="detalle_ticket.html">
+              <td><span class="miniatura"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span></td>
+              <td><a class="codigo" href="detalle_ticket.html">TK-2291</a></td>
+              <td><span class="fuerte">Servidor de facturación caído</span><span class="secundario">Software</span></td>
+              <td>Rosa Villanueva<span class="secundario">Angel Divino Bus</span></td>
+              <td>Luis Ramos</td>
+              <td><span class="prioridad"><span class="barras barras--alta"><i></i><i></i><i></i></span> Alta</span></td>
+              <td><span class="pill pill--indigo">En proceso</span></td>
+              <td><span class="sla sla--rojo">Vencido hace 40 min</span></td>
+            </tr>
+            <tr class="fila-enlace fila--amarilla" data-href="detalle_ticket.html">
+              <td><span class="miniatura"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span></td>
+              <td><a class="codigo" href="detalle_ticket.html">TK-2290</a></td>
+              <td><span class="fuerte">VPN no conecta desde almacén</span><span class="secundario">Red e internet</span></td>
+              <td>Jorge Paredes<span class="secundario">Agrofutura</span></td>
+              <td>Carla Mendoza</td>
+              <td><span class="prioridad"><span class="barras barras--alta"><i></i><i></i><i></i></span> Alta</span></td>
+              <td><span class="pill pill--indigo">En proceso</span></td>
+              <td><span class="sla sla--amarillo">Quedan 50 min</span></td>
+            </tr>
+            <tr class="fila-enlace fila--amarilla" data-href="detalle_ticket.html">
+              <td><span class="miniatura"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span></td>
+              <td><a class="codigo" href="detalle_ticket.html">TK-2289</a></td>
+              <td><span class="fuerte">Laptop no enciende</span><span class="secundario">Hardware</span></td>
+              <td>Lucía Campos<span class="secundario">Atlántica</span></td>
+              <td>Luis Ramos</td>
+              <td><span class="prioridad"><span class="barras barras--media"><i></i><i></i><i></i></span> Media</span></td>
+              <td><span class="pill pill--borde-indigo">Abierto</span></td>
+              <td><span class="sla sla--amarillo">Quedan 3 h</span></td>
+            </tr>
+            <tr class="fila-enlace " data-href="detalle_ticket.html">
+              <td><span class="miniatura"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span></td>
+              <td><a class="codigo" href="detalle_ticket.html">TK-2288</a></td>
+              <td><span class="fuerte">Impresora de despacho sin tóner</span><span class="secundario">Impresoras</span></td>
+              <td>Rosa Villanueva<span class="secundario">Angel Divino Bus</span></td>
+              <td>Sin asignar</td>
+              <td><span class="prioridad"><span class="barras barras--media"><i></i><i></i><i></i></span> Media</span></td>
+              <td><span class="pill pill--borde-indigo">Abierto</span></td>
+              <td><span class="sla sla--verde">Quedan 19 h</span></td>
+            </tr>
+            <tr class="fila-enlace " data-href="detalle_ticket.html">
+              <td><span class="miniatura miniatura--vacia">—</span></td>
+              <td><a class="codigo" href="detalle_ticket.html">TK-2287</a></td>
+              <td><span class="fuerte">Correo no sincroniza en el celular</span><span class="secundario">Correo</span></td>
+              <td>Miguel Torres<span class="secundario">Robotic Air Systems</span></td>
+              <td>Carla Mendoza</td>
+              <td><span class="prioridad"><span class="barras barras--baja"><i></i><i></i><i></i></span> Baja</span></td>
+              <td><span class="pill pill--indigo">En proceso</span></td>
+              <td><span class="sla sla--verde">Quedan 2 d</span></td>
+            </tr>
+            <tr class="fila-enlace " data-href="detalle_ticket.html">
+              <td><span class="miniatura miniatura--vacia">—</span></td>
+              <td><a class="codigo" href="detalle_ticket.html">TK-2286</a></td>
+              <td><span class="fuerte">Alta de usuario en ERP</span><span class="secundario">Accesos y cuentas</span></td>
+              <td>Lucía Campos<span class="secundario">Atlántica</span></td>
+              <td>Luis Ramos</td>
+              <td><span class="prioridad"><span class="barras barras--baja"><i></i><i></i><i></i></span> Baja</span></td>
+              <td><span class="pill pill--borde-indigo">Abierto</span></td>
+              <td><span class="sla sla--verde">Quedan 2 d 10 h</span></td>
+            </tr>
+            <tr class="fila-enlace " data-href="detalle_ticket.html">
+              <td><span class="miniatura"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span></td>
+              <td><a class="codigo" href="detalle_ticket.html">TK-2284</a></td>
+              <td><span class="fuerte">Monitor con líneas en pantalla</span><span class="secundario">Hardware</span></td>
+              <td>Jorge Paredes<span class="secundario">Agrofutura</span></td>
+              <td>Carla Mendoza</td>
+              <td><span class="prioridad"><span class="barras barras--media"><i></i><i></i><i></i></span> Media</span></td>
+              <td><span class="pill pill--borde-verde">Resuelto</span></td>
+              <td><span class="sla sla--verde">Cumplido</span></td>
+            </tr>
+            <tr class="fila-enlace " data-href="detalle_ticket.html">
+              <td><span class="miniatura miniatura--vacia">—</span></td>
+              <td><a class="codigo" href="detalle_ticket.html">TK-2283</a></td>
+              <td><span class="fuerte">Cambio de contraseña de correo</span><span class="secundario">Accesos y cuentas</span></td>
+              <td>Rosa Villanueva<span class="secundario">Angel Divino Bus</span></td>
+              <td>Luis Ramos</td>
+              <td><span class="prioridad"><span class="barras barras--baja"><i></i><i></i><i></i></span> Baja</span></td>
+              <td><span class="pill pill--gris">Cerrado</span></td>
+              <td><span class="sla sla--verde">Cumplido</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tabla-pie">
+        <span>Mostrando 1–8 de 47</span>
+        <div class="tabla-pie__botones">
+          <button type="button" class="btn btn--borde btn--sm">Anterior</button>
+          <button type="button" class="btn btn--borde btn--sm">Siguiente</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p>© 2026 Mesa de Ayuda TI · Sistema integrado para las 6 empresas del grupo</p>
+    <nav class="pie__links" aria-label="Enlaces de ayuda">
+      <a href="#">Manual de usuario</a>
+      <a href="#">Documentación API</a>
+      <a href="#">Soporte: [correo de soporte]</a>
+      <span class="version">v1.0.0</span>
+    </nav>
+  </footer>
+
+  <script src="JS/app.js"></script>
+</body>
+</html>

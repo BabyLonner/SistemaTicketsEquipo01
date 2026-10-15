@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Usuarios · Mesa de Ayuda TI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSS/estilos.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="index.html">
+      <span class="marca__icono"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M9 10h6M9 14h6"/></svg></span>
+      <span class="marca__nombre">Mesa de Ayuda TI</span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a href="dashboard.html" class="nav__link">Dashboard</a>
+      <a href="tickets.html" class="nav__link">Tickets</a>
+      <a href="nuevo_ticket.html" class="nav__link">Nuevo ticket</a>
+      <a href="usuarios.html" class="nav__link is-activo" aria-current="page">Usuarios</a>
+    </nav>
+    <div class="topbar__derecha">
+      <label class="selector-empresa">
+        <span>Empresa</span>
+        <select class="select select--pill"><option>Todas las empresas</option><option>Grupo M&amp;M</option><option>EPSEL</option><option>Agrofutura</option><option>Angel Divino Bus</option><option>Robotic Air Systems</option><option>Atlántica</option></select>
+      </label>
+      <a href="notificaciones.html" class="campana" aria-label="Notificaciones: 3 sin leer">
+        <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="campana__badge">3</span>
+      </a>
+      <div class="perfil">
+        <span class="avatar avatar--primario">AD</span>
+        <span class="perfil__datos"><strong>Ana Díaz</strong><small>Administrador</small></span>
+      </div>
+      <a href="index.html" class="icon-link" aria-label="Cerrar sesión" title="Cerrar sesión"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></a>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <div class="encabezado">
+      <div>
+        <p class="etiqueta-mono">administración</p>
+        <h1 class="titulo">Usuarios</h1>
+        <p class="subtitulo">Solo el administrador puede registrar, editar y desactivar cuentas.</p>
+      </div>
+    </div>
+
+    <div class="grid-lateral" style="grid-template-columns:minmax(0,1fr) 400px">
+      <section class="tarjeta tarjeta--sin-padding">
+        <div class="barra-filtros">
+          <label class="buscador">
+            <span class="sr-only">Buscar</span>
+            <svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="input" type="search" placeholder="Buscar por nombre o correo">
+          </label>
+          <select class="select" aria-label="Rol"><option>Todos los roles</option><option>Administrador</option><option>Técnico</option><option>Solicitante</option></select>
+          <select class="select" aria-label="Estado"><option>Todos los estados</option><option>Activo</option><option>Inactivo</option></select>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead><tr><th>usuario</th><th>rol</th><th>empresa</th><th>estado</th><th>acciones</th></tr></thead>
+            <tbody>
+            <tr>
+              <td><div class="usuario-celda"><span class="avatar">AD</span><div><span class="fuerte">Ana Díaz</span><span class="secundario">ana.diaz@empresa.pe</span></div></div></td>
+              <td><span class="pill pill--indigo">Administrador</span></td>
+              <td>Grupo M&amp;M</td>
+              <td><span class="pill pill--verde">Activo</span></td>
+              <td><div class="acciones">
+                <button type="button" class="btn-icono" aria-label="Editar a Ana Díaz"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button type="button" class="btn-icono btn-icono--gris" aria-label="Desactivar a Ana Díaz"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><div class="usuario-celda"><span class="avatar">LR</span><div><span class="fuerte">Luis Ramos</span><span class="secundario">luis.ramos@empresa.pe</span></div></div></td>
+              <td><span class="pill pill--gris">Técnico</span></td>
+              <td>Grupo M&amp;M</td>
+              <td><span class="pill pill--verde">Activo</span></td>
+              <td><div class="acciones">
+                <button type="button" class="btn-icono" aria-label="Editar a Luis Ramos"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button type="button" class="btn-icono btn-icono--gris" aria-label="Desactivar a Luis Ramos"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><div class="usuario-celda"><span class="avatar">CM</span><div><span class="fuerte">Carla Mendoza</span><span class="secundario">carla.mendoza@empresa.pe</span></div></div></td>
+              <td><span class="pill pill--gris">Técnico</span></td>
+              <td>EPSEL</td>
+              <td><span class="pill pill--verde">Activo</span></td>
+              <td><div class="acciones">
+                <button type="button" class="btn-icono" aria-label="Editar a Carla Mendoza"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button type="button" class="btn-icono btn-icono--gris" aria-label="Desactivar a Carla Mendoza"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><div class="usuario-celda"><span class="avatar">JP</span><div><span class="fuerte">Jorge Paredes</span><span class="secundario">jorge.paredes@empresa.pe</span></div></div></td>
+              <td><span class="pill pill--blanca">Solicitante</span></td>
+              <td>Agrofutura</td>
+              <td><span class="pill pill--verde">Activo</span></td>
+              <td><div class="acciones">
+                <button type="button" class="btn-icono" aria-label="Editar a Jorge Paredes"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button type="button" class="btn-icono btn-icono--gris" aria-label="Desactivar a Jorge Paredes"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><div class="usuario-celda"><span class="avatar">RV</span><div><span class="fuerte">Rosa Villanueva</span><span class="secundario">rosa.villanueva@empresa.pe</span></div></div></td>
+              <td><span class="pill pill--blanca">Solicitante</span></td>
+              <td>Angel Divino Bus</td>
+              <td><span class="pill pill--verde">Activo</span></td>
+              <td><div class="acciones">
+                <button type="button" class="btn-icono" aria-label="Editar a Rosa Villanueva"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button type="button" class="btn-icono btn-icono--gris" aria-label="Desactivar a Rosa Villanueva"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><div class="usuario-celda"><span class="avatar">MT</span><div><span class="fuerte">Miguel Torres</span><span class="secundario">miguel.torres@empresa.pe</span></div></div></td>
+              <td><span class="pill pill--blanca">Solicitante</span></td>
+              <td>Robotic Air Systems</td>
+              <td><span class="pill pill--gris">Inactivo</span></td>
+              <td><div class="acciones">
+                <button type="button" class="btn-icono" aria-label="Editar a Miguel Torres"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button type="button" class="btn-icono btn-icono--gris" aria-label="Activar a Miguel Torres"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><div class="usuario-celda"><span class="avatar">LC</span><div><span class="fuerte">Lucía Campos</span><span class="secundario">lucia.campos@empresa.pe</span></div></div></td>
+              <td><span class="pill pill--blanca">Solicitante</span></td>
+              <td>Atlántica</td>
+              <td><span class="pill pill--verde">Activo</span></td>
+              <td><div class="acciones">
+                <button type="button" class="btn-icono" aria-label="Editar a Lucía Campos"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button type="button" class="btn-icono btn-icono--gris" aria-label="Desactivar a Lucía Campos"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></button>
+              </div></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <form class="tarjeta form">
+        <h2 class="tarjeta__titulo" style="margin:0">Registrar usuario</h2>
+        <div class="campo"><label for="nombre">Nombre completo</label><input class="input" id="nombre"></div>
+        <div class="campo"><label for="correo-u">Correo corporativo</label><input class="input" type="email" id="correo-u" placeholder="nombre@empresa.com"></div>
+        <div class="campo"><label for="clave-u">Contraseña temporal</label><input class="input" type="password" id="clave-u"></div>
+        <div class="fila-2">
+          <div class="campo"><label for="rol">Rol</label>
+            <select class="select" id="rol"><option>Solicitante</option><option>Técnico</option><option>Administrador</option></select></div>
+          <div class="campo"><label for="empresa">Empresa</label>
+            <select class="select" id="empresa"><option>Grupo M&amp;M</option><option>EPSEL</option><option>Agrofutura</option><option>Angel Divino Bus</option><option>Robotic Air Systems</option><option>Atlántica</option></select></div>
+        </div>
+        <label class="check"><input type="checkbox" checked> Cuenta activa</label>
+        <button type="submit" class="btn btn--primario btn--bloque">Registrar usuario</button>
+      </form>
+    </div>
+  </main>
+
+  <footer class="pie">
+    <p>© 2026 Mesa de Ayuda TI · Sistema integrado para las 6 empresas del grupo</p>
+    <nav class="pie__links" aria-label="Enlaces de ayuda">
+      <a href="#">Manual de usuario</a>
+      <a href="#">Documentación API</a>
+      <a href="#">Soporte: [correo de soporte]</a>
+      <span class="version">v1.0.0</span>
+    </nav>
+  </footer>
+
+  <script src="JS/app.js"></script>
+</body>
+</html>

@@ -1,7 +1,0 @@
-Flask
-Flask-JWT-Extended
-PyMySQL
-bcrypt
-openpyxl
-reportlab
-Pillow

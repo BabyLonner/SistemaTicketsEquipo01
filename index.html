@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iniciar sesión · Mesa de Ayuda TI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSS/estilos.css">
+</head>
+<body>
+  <header class="topbar topbar--simple">
+    <a class="marca" href="index.html">
+      <span class="marca__icono"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M9 10h6M9 14h6"/></svg></span>
+      <span class="marca__nombre">Mesa de Ayuda TI</span>
+    </a>
+    <span class="topbar__lema">Soporte técnico para las 6 empresas del grupo</span>
+  </header>
+
+  <main>
+    <section class="bienvenida">
+      <div>
+        <p class="etiqueta-mono">acceso al sistema</p>
+        <h1 class="bienvenida__titulo">Reporta, sigue y resuelve incidencias en un solo lugar</h1>
+        <p class="bienvenida__texto">Plataforma de soporte de TI compartida por las seis empresas del grupo.</p>
+        <p class="perfiles__titulo">Perfiles del sistema</p>
+        <div class="perfiles">
+          <span class="pill pill--indigo pill--grande">Administrador</span>
+          <span class="pill pill--gris pill--grande">Técnico</span>
+          <span class="pill pill--blanca pill--grande">Solicitante</span>
+        </div>
+      </div>
+
+      <div class="tarjeta login-card">
+        <h2 class="login-card__titulo">Iniciar sesión</h2>
+        <p class="subtitulo">Usa las credenciales que te asignó el administrador.</p>
+        <form class="form" id="form-login">
+          <div class="campo">
+            <label for="correo">Correo corporativo</label>
+            <input class="input" type="email" id="correo" placeholder="nombre@empresa.com" autocomplete="username">
+          </div>
+          <div class="campo">
+            <label for="clave">Contraseña</label>
+            <input class="input" type="password" id="clave" placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <label class="check"><input type="checkbox"> Mantener la sesión iniciada</label>
+          <button type="submit" class="btn btn--primario btn--bloque">Ingresar</button>
+          <div class="nota">
+            <svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span>Las cuentas las crea el administrador. Si olvidaste tu contraseña, solicítale un restablecimiento.</span>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p>© 2026 Mesa de Ayuda TI · Sistema integrado para las 6 empresas del grupo</p>
+    <nav class="pie__links" aria-label="Enlaces de ayuda">
+      <a href="#">Manual de usuario</a>
+      <a href="#">Documentación API</a>
+      <a href="#">Soporte: [correo de soporte]</a>
+      <span class="version">v1.0.0</span>
+    </nav>
+  </footer>
+
+  <script src="JS/app.js"></script>
+</body>
+</html>

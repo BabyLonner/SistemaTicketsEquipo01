@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TK-2291 · Mesa de Ayuda TI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSS/estilos.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="index.html">
+      <span class="marca__icono"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M9 10h6M9 14h6"/></svg></span>
+      <span class="marca__nombre">Mesa de Ayuda TI</span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a href="dashboard.html" class="nav__link">Dashboard</a>
+      <a href="tickets.html" class="nav__link is-activo" aria-current="page">Tickets</a>
+      <a href="nuevo_ticket.html" class="nav__link">Nuevo ticket</a>
+      <a href="usuarios.html" class="nav__link">Usuarios</a>
+    </nav>
+    <div class="topbar__derecha">
+      <label class="selector-empresa">
+        <span>Empresa</span>
+        <select class="select select--pill"><option>Todas las empresas</option><option>Grupo M&amp;M</option><option>EPSEL</option><option>Agrofutura</option><option>Angel Divino Bus</option><option>Robotic Air Systems</option><option>Atlántica</option></select>
+      </label>
+      <a href="notificaciones.html" class="campana" aria-label="Notificaciones: 3 sin leer">
+        <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="campana__badge">3</span>
+      </a>
+      <div class="perfil">
+        <span class="avatar avatar--primario">AD</span>
+        <span class="perfil__datos"><strong>Ana Díaz</strong><small>Administrador</small></span>
+      </div>
+      <a href="index.html" class="icon-link" aria-label="Cerrar sesión" title="Cerrar sesión"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></a>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <p class="migas"><a href="tickets.html">Tickets</a> / TK-2291</p>
+    <div class="detalle-cabecera">
+      <div>
+        <p class="etiqueta-mono">TK-2291</p>
+        <h1 class="titulo">Servidor de facturación caído</h1>
+        <div class="pills">
+          <span class="pill pill--blanca"><span class="barras barras--alta"><i></i><i></i><i></i></span> Prioridad alta</span>
+          <span class="pill pill--indigo">En proceso</span>
+          <span class="pill pill--blanca">Software</span>
+        </div>
+      </div>
+      <a href="tickets.html" class="btn btn--borde">Volver al listado</a>
+    </div>
+
+    <div class="alerta alerta--peligro" role="status">
+      <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      <span>Plazo vencido hace 40 min · el máximo para prioridad alta es 4 h</span>
+    </div>
+
+    <div class="grid-lateral">
+      <div class="columna">
+        <section class="tarjeta">
+          <h2 class="tarjeta__titulo" style="margin-bottom:.6rem">Descripción</h2>
+          <p style="margin:0">Desde las 8:00 a. m. no se pueden emitir boletas ni facturas en las tres oficinas de venta de pasajes. El sistema muestra "No se puede conectar con el servidor".</p>
+          <div class="meta">
+            <div><small>Solicitante</small><strong>Rosa Villanueva</strong></div>
+            <div><small>Empresa</small><strong>Angel Divino Bus</strong></div>
+            <div><small>Área</small><strong>Administración</strong></div>
+            <div><small>Creado</small><strong class="mono">28/09 · 08:20</strong></div>
+          </div>
+        </section>
+
+        <section class="tarjeta">
+          <div class="tarjeta__cabecera">
+            <h2 class="tarjeta__titulo">Evidencias</h2>
+            <span class="fotos__info">3 fotos</span>
+          </div>
+          <div class="evidencia-grande" id="evidencia-grande">
+            <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+            <span id="evidencia-nombre">Imagen completa · error_servidor.jpg</span>
+          </div>
+          <div class="miniaturas">
+            <button type="button" class="is-activa" data-nombre="error_servidor.jpg">foto 1</button>
+            <button type="button" data-nombre="registro_eventos.jpg">foto 2</button>
+            <button type="button" data-nombre="pantalla_caja.jpg">foto 3</button>
+          </div>
+        </section>
+
+        <section class="tarjeta">
+          <h2 class="tarjeta__titulo">Línea de tiempo</h2>
+          <ol class="linea-tiempo">
+            <li class="evento">
+              <strong>Estado cambiado: Abierto → En proceso</strong>
+              <small>hace 3 h 10 min · Luis Ramos (Técnico)</small>
+              <p class="evento__comentario">Revisando los registros del servidor. El servicio se detuvo después de la actualización de anoche.</p>
+            </li>
+            <li class="evento">
+              <strong>Ticket asignado a Luis Ramos</strong>
+              <small>hace 4 h · Ana Díaz (Administrador)</small>
+            </li>
+            <li class="evento">
+              <strong>Ticket creado</strong>
+              <small>hace 4 h 40 min · Rosa Villanueva (Solicitante)</small>
+              <p class="evento__comentario">Se adjuntaron 3 fotos de evidencia.</p>
+            </li>
+          </ol>
+        </section>
+      </div>
+
+      <div class="columna">
+        <section class="tarjeta">
+          <p class="tiempo__label">Tiempo transcurrido</p>
+          <p class="tiempo__valor">4 h 40 min</p>
+          <p class="tiempo__label">de 4 h permitidas</p>
+          <div class="progreso"><span style="width:100%"></span></div>
+          <div class="semaforo-mini">
+            <span class="punto" style="background:var(--verde-suave)"></span>
+            <span class="punto" style="background:var(--amarillo-suave)"></span>
+            <span class="punto" style="background:var(--rojo)"></span>
+            <span>Rojo · vencido</span>
+          </div>
+        </section>
+
+        <form class="tarjeta form">
+          <h2 class="tarjeta__titulo" style="margin:0">Asignación</h2>
+          <div class="campo">
+            <label for="tecnico">Técnico responsable</label>
+            <select class="select" id="tecnico"><option>Luis Ramos</option><option>Carla Mendoza</option><option>Pedro Salazar</option></select>
+          </div>
+          <button type="submit" class="btn btn--borde btn--bloque">Reasignar</button>
+        </form>
+
+        <form class="tarjeta form">
+          <h2 class="tarjeta__titulo" style="margin:0">Cambiar estado</h2>
+          <div class="campo">
+            <label for="nuevo-estado">Nuevo estado</label>
+            <select class="select" id="nuevo-estado"><option>Abierto</option><option selected>En proceso</option><option>Resuelto</option><option>Cerrado</option></select>
+          </div>
+          <div class="campo">
+            <label for="comentario">Comentario (obligatorio)</label>
+            <textarea class="textarea textarea--error" id="comentario" placeholder="Explica qué hiciste o por qué cambia el estado"></textarea>
+            <p class="ayuda-error">Escribe un comentario para poder guardar el cambio.</p>
+          </div>
+          <button type="submit" class="btn btn--primario btn--bloque">Guardar cambio</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="pie">
+    <p>© 2026 Mesa de Ayuda TI · Sistema integrado para las 6 empresas del grupo</p>
+    <nav class="pie__links" aria-label="Enlaces de ayuda">
+      <a href="#">Manual de usuario</a>
+      <a href="#">Documentación API</a>
+      <a href="#">Soporte: [correo de soporte]</a>
+      <span class="version">v1.0.0</span>
+    </nav>
+  </footer>
+
+  <script src="JS/app.js"></script>
+</body>
+</html>

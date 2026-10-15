@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · Mesa de Ayuda TI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="CSS/estilos.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="marca" href="index.html">
+      <span class="marca__icono"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M9 10h6M9 14h6"/></svg></span>
+      <span class="marca__nombre">Mesa de Ayuda TI</span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a href="dashboard.html" class="nav__link is-activo" aria-current="page">Dashboard</a>
+      <a href="tickets.html" class="nav__link">Tickets</a>
+      <a href="nuevo_ticket.html" class="nav__link">Nuevo ticket</a>
+      <a href="usuarios.html" class="nav__link">Usuarios</a>
+    </nav>
+    <div class="topbar__derecha">
+      <label class="selector-empresa">
+        <span>Empresa</span>
+        <select class="select select--pill"><option>Todas las empresas</option><option>Grupo M&amp;M</option><option>EPSEL</option><option>Agrofutura</option><option>Angel Divino Bus</option><option>Robotic Air Systems</option><option>Atlántica</option></select>
+      </label>
+      <a href="notificaciones.html" class="campana" aria-label="Notificaciones: 3 sin leer">
+        <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="campana__badge">3</span>
+      </a>
+      <div class="perfil">
+        <span class="avatar avatar--primario">AD</span>
+        <span class="perfil__datos"><strong>Ana Díaz</strong><small>Administrador</small></span>
+      </div>
+      <a href="index.html" class="icon-link" aria-label="Cerrar sesión" title="Cerrar sesión"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></a>
+    </div>
+  </header>
+
+  <main class="contenedor">
+    <div class="encabezado">
+      <div>
+        <h1 class="titulo">Dashboard</h1>
+        <p class="subtitulo">Resumen de tickets de todas las empresas</p>
+      </div>
+      <div class="encabezado__acciones">
+        <button type="button" class="btn btn--borde"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Exportar Excel</button>
+        <button type="button" class="btn btn--borde"><svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Exportar PDF</button>
+      </div>
+    </div>
+
+    <form class="tarjeta filtros-dashboard">
+      <div class="campo"><label for="desde">Desde</label><input class="input" type="date" id="desde" value="2026-09-01"></div>
+      <div class="campo"><label for="hasta">Hasta</label><input class="input" type="date" id="hasta" value="2026-09-28"></div>
+      <div class="campo"><label for="area">Área</label>
+        <select class="select" id="area"><option>Todas las áreas</option><option>Administración</option><option>Logística</option><option>Ventas</option></select></div>
+      <div class="campo"><label for="responsable">Responsable</label>
+        <select class="select" id="responsable"><option>Todos</option><option>Luis Ramos</option><option>Carla Mendoza</option><option>Pedro Salazar</option></select></div>
+      <button type="submit" class="btn btn--primario">Aplicar filtros</button>
+    </form>
+
+    <section class="metricas">
+      <div class="tarjeta metrica"><p class="metrica__label">Abiertos</p><p class="metrica__valor">18</p></div>
+      <div class="tarjeta metrica metrica--indigo"><p class="metrica__label">En proceso</p><p class="metrica__valor">14</p></div>
+      <div class="tarjeta metrica"><p class="metrica__label">Resueltos</p><p class="metrica__valor">11</p></div>
+      <div class="tarjeta metrica metrica--gris"><p class="metrica__label">Cerrados</p><p class="metrica__valor">4</p></div>
+    </section>
+
+    <section class="graficos">
+      <div class="tarjeta">
+        <h2 class="tarjeta__titulo">Por prioridad</h2>
+        <div class="barra-h"><div class="barra-h__fila"><span>Alta</span><span>9</span></div>
+          <div class="barra-h__pista"><div class="barra-h__relleno" style="width:38%;background:var(--indigo)"></div></div></div>
+        <div class="barra-h"><div class="barra-h__fila"><span>Media</span><span>24</span></div>
+          <div class="barra-h__pista"><div class="barra-h__relleno" style="width:100%;background:var(--indigo-medio)"></div></div></div>
+        <div class="barra-h"><div class="barra-h__fila"><span>Baja</span><span>14</span></div>
+          <div class="barra-h__pista"><div class="barra-h__relleno" style="width:58%;background:var(--indigo-claro)"></div></div></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2 class="tarjeta__titulo">Por tipo</h2>
+        <div class="columnas">
+            <div class="columna-g"><span class="columna-g__valor">12</span><span class="columna-g__barra" style="height:110px"></span></div>
+            <div class="columna-g"><span class="columna-g__valor">10</span><span class="columna-g__barra" style="height:92px"></span></div>
+            <div class="columna-g"><span class="columna-g__valor">8</span><span class="columna-g__barra" style="height:73px"></span></div>
+            <div class="columna-g"><span class="columna-g__valor">7</span><span class="columna-g__barra" style="height:64px"></span></div>
+            <div class="columna-g"><span class="columna-g__valor">6</span><span class="columna-g__barra" style="height:55px"></span></div>
+            <div class="columna-g"><span class="columna-g__valor">4</span><span class="columna-g__barra" style="height:37px"></span></div>
+        </div>
+        <div class="columnas-etiquetas"><span>Hardware</span><span>Software</span><span>Red</span><span>Accesos</span><span>Impresoras</span><span>Correo</span></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2 class="tarjeta__titulo">Cumplimiento del plazo</h2>
+        <div class="cumplimiento__cifra"><strong>81%</strong><span>dentro del plazo</span></div>
+        <div class="barra-segmentada">
+          <span style="flex:38;background:var(--verde-punto)"></span>
+          <span style="flex:6;background:var(--amarillo-punto)"></span>
+          <span style="flex:3;background:var(--rojo-punto)"></span>
+        </div>
+        <ul class="leyenda">
+          <li><span class="punto" style="background:var(--verde-punto)"></span><span>Verde · a tiempo</span><span>38</span></li>
+          <li><span class="punto" style="background:var(--amarillo-punto)"></span><span>Amarillo · por vencer</span><span>6</span></li>
+          <li><span class="punto" style="background:var(--rojo-punto)"></span><span>Rojo · vencido</span><span>3</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="tarjeta tarjeta--sin-padding">
+      <h2 class="tarjeta__titulo" style="padding:1.5rem 1.5rem 0">Por responsable</h2>
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead><tr><th>técnico</th><th>asignados</th><th>en proceso</th><th>resueltos</th><th>a tiempo</th></tr></thead>
+          <tbody>
+              <tr><td class="fuerte">Luis Ramos</td><td>17</td><td>6</td><td>4</td><td>82%</td></tr>
+              <tr><td class="fuerte">Carla Mendoza</td><td>16</td><td>5</td><td>4</td><td>81%</td></tr>
+              <tr><td class="fuerte">Pedro Salazar</td><td>12</td><td>3</td><td>3</td><td>79%</td></tr>
+              <tr><td class="fuerte">Sin asignar</td><td>2</td><td>—</td><td>—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p>© 2026 Mesa de Ayuda TI · Sistema integrado para las 6 empresas del grupo</p>
+    <nav class="pie__links" aria-label="Enlaces de ayuda">
+      <a href="#">Manual de usuario</a>
+      <a href="#">Documentación API</a>
+      <a href="#">Soporte: [correo de soporte]</a>
+      <span class="version">v1.0.0</span>
+    </nav>
+  </footer>
+
+  <script src="JS/app.js"></script>
+</body>
+</html>
