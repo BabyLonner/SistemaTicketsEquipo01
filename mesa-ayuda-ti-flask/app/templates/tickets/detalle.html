@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% import "partials/_macros.html" as m with context %}
+{% block titulo %}{{ t.codigo }}{% endblock %}
+
+{% block contenido %}
+{% set s = t.sla %}
+<div>
+  <nav aria-label="Ruta"><ol class="breadcrumb small mb-2">
+    <li class="breadcrumb-item"><a href="{{ url_for('web.tickets') }}">Tickets</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ t.codigo }}</li>
+  </ol></nav>
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div class="d-flex flex-column gap-2">
+      <span class="code">{{ t.codigo }}</span>
+      <h1 class="page-title">{{ t.asunto }}</h1>
+      <div class="d-flex flex-wrap gap-2">
+        <span class="pill pill--neutro">{{ m.prioridad(t.prioridad, 'Prioridad ' ~ t.prioridad|lower) }}</span>
+        {{ m.estado(t.estado) }}
+        <span class="pill pill--neutro">{{ t.categoria }}</span>
+      </div>
+    </div>
+    <a class="btn btn-outline-primary" href="{{ url_for('web.tickets') }}">Volver al listado</a>
+  </div>
+</div>
+
+{% if not s.cerrado and s.nivel == 'rojo' %}
+<div class="alert alert-rojo d-flex align-items-center gap-2 mb-0" role="alert">
+  <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+  <span class="fw-semibold">{{ s.texto | replace('Vencido', 'Plazo vencido') }} · el máximo para prioridad {{ t.prioridad|lower }} es {{ s.horas_limite }} h</span>
+</div>
+{% elif not s.cerrado and s.nivel == 'amarillo' %}
+<div class="alert alert-amarillo d-flex align-items-center gap-2 mb-0" role="status">
+  <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+  <span class="fw-semibold">{{ s.texto }} para cumplir el plazo · el máximo para prioridad {{ t.prioridad|lower }} es {{ s.horas_limite }} h</span>
+</div>
+{% endif %}
+
+<div class="row g-4 align-items-start">
+  <div class="col-lg-8 d-flex flex-column gap-4">
+    <section class="card"><div class="card-body d-flex flex-column gap-3">
+      <h2 class="card-title-serif fs-5 mb-0">Descripción</h2>
+      <p class="mb-0 desc">{{ t.descripcion }}</p>
+      <div class="row g-3 pt-3 border-top">
+        <div class="col-6 col-md-3"><span class="fact-label">Solicitante</span><strong class="d-block small">{{ t.solicitante.nombre }}</strong></div>
+        <div class="col-6 col-md-3"><span class="fact-label">Empresa</span><strong class="d-block small">{{ t.empresa }}</strong></div>
+        <div class="col-6 col-md-3"><span class="fact-label">Área</span><strong class="d-block small">{{ t.solicitante.area or '—' }}</strong></div>
+        <div class="col-6 col-md-3"><span class="fact-label">Creado</span><span class="d-block code texto-base" title="{{ t.created_at|fecha }}">{{ t.created_at|fecha_corta }}</span></div>
+      </div>
+    </div></section>
+
+    <section class="card"><div class="card-body d-flex flex-column gap-3">
+      <div class="d-flex justify-content-between align-items-baseline">
+        <h2 class="card-title-serif fs-5 mb-0">Evidencias</h2>
+        <span class="mono">{{ t.fotos|length }} {{ 'foto' if t.fotos|length == 1 else 'fotos' }}</span>
+      </div>
+      {% if t.fotos %}
+      {% set primera = t.fotos[0] %}
+      <a class="visor" id="visor" href="{{ url_for('web.uploads', archivo=primera.archivo) }}" target="_blank" rel="noopener">
+        <img id="visor-img" src="{{ url_for('web.uploads', archivo=primera.archivo) }}" alt="Foto 1: {{ primera.nombre_original }}">
+      </a>
+      <div class="d-flex flex-wrap gap-2" role="group" aria-label="Elegir foto">
+        {% for f in t.fotos %}
+        <button type="button" class="miniatura" aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                data-foto="{{ url_for('web.uploads', archivo=f.archivo) }}" data-alt="Foto {{ loop.index }}: {{ f.nombre_original }}"
+                aria-label="Ver foto {{ loop.index }}">
+          <img src="{{ url_for('web.uploads', archivo=f.miniatura) }}" alt="" loading="lazy">
+        </button>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-secondary small mb-0 py-3 text-center">Este ticket no tiene fotos de evidencia.</p>
+      {% endif %}
+    </div></section>
+
+    <section class="card" id="linea-tiempo"><div class="card-body d-flex flex-column gap-3">
+      <h2 class="card-title-serif fs-5 mb-0">Línea de tiempo</h2>
+      <ol class="timeline">
+        {% for h in t.historial|reverse %}
+        <li>
+          <div class="timeline__rail"><span class="timeline__dot"></span><span class="timeline__line"></span></div>
+          <div class="timeline__body">
+            <span class="timeline__title">{{ h.titulo }}</span>
+            <span class="timeline__meta">{{ m.relativa(h.created_at) }} · {{ h.usuario.nombre }} ({{ h.usuario.rol }})</span>
+            {% if h.comentario %}<p class="comment">{{ h.comentario }}</p>{% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+      <form class="d-flex flex-column gap-2 pt-3 border-top" method="post" action="{{ url_for('web.ticket_comentar', ticket_id=t.id) }}" novalidate>
+        {{ m.csrf() }}
+        <label class="form-label mb-0" for="texto">Agregar comentario</label>
+        <textarea class="form-control{{ m.invalido(errores, 'texto') }}" id="texto" name="texto" rows="3"
+                  placeholder="Escribe una actualización o una pregunta">{{ valores.texto or '' }}</textarea>
+        {{ m.error_campo(errores, 'texto') }}
+        <button class="btn btn-outline-primary align-self-end" type="submit">Publicar comentario</button>
+      </form>
+    </div></section>
+  </div>
+
+  <div class="col-lg-4 d-flex flex-column gap-4">
+    {% set ancho = [100, (s.ratio * 100)|round|int]|min %}
+    <section class="card"><div class="card-body d-flex flex-column gap-2">
+      <span class="small text-secondary">{{ 'Tiempo de resolución' if s.cerrado else 'Tiempo transcurrido' }}</span>
+      <span class="sla-big sla-big--{{ s.nivel }}">{{ (s.transcurrido)|duracion }}</span>
+      <span class="small text-secondary">de {{ s.horas_limite }} h permitidas</span>
+      <div class="progress progress--{{ s.nivel }}" role="progressbar" aria-label="Plazo consumido"
+           aria-valuenow="{{ ancho }}" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar" style="width: {{ ancho }}%"></div>
+      </div>
+      <div class="semaforo">
+        <i class="s-verde{% if s.nivel == 'verde' %} on{% endif %}"></i>
+        <i class="s-amarillo{% if s.nivel == 'amarillo' %} on{% endif %}"></i>
+        <i class="s-rojo{% if s.nivel == 'rojo' %} on{% endif %}"></i>
+        <strong class="sla-big--{{ s.nivel }} small">
+          {%- if s.nivel == 'verde' %}{{ 'Verde · cumplido' if s.cerrado else 'Verde · dentro del plazo' }}
+          {%- elif s.nivel == 'amarillo' %}Amarillo · por vencer
+          {%- else %}{{ 'Rojo · fuera de plazo' if s.cerrado else 'Rojo · vencido' }}{% endif -%}
+        </strong>
+      </div>
+    </div></section>
+
+    <section class="card"><div class="card-body d-flex flex-column gap-3">
+      <h2 class="card-title-serif fs-5 mb-0">Asignación</h2>
+      {% if puede_asignar %}
+      <form class="d-flex flex-column gap-3" method="post" action="{{ url_for('web.ticket_asignar', ticket_id=t.id) }}">
+        {{ m.csrf() }}
+        <div>
+          <label class="form-label" for="tecnico_id">Técnico responsable</label>
+          <select class="form-select" id="tecnico_id" name="tecnico_id">
+            {% if not t.tecnico %}<option value="">Elige un técnico</option>{% endif %}
+            {% for tec in tecnicos %}<option value="{{ tec.id }}" {% if tec.id == t.tecnico_id %}selected{% endif %}>{{ tec.nombre }}</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-outline-primary" type="submit">{{ 'Reasignar' if t.tecnico else 'Asignar' }}</button>
+      </form>
+      {% else %}
+      <div class="d-flex align-items-center gap-3">
+        <span class="avatar avatar--md">{{ t.tecnico.iniciales if t.tecnico else '—' }}</span>
+        <div class="d-flex flex-column">
+          <span class="fw-semibold texto-titulo">{{ t.tecnico.nombre if t.tecnico else 'Sin asignar' }}</span>
+          <span class="small text-secondary">Técnico responsable</span>
+        </div>
+      </div>
+      {% endif %}
+    </div></section>
+
+    {% if puede_cambiar_estado %}
+    <form class="card" method="post" action="{{ url_for('web.ticket_estado', ticket_id=t.id) }}" novalidate>
+      <div class="card-body d-flex flex-column gap-3">
+        {{ m.csrf() }}
+        <h2 class="card-title-serif fs-5 mb-0">Cambiar estado</h2>
+        <div>
+          <label class="form-label" for="estado">Nuevo estado</label>
+          <select class="form-select{{ m.invalido(errores, 'estado') }}" id="estado" name="estado">
+            {% set elegido = valores.estado or t.estado %}
+            {% for e in estados %}<option {% if e == elegido %}selected{% endif %}>{{ e }}</option>{% endfor %}
+          </select>
+          {{ m.error_campo(errores, 'estado') }}
+        </div>
+        <div>
+          <label class="form-label" for="comentario">Comentario (obligatorio)</label>
+          <textarea class="form-control{{ m.invalido(errores, 'comentario') }}" id="comentario" name="comentario" rows="4"
+                    placeholder="Explica qué hiciste o por qué cambia el estado" required>{{ valores.comentario or '' }}</textarea>
+          {{ m.error_campo(errores, 'comentario') }}
+        </div>
+        <button class="btn btn-primary btn-lg" type="submit">Guardar cambio</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
