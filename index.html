@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="CSS/estilos.css">
 </head>
-<body>
+<body class="pagina-acceso">
   <header class="topbar topbar--simple">
     <a class="marca" href="index.html">
       <span class="marca__icono"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M9 10h6M9 14h6"/></svg></span>
@@ -20,10 +20,45 @@
 
   <main>
     <section class="bienvenida">
-      <div>
+      <div class="bienvenida__info">
         <p class="etiqueta-mono">acceso al sistema</p>
-        <h1 class="bienvenida__titulo">Reporta, sigue y resuelve incidencias en un solo lugar</h1>
-        <p class="bienvenida__texto">Plataforma de soporte de TI compartida por las seis empresas del grupo.</p>
+        <h1 class="bienvenida__titulo">Reporta, sigue y resuelve incidencias <em>en un solo lugar</em></h1>
+        <p class="bienvenida__texto">Plataforma de soporte de TI compartida por las seis empresas del grupo. Cada ticket tiene un responsable, un plazo y un historial.</p>
+
+        <div class="vista-previa" aria-hidden="true">
+          <div class="vista-previa__cabecera">
+            <span>cola de hoy</span>
+            <span class="vista-previa__vivo">en tiempo real</span>
+          </div>
+          <ul class="vista-previa__lista">
+          <li class="vista-ticket vista-ticket--rojo">
+            <span class="vista-ticket__codigo">TK-2291</span>
+            <span class="vista-ticket__asunto">Servidor de facturación caído<small>Angel Divino Bus</small></span>
+            <span class="barras barras--alta"><i></i><i></i><i></i></span>
+            <span class="sla sla--rojo">Vencido hace 40 min</span>
+          </li>
+          <li class="vista-ticket vista-ticket--amarillo">
+            <span class="vista-ticket__codigo">TK-2290</span>
+            <span class="vista-ticket__asunto">VPN no conecta desde almacén<small>Agrofutura</small></span>
+            <span class="barras barras--alta"><i></i><i></i><i></i></span>
+            <span class="sla sla--amarillo">Quedan 50 min</span>
+          </li>
+          <li class="vista-ticket vista-ticket--verde">
+            <span class="vista-ticket__codigo">TK-2288</span>
+            <span class="vista-ticket__asunto">Impresora de despacho sin tóner<small>Angel Divino Bus</small></span>
+            <span class="barras barras--media"><i></i><i></i><i></i></span>
+            <span class="sla sla--verde">Quedan 19 h</span>
+          </li>
+          </ul>
+        </div>
+
+        <dl class="cifras">
+          <div><dt>Empresas</dt><dd>6</dd></div>
+          <div><dt>Plazo prioridad alta</dt><dd>4 h</dd></div>
+          <div><dt>Plazo prioridad media</dt><dd>24 h</dd></div>
+          <div><dt>Plazo prioridad baja</dt><dd>72 h</dd></div>
+        </dl>
+
         <p class="perfiles__titulo">Perfiles del sistema</p>
         <div class="perfiles">
           <span class="pill pill--indigo pill--grande">Administrador</span>
@@ -32,21 +67,49 @@
         </div>
       </div>
 
-      <div class="tarjeta login-card">
+      <div class="tarjeta login-card" id="login-card">
         <h2 class="login-card__titulo">Iniciar sesión</h2>
         <p class="subtitulo">Usa las credenciales que te asignó el administrador.</p>
-        <form class="form" id="form-login">
+
+        <div id="login-alerta" class="alerta-login" role="alert" hidden>
+          <svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span id="login-alerta-texto"></span>
+        </div>
+
+        <form class="form" id="form-login" novalidate>
           <div class="campo">
             <label for="correo">Correo corporativo</label>
-            <input class="input" type="email" id="correo" placeholder="nombre@empresa.com" autocomplete="username">
+            <div class="campo__control">
+              <svg class="campo__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+              <input class="input input--icono" type="email" id="correo" name="correo" placeholder="nombre@empresa.com"
+                     autocomplete="username" maxlength="100" aria-describedby="error-correo" required>
+            </div>
+            <p class="campo__error" id="error-correo" aria-live="polite"></p>
           </div>
+
           <div class="campo">
-            <label for="clave">Contraseña</label>
-            <input class="input" type="password" id="clave" placeholder="••••••••" autocomplete="current-password">
+            <div class="campo__fila">
+              <label for="clave">Contraseña</label>
+              <button type="button" class="enlace-boton" id="olvide-clave">¿Olvidaste tu contraseña?</button>
+            </div>
+            <div class="campo__control">
+              <svg class="campo__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+              <input class="input input--icono input--con-boton" type="password" id="clave" name="clave" placeholder="Tu contraseña"
+                     autocomplete="current-password" maxlength="64" aria-describedby="error-clave aviso-mayus" required>
+              <button type="button" class="ver-clave" id="ver-clave" aria-label="Mostrar contraseña" aria-pressed="false">Mostrar</button>
+            </div>
+            <p class="campo__aviso" id="aviso-mayus" hidden>Bloq Mayús está activado.</p>
+            <p class="campo__error" id="error-clave" aria-live="polite"></p>
           </div>
-          <label class="check"><input type="checkbox"> Mantener la sesión iniciada</label>
-          <button type="submit" class="btn btn--primario btn--bloque">Ingresar</button>
-          <div class="nota">
+
+          <label class="check"><input type="checkbox" id="recordar"> Mantener la sesión iniciada</label>
+
+          <button type="submit" class="btn btn--primario btn--bloque btn--login" id="btn-ingresar">
+            <span class="btn__texto">Ingresar</span>
+            <span class="btn__carga" aria-hidden="true"></span>
+          </button>
+
+          <div class="nota" id="nota-cuentas">
             <svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
             <span>Las cuentas las crea el administrador. Si olvidaste tu contraseña, solicítale un restablecimiento.</span>
           </div>
