@@ -3,161 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TK-2291 · Mesa de Ayuda TI</title>
+  <title>Detalle del ticket | Soporte TI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/CSS/estilos.css">
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../static/CSS/detalle_ticket.css">
+  <script src="../static/JS/detalle_ticket.js" defer></script>
 </head>
 <body>
   <header class="topbar">
-    <a class="marca" href="index.html">
-      <span class="marca__icono"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M9 10h6M9 14h6"/></svg></span>
-      <span class="marca__nombre">Mesa de Ayuda TI</span>
+    <a class="brand" href="dashboard.html" aria-label="Soporte TI, inicio">
+      <span class="brand-mark" aria-hidden="true">⌁</span>
+      <span class="brand-copy"><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
     </a>
-    <nav class="nav" aria-label="Principal">
-      <a href="dashboard.html" class="nav__link">Dashboard</a>
-      <a href="tickets.html" class="nav__link is-activo" aria-current="page">Tickets</a>
-      <a href="nuevo_ticket.html" class="nav__link">Nuevo ticket</a>
-      <a href="usuarios.html" class="nav__link">Usuarios</a>
-    </nav>
-    <div class="topbar__derecha">
-      <label class="selector-empresa">
-        <span>Empresa</span>
-        <select class="select select--pill"><option>Todas las empresas</option><option>Grupo M&amp;M</option><option>EPSEL</option><option>Agrofutura</option><option>Angel Divino Bus</option><option>Robotic Air Systems</option><option>Atlántica</option></select>
-      </label>
-      <a href="notificaciones.html" class="campana" aria-label="Notificaciones: 3 sin leer">
-        <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-        <span class="campana__badge">3</span>
-      </a>
-      <div class="perfil">
-        <span class="avatar avatar--primario">AD</span>
-        <span class="perfil__datos"><strong>Ana Díaz</strong><small>Administrador</small></span>
-      </div>
-      <a href="index.html" class="icon-link" aria-label="Cerrar sesión" title="Cerrar sesión"><svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></a>
+    <label class="global-search"><span aria-hidden="true">⌕</span><input id="global-search" type="search" placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios"></label>
+    <div class="top-actions">
+      <a class="notification" href="notificaciones.html" aria-label="Notificaciones, 3 sin leer">♧<span class="notification-count">3</span></a>
+      <div class="profile"><span class="avatar">JP</span><span class="profile-copy"><strong>Juan Pérez</strong><small>Administrador</small></span><span class="chevron" aria-hidden="true">⌄</span></div>
     </div>
   </header>
 
-  <main class="contenedor">
-    <p class="migas"><a href="tickets.html">Tickets</a> / TK-2291</p>
-    <div class="detalle-cabecera">
-      <div>
-        <p class="etiqueta-mono">TK-2291</p>
-        <h1 class="titulo">Servidor de facturación caído</h1>
-        <div class="pills">
-          <span class="pill pill--blanca"><span class="barras barras--alta"><i></i><i></i><i></i></span> Prioridad alta</span>
-          <span class="pill pill--indigo">En proceso</span>
-          <span class="pill pill--blanca">Software</span>
+  <aside class="sidebar">
+    <nav class="sidebar-nav" aria-label="Menú principal">
+      <a class="side-link" href="dashboard.html"><span class="side-icon">▦</span>Dashboard</a>
+      <a class="side-link active" href="tickets.html" aria-current="page"><span class="side-icon">▤</span>Tickets</a>
+      <a class="side-link" href="nuevo_ticket.html"><span class="side-icon">⊕</span>Nuevo Ticket</a>
+      <a class="side-link" href="conocimientos.html"><span class="side-icon">▣</span>Base de Conocimientos</a>
+      <a class="side-link" href="usuarios.html"><span class="side-icon">♙</span>Usuarios</a>
+      <a class="side-link" href="asignacion.html"><span class="side-icon">♧</span>Asignación</a>
+      <a class="side-link" href="sla.html"><span class="side-icon">◷</span>SLA</a>
+      <a class="side-link" href="reportes.html"><span class="side-icon">▥</span>Reportes</a>
+      <a class="side-link" href="notificaciones.html"><span class="side-icon">♧</span>Notificaciones</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <a class="side-link" href="configuracion.html"><span class="side-icon">⚙</span>Configuración</a>
+      <a class="side-link" href="index.html"><span class="side-icon">⇥</span>Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="breadcrumb"><a href="tickets.html">Tickets</a><span>›</span><span id="breadcrumb-code">TK-2291</span></div>
+    <section class="page-heading">
+      <div class="ticket-title">
+        <span class="title-icon" aria-hidden="true">▤</span>
+        <div><h1><span id="ticket-code">TK-2291</span> - <span id="ticket-subject">Servidor de facturación caído</span></h1>
+          <div class="ticket-tags"><span class="badge priority-high" id="ticket-priority-tag">▥ Alta</span><span class="badge status-progress" id="ticket-status-tag">▤ En proceso</span><span class="badge category-tag">◉ Software</span><span class="badge category-tag">▦ Ángel Divino Bus</span></div>
         </div>
       </div>
-      <a href="tickets.html" class="btn btn--borde">Volver al listado</a>
-    </div>
+      <a class="btn-outline" href="tickets.html"><span aria-hidden="true">‹</span> Volver al listado</a>
+    </section>
 
-    <div class="alerta alerta--peligro" role="status">
-      <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-      <span>Plazo vencido hace 40 min · el máximo para prioridad alta es 4 h</span>
-    </div>
-
-    <div class="grid-lateral">
-      <div class="columna">
-        <section class="tarjeta">
-          <h2 class="tarjeta__titulo" style="margin-bottom:.6rem">Descripción</h2>
-          <p style="margin:0">Desde las 8:00 a. m. no se pueden emitir boletas ni facturas en las tres oficinas de venta de pasajes. El sistema muestra "No se puede conectar con el servidor".</p>
-          <div class="meta">
-            <div><small>Solicitante</small><strong>Rosa Villanueva</strong></div>
-            <div><small>Empresa</small><strong>Angel Divino Bus</strong></div>
-            <div><small>Área</small><strong>Administración</strong></div>
-            <div><small>Creado</small><strong class="mono">28/09 · 08:20</strong></div>
+    <div class="detail-layout">
+      <div class="left-column">
+        <section class="panel description-panel">
+          <h2><span class="section-icon">▤</span>Descripción</h2>
+          <p class="description-text" id="ticket-description">Desde las 8:00 a. m. no se pueden emitir boletas ni facturas en las tres oficinas de venta de pasajes. El sistema muestra el mensaje: “No se puede conectar con el servidor”.</p>
+          <div class="ticket-metadata">
+            <div class="metadata-item"><span class="metadata-icon">♙</span><div><small>Solicitante</small><strong>Rosa Villanueva</strong></div></div>
+            <div class="metadata-item"><span class="metadata-icon">▥</span><div><small>Área</small><strong>Administración</strong></div></div>
+            <div class="metadata-item"><span class="metadata-icon">▦</span><div><small>Empresa</small><strong>Ángel Divino Bus</strong></div></div>
+            <div class="metadata-item"><span class="metadata-icon">▦</span><div><small>Creado</small><strong>28/09/2026 08:20</strong></div></div>
           </div>
         </section>
 
-        <section class="tarjeta">
-          <div class="tarjeta__cabecera">
-            <h2 class="tarjeta__titulo">Evidencias</h2>
-            <span class="fotos__info">3 fotos</span>
-          </div>
-          <div class="evidencia-grande" id="evidencia-grande">
-            <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
-            <span id="evidencia-nombre">Imagen completa · error_servidor.jpg</span>
-          </div>
-          <div class="miniaturas">
-            <button type="button" class="is-activa" data-nombre="error_servidor.jpg">foto 1</button>
-            <button type="button" data-nombre="registro_eventos.jpg">foto 2</button>
-            <button type="button" data-nombre="pantalla_caja.jpg">foto 3</button>
+        <section class="panel evidence-panel">
+          <div class="panel-heading"><h2><span class="section-icon">↗</span>Evidencias</h2><span class="muted" id="file-count">3 archivos</span></div>
+          <div class="evidence-grid" id="evidence-grid">
+            <article class="evidence-card">
+              <button type="button" class="evidence-preview preview-error" data-preview="error" aria-label="Ver error_servidor.jpg"><span class="fake-window"><span class="window-bar">Ángel Divino <b>×</b></span><span class="error-symbol">×</span><strong>No se puede conectar<br>con el servidor</strong><span class="fake-button">Aceptar</span></span></button>
+              <div class="evidence-name">error_servidor.jpg</div>
+            </article>
+            <article class="evidence-card">
+              <button type="button" class="evidence-preview preview-log" data-preview="log" aria-label="Ver registro_eventos.jpg"><span class="log-line">ERROR 503 · Servicio no disponible</span><span class="log-line">database connection timeout</span><span class="log-line">server: billing-prod-02</span><span class="log-line">retry attempt: 05</span><span class="log-line">connection refused</span></button>
+              <div class="evidence-name">registro_eventos.jpg</div>
+            </article>
+            <article class="evidence-card">
+              <button type="button" class="evidence-preview preview-screen" data-preview="screen" aria-label="Ver pantalla_caja.jpg"><span class="mini-app"><span></span><span></span><span></span><b>Ventas</b><i></i><i></i><i></i></span></button>
+              <div class="evidence-name">pantalla_caja.jpg</div>
+            </article>
+            <label class="upload-zone"><input id="evidence-input" type="file" accept=".jpg,.jpeg,.png,.pdf,.docx" multiple hidden><span class="upload-icon">⇧</span><strong>Arrastra más archivos aquí</strong><span>o haz clic para seleccionar</span><small>Máx. 10 MB por archivo<br>(JPG, PNG, PDF, DOCX)</small></label>
           </div>
         </section>
 
-        <section class="tarjeta">
-          <h2 class="tarjeta__titulo">Línea de tiempo</h2>
-          <ol class="linea-tiempo">
-            <li class="evento">
-              <strong>Estado cambiado: Abierto → En proceso</strong>
-              <small>hace 3 h 10 min · Luis Ramos (Técnico)</small>
-              <p class="evento__comentario">Revisando los registros del servidor. El servicio se detuvo después de la actualización de anoche.</p>
-            </li>
-            <li class="evento">
-              <strong>Ticket asignado a Luis Ramos</strong>
-              <small>hace 4 h · Ana Díaz (Administrador)</small>
-            </li>
-            <li class="evento">
-              <strong>Ticket creado</strong>
-              <small>hace 4 h 40 min · Rosa Villanueva (Solicitante)</small>
-              <p class="evento__comentario">Se adjuntaron 3 fotos de evidencia.</p>
-            </li>
-          </ol>
+        <section class="panel activity-panel">
+          <div class="tabs" role="tablist" aria-label="Actividad del ticket">
+            <button type="button" class="tab active" data-tab="conversation" role="tab" aria-selected="true"><span>●</span>Conversación</button>
+            <button type="button" class="tab" data-tab="history" role="tab" aria-selected="false"><span>◷</span>Historial</button>
+            <button type="button" class="tab" data-tab="tasks" role="tab" aria-selected="false"><span>☑</span>Tareas</button>
+            <button type="button" class="tab" data-tab="files" role="tab" aria-selected="false"><span>↗</span>Archivos</button>
+          </div>
+          <div class="tab-content" id="tab-conversation" role="tabpanel">
+            <div class="conversation-list" id="conversation-list">
+              <article class="comment"><span class="comment-avatar avatar-requester">RV</span><div class="comment-body"><div class="comment-meta"><strong>Rosa Villanueva <small>(Solicitante)</small></strong><time>28/09/2026 08:20</time><button type="button" class="comment-more" aria-label="Más opciones">···</button></div><p>Se presenta el error en las tres oficinas. Adjunto captura de pantalla.</p></div></article>
+              <article class="comment"><span class="comment-avatar avatar-tech">LR</span><div class="comment-body"><div class="comment-meta"><strong>Luis Ramos <small>(Técnico)</small></strong><time>28/09/2026 09:15</time><button type="button" class="comment-more" aria-label="Más opciones">···</button></div><p>Revisando los logs del servidor. Parece un fallo en el servicio de base de datos.</p></div></article>
+              <article class="comment"><span class="comment-avatar avatar-requester">RV</span><div class="comment-body"><div class="comment-meta"><strong>Rosa Villanueva <small>(Solicitante)</small></strong><time>28/09/2026 09:32</time><button type="button" class="comment-more" aria-label="Más opciones">···</button></div><p>En la agencia de Piura el sistema ya responde, pero en Lima sigue con el mismo error.</p></div></article>
+            </div>
+            <form class="reply-form" id="reply-form"><span class="comment-avatar avatar-admin">JP</span><label class="reply-input"><span class="sr-only">Escribe un comentario</span><input id="reply-text" type="text" maxlength="1000" placeholder="Escribe un comentario..." required><label class="attach-button" title="Adjuntar archivo">↗<input id="reply-file" type="file" hidden></label></label><button class="btn-primary send-button" type="submit"><span>➤</span>Enviar</button></form>
+          </div>
+          <div class="tab-content alternate-content" id="tab-history" role="tabpanel" hidden>
+            <div class="history-item"><span class="history-dot"></span><div><strong>Ticket asignado a Luis Ramos</strong><p>Asignación realizada por Juan Pérez.</p><time>28/09/2026 · 08:45</time></div></div>
+            <div class="history-item"><span class="history-dot"></span><div><strong>Prioridad establecida en Alta</strong><p>La incidencia afecta la emisión de comprobantes.</p><time>28/09/2026 · 08:22</time></div></div>
+            <div class="history-item"><span class="history-dot"></span><div><strong>Ticket creado por Rosa Villanueva</strong><p>Estado inicial: Abierto.</p><time>28/09/2026 · 08:20</time></div></div>
+          </div>
+          <div class="tab-content alternate-content" id="tab-tasks" role="tabpanel" hidden>
+            <form class="task-form" id="task-form"><input id="task-text" type="text" placeholder="Escribe una nueva tarea..." required><button class="btn-primary" type="submit">＋ Agregar</button></form>
+            <ul class="task-list" id="task-list"><li><label><input type="checkbox"> Revisar conexión con base de datos</label><span>En curso</span></li><li><label><input type="checkbox"> Validar emisión de boletas</label><span>Pendiente</span></li></ul>
+          </div>
+          <div class="tab-content alternate-content" id="tab-files" role="tabpanel" hidden><ul class="file-list" id="file-list"><li>▧ <span>error_servidor.jpg</span><small>Imagen adjunta</small></li><li>▧ <span>registro_eventos.jpg</span><small>Imagen adjunta</small></li><li>▧ <span>pantalla_caja.jpg</span><small>Imagen adjunta</small></li></ul></div>
         </section>
       </div>
 
-      <div class="columna">
-        <section class="tarjeta">
-          <p class="tiempo__label">Tiempo transcurrido</p>
-          <p class="tiempo__valor">4 h 40 min</p>
-          <p class="tiempo__label">de 4 h permitidas</p>
-          <div class="progreso"><span style="width:100%"></span></div>
-          <div class="semaforo-mini">
-            <span class="punto" style="background:var(--verde-suave)"></span>
-            <span class="punto" style="background:var(--amarillo-suave)"></span>
-            <span class="punto" style="background:var(--rojo)"></span>
-            <span>Rojo · vencido</span>
-          </div>
+      <aside class="right-column">
+        <section class="panel side-panel status-panel">
+          <h2><span class="section-icon">◷</span>Estado actual</h2>
+          <form id="ticket-properties">
+            <label class="property-row"><span class="property-label"><span>●</span>Estado</span><select id="property-status"><option>Abierto</option><option selected>En proceso</option><option>Resuelto</option><option>Cerrado</option></select></label>
+            <label class="property-row"><span class="property-label"><span>▥</span>Prioridad</span><select id="property-priority"><option>Alta</option><option>Media</option><option>Baja</option></select></label>
+            <label class="property-row"><span class="property-label"><span>▱</span>Categoría</span><select id="property-category"><option>Software</option><option>Hardware</option><option>Red e internet</option><option>Accesos y cuentas</option><option>Impresoras</option></select></label>
+            <label class="property-row"><span class="property-label"><span>♙</span>Técnico asignado</span><select id="property-technician"><option>Luis Ramos</option><option>Carla Mendoza</option><option>Pedro Salazar</option><option>Sin asignar</option></select></label>
+            <button class="btn-primary save-button" type="submit"><span>▣</span>Guardar cambios</button>
+          </form>
         </section>
 
-        <form class="tarjeta form">
-          <h2 class="tarjeta__titulo" style="margin:0">Asignación</h2>
-          <div class="campo">
-            <label for="tecnico">Técnico responsable</label>
-            <select class="select" id="tecnico"><option>Luis Ramos</option><option>Carla Mendoza</option><option>Pedro Salazar</option></select>
-          </div>
-          <button type="submit" class="btn btn--borde btn--bloque">Reasignar</button>
-        </form>
+        <section class="panel side-panel sla-panel">
+          <h2><span class="section-icon">◷</span>SLA y tiempos</h2>
+          <div class="sla-warning-box"><span>!</span><div><strong id="sla-title">Plazo vencido</strong><small>El máximo para prioridad alta es 4 h.</small></div></div>
+          <div class="sla-stats"><div><small>Tiempo transcurrido</small><strong class="time-danger">◷ <span>6 h 40 min</span></strong></div><div><small>Tiempo límite (SLA)</small><strong class="time-muted">◷ <span id="sla-limit">4 h</span></strong></div></div>
+          <p class="sla-note" id="sla-note">Venció hace 2 h 40 min.</p>
+          <div class="sla-progress"><span id="sla-progress-bar"></span></div>
+          <div class="sla-percent" id="sla-percent">167%</div>
+        </section>
 
-        <form class="tarjeta form">
-          <h2 class="tarjeta__titulo" style="margin:0">Cambiar estado</h2>
-          <div class="campo">
-            <label for="nuevo-estado">Nuevo estado</label>
-            <select class="select" id="nuevo-estado"><option>Abierto</option><option selected>En proceso</option><option>Resuelto</option><option>Cerrado</option></select>
-          </div>
-          <div class="campo">
-            <label for="comentario">Comentario (obligatorio)</label>
-            <textarea class="textarea textarea--error" id="comentario" placeholder="Explica qué hiciste o por qué cambia el estado"></textarea>
-            <p class="ayuda-error">Escribe un comentario para poder guardar el cambio.</p>
-          </div>
-          <button type="submit" class="btn btn--primario btn--bloque">Guardar cambio</button>
-        </form>
-      </div>
+        <section class="panel side-panel actions-panel">
+          <h2><span class="section-icon">⚙</span>Acciones</h2>
+          <button class="action-button" type="button" data-action="reply"><span>▱</span>Responder</button>
+          <button class="action-button" type="button" data-action="task"><span>☑</span>Agregar tarea</button>
+          <label class="action-button action-select"><span>⟳</span>Cambiar estado<select id="quick-status" aria-label="Cambiar estado rápidamente"><option value="">Seleccionar estado...</option><option>Abierto</option><option>En proceso</option><option>Resuelto</option><option>Cerrado</option></select><b>⌄</b></label>
+          <button class="action-button" type="button" data-action="assign"><span>♙</span>Asignar a otro técnico</button>
+          <button class="action-button action-danger" type="button" id="close-ticket"><span>▣</span>Cerrar ticket</button>
+        </section>
+      </aside>
     </div>
+    <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span id="page-message">Datos de demostración · pendiente de conectar con Flask</span></footer>
   </main>
 
-  <footer class="pie">
-    <p>© 2026 Mesa de Ayuda TI · Sistema integrado para las 6 empresas del grupo</p>
-    <nav class="pie__links" aria-label="Enlaces de ayuda">
-      <a href="#">Manual de usuario</a>
-      <a href="#">Documentación API</a>
-      <a href="#">Soporte: [correo de soporte]</a>
-      <span class="version">v1.0.0</span>
-    </nav>
-  </footer>
-
-  <script src="../static/JS/app.js"></script>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="preview-modal" id="preview-modal" role="dialog" aria-modal="true" aria-label="Vista previa de evidencia" hidden><div class="preview-dialog"><button type="button" id="close-preview" aria-label="Cerrar vista previa">×</button><div id="preview-content"></div><p id="preview-caption"></p></div></div>
 </body>
 </html>
