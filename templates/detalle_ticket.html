@@ -88,7 +88,7 @@
         <section class="panel activity-panel">
           <div class="tabs" role="tablist" aria-label="Actividad del ticket">
             <button type="button" class="tab active" data-tab="conversation" role="tab" aria-selected="true"><span>●</span>Conversación</button>
-            <button type="button" class="tab" data-tab="history" role="tab" aria-selected="false"><span>◷</span>Historial</button>
+            <button type="button" class="tab" data-tab="history" role="tab" aria-selected="false"><span>◷</span>Historial <b class="tab-count" id="history-tab-count"></b></button>
             <button type="button" class="tab" data-tab="tasks" role="tab" aria-selected="false"><span>☑</span>Tareas</button>
             <button type="button" class="tab" data-tab="files" role="tab" aria-selected="false"><span>↗</span>Archivos</button>
           </div>
@@ -101,9 +101,9 @@
             <form class="reply-form" id="reply-form"><span class="comment-avatar avatar-admin">JP</span><label class="reply-input"><span class="sr-only">Escribe un comentario</span><input id="reply-text" type="text" maxlength="1000" placeholder="Escribe un comentario..." required><label class="attach-button" title="Adjuntar archivo">↗<input id="reply-file" type="file" hidden></label></label><button class="btn-primary send-button" type="submit"><span>➤</span>Enviar</button></form>
           </div>
           <div class="tab-content alternate-content" id="tab-history" role="tabpanel" hidden>
-            <div class="history-item"><span class="history-dot"></span><div><strong>Ticket asignado a Luis Ramos</strong><p>Asignación realizada por Juan Pérez.</p><time>28/09/2026 · 08:45</time></div></div>
-            <div class="history-item"><span class="history-dot"></span><div><strong>Prioridad establecida en Alta</strong><p>La incidencia afecta la emisión de comprobantes.</p><time>28/09/2026 · 08:22</time></div></div>
-            <div class="history-item"><span class="history-dot"></span><div><strong>Ticket creado por Rosa Villanueva</strong><p>Estado inicial: Abierto.</p><time>28/09/2026 · 08:20</time></div></div>
+            <!-- MÓDULO 3: línea de tiempo generada por detalle_ticket.js (tabla ticket_historial) -->
+            <div class="history-head"><strong>Línea de tiempo</strong><span class="muted" id="history-count"></span></div>
+            <ol class="timeline" id="history-timeline"></ol>
           </div>
           <div class="tab-content alternate-content" id="tab-tasks" role="tabpanel" hidden>
             <form class="task-form" id="task-form"><input id="task-text" type="text" placeholder="Escribe una nueva tarea..." required><button class="btn-primary" type="submit">＋ Agregar</button></form>
@@ -147,6 +147,21 @@
     <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span id="page-message">Datos de demostración · pendiente de conectar con Flask</span></footer>
   </main>
 
+  <!-- MÓDULO 3: cambio de estado con comentario obligatorio -->
+  <div class="status-modal" id="status-modal" role="dialog" aria-modal="true" aria-labelledby="status-modal-title" hidden>
+    <form class="status-dialog" id="status-form" novalidate>
+      <button type="button" class="status-close" data-close aria-label="Cerrar">×</button>
+      <h2 id="status-modal-title"><span class="section-icon">⟳</span>Confirmar cambio de estado</h2>
+      <div class="status-transition"><div><small>Estado actual</small><span class="badge" id="modal-status-from">—</span></div><span class="transition-arrow" aria-hidden="true">→</span><div><small>Nuevo estado</small><span class="badge" id="modal-status-to">—</span></div></div>
+      <p class="status-extra" id="modal-extra" hidden></p>
+      <label class="status-field"><span>Comentario del técnico <b>*</b></span>
+        <textarea id="status-comment" rows="4" maxlength="500" placeholder="Describe qué se hizo o por qué cambia el estado (mínimo 10 caracteres)."></textarea>
+        <small class="char-count"><span id="status-comment-count">0</span>/500</small>
+      </label>
+      <p class="status-error" id="status-comment-error"></p>
+      <div class="status-actions"><button type="button" class="btn-outline" data-close>Cancelar</button><button type="submit" class="btn-primary"><span>✓</span>Guardar cambio</button></div>
+    </form>
+  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="preview-modal" id="preview-modal" role="dialog" aria-modal="true" aria-label="Vista previa de evidencia" hidden><div class="preview-dialog"><button type="button" id="close-preview" aria-label="Cerrar vista previa">×</button><div id="preview-content"></div><p id="preview-caption"></p></div></div>
 </body>
