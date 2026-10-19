@@ -37,26 +37,234 @@ document.addEventListener("DOMContentLoaded", () => {
     }[value] || "priority-medium");
   }
 
+  /* =========================================================
+     MÓDULO 3 — Asignación, estados e historial (detalle)
+     - Cada cambio de estado pide comentario obligatorio.
+     - Solo se permiten transiciones válidas.
+     - La pestaña "Historial" muestra la línea de tiempo con
+       fechas relativas. Comparte datos con asignacion.html
+       mediante localStorage (demo). API: reemplazar por fetch.
+     ========================================================= */
+  const STORE_KEY = "soporteti_modulo3";
+  const CURRENT_USER = { name: "Juan Pérez", role: "Administrador" };
+  const MIN_COMMENT = 10;
+  const TRANSITIONS = {
+    "Abierto": ["En proceso"],
+    "En proceso": ["Resuelto"],
+    "Resuelto": ["Cerrado", "En proceso"],
+    "Cerrado": []
+  };
+  const STATUS_CLASS = { "Abierto": "status-open", "En proceso": "status-progress", "Resuelto": "status-resolved", "Cerrado": "status-closed" };
+  const ticketCode = document.getElementById("ticket-code").textContent.trim();
+  const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+
+  function loadStore() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (Array.isArray(saved)) return saved;
+    } catch (e) { /* sin localStorage */ }
+    return [];
+  }
+  const store = loadStore();
+  let ticket = store.find((t) => t.code === ticketCode);
+  if (!ticket) {
+    /* API: GET /api/tickets/<code>/historial */
+    ticket = {
+      code: ticketCode, subject: document.getElementById("ticket-subject").textContent.trim(), category: "Software",
+      requester: "Rosa Villanueva", company: "Ángel Divino Bus", priority: prioritySelect.value, status: statusSelect.value,
+      technician: technicianSelect.value === "Sin asignar" ? null : technicianSelect.value,
+      history: [
+        { type: "created", to: "Abierto", by: "Rosa Villanueva", role: "Solicitante", comment: "Ticket registrado desde el formulario.", at: ago(400) },
+        { type: "assign", tech: "Luis Ramos", by: "Juan Pérez", role: "Administrador", comment: "Se asigna a Luis por ser responsable de los servidores.", at: ago(375) },
+        { type: "status", from: "Abierto", to: "En proceso", by: "Luis Ramos", role: "Técnico", comment: "Revisando los logs del servidor. Parece un fallo en el servicio de base de datos.", at: ago(345) }
+      ]
+    };
+    store.push(ticket);
+  }
+  function saveStore() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* sin localStorage */ }
+  }
+  saveStore();
+
+  const escapeHTML = (text) => String(text ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function absoluteTime(iso) {
+    const d = new Date(iso);
+    const p = (n) => String(n).padStart(2, "0");
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+  function relativeTime(iso) {
+    const min = Math.floor(Math.max(0, Date.now() - new Date(iso).getTime()) / 60000);
+    if (min < 1) return "hace un momento";
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `hace ${h} h`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return "ayer";
+    if (d < 7) return `hace ${d} días`;
+    return absoluteTime(iso).split(" ")[0];
+  }
+  function describe(entry) {
+    if (entry.type === "created") return { icon: "＋", cls: "t-open", title: "Ticket creado · estado inicial Abierto" };
+    if (entry.type === "assign") return { icon: "♙", cls: "t-assign", title: `Asignado a ${entry.tech}` };
+    if (entry.type === "reassign") return { icon: "⇄", cls: "t-assign", title: `Reasignado de ${entry.fromTech} a ${entry.tech}` };
+    const reopen = entry.from === "Resuelto" && entry.to === "En proceso";
+    return {
+      icon: { "En proceso": "⟳", "Resuelto": "✓", "Cerrado": "■", "Abierto": "!" }[entry.to] || "●",
+      cls: { "Abierto": "t-open", "En proceso": "t-progress", "Resuelto": "t-resolved", "Cerrado": "t-closed" }[entry.to] || "",
+      title: reopen ? "Ticket reabierto · Resuelto → En proceso" : `Estado: ${entry.from} → ${entry.to}`
+    };
+  }
+
+  const timeline = document.getElementById("history-timeline");
+  function renderHistory(highlightLast) {
+    const items = [...ticket.history].reverse().map((entry, index) => {
+      const info = describe(entry);
+      const li = document.createElement("li");
+      li.className = "tl-item" + (highlightLast && index === 0 ? " is-new" : "");
+      li.innerHTML = `<span class="tl-icon ${info.cls}" aria-hidden="true">${info.icon}</span>
+        <div class="tl-body"><div class="tl-title">${escapeHTML(info.title)}</div>
+          <div class="tl-meta"><span>${escapeHTML(entry.by)} (${escapeHTML(entry.role)})</span><time datetime="${entry.at}" title="${absoluteTime(entry.at)}" data-relative>${relativeTime(entry.at)}</time></div>
+          ${entry.comment ? `<p class="tl-comment">${escapeHTML(entry.comment)}</p>` : ""}</div>`;
+      return li;
+    });
+    timeline.replaceChildren(...items);
+    document.getElementById("history-count").textContent = `${ticket.history.length} movimientos`;
+    document.getElementById("history-tab-count").textContent = ticket.history.length;
+  }
+  setInterval(() => document.querySelectorAll("[data-relative]").forEach((el) => { el.textContent = relativeTime(el.getAttribute("datetime")); }), 60000);
+
+  function syncControls() {
+    statusSelect.value = ticket.status;
+    technicianSelect.value = ticket.technician || "Sin asignar";
+    updateStatusTag(ticket.status);
+  }
+  syncControls();
+  renderHistory(false);
+
+  function showHistoryTab() {
+    const tab = document.querySelector('[data-tab="history"]');
+    if (tab) tab.click();
+  }
+
+  function recordTechnician(newTech, comment, at) {
+    if (newTech === ticket.technician) return false;
+    ticket.history.push(ticket.technician
+      ? { type: "reassign", fromTech: ticket.technician, tech: newTech, by: CURRENT_USER.name, role: CURRENT_USER.role, comment, at }
+      : { type: "assign", tech: newTech, by: CURRENT_USER.name, role: CURRENT_USER.role, comment, at });
+    ticket.technician = newTech;
+    return true;
+  }
+
+  /* ----- Modal de cambio de estado ----- */
+  const statusModal = document.getElementById("status-modal");
+  const statusComment = document.getElementById("status-comment");
+  const commentError = document.getElementById("status-comment-error");
+  let pending = null;
+
+  function requestStatusChange(newStatus, newTech) {
+    const tech = newTech === undefined ? ticket.technician : newTech;
+    if (!newStatus || newStatus === ticket.status) return;
+    if (!TRANSITIONS[ticket.status].includes(newStatus)) {
+      const allowed = TRANSITIONS[ticket.status];
+      notify(allowed.length
+        ? `No se puede pasar de ${ticket.status} a ${newStatus}. Desde ${ticket.status} solo se permite: ${allowed.join(" o ")}.`
+        : "El ticket está cerrado; ya no admite cambios de estado.");
+      syncControls();
+      return;
+    }
+    if (newStatus === "En proceso" && !tech) {
+      notify("Primero asigna un técnico para pasar el ticket a En proceso.");
+      syncControls();
+      return;
+    }
+    pending = { status: newStatus, tech };
+    const from = document.getElementById("modal-status-from");
+    const to = document.getElementById("modal-status-to");
+    from.textContent = ticket.status; from.className = `badge ${STATUS_CLASS[ticket.status]}`;
+    to.textContent = newStatus; to.className = `badge ${STATUS_CLASS[newStatus]}`;
+    const extra = document.getElementById("modal-extra");
+    extra.hidden = !(tech && tech !== ticket.technician);
+    extra.textContent = extra.hidden ? "" : `También se asignará el ticket a ${tech}.`;
+    statusComment.value = "";
+    statusComment.setAttribute("aria-invalid", "false");
+    document.getElementById("status-comment-count").textContent = "0";
+    commentError.textContent = "";
+    statusModal.hidden = false;
+    statusComment.focus();
+  }
+
+  function closeStatusModal() {
+    statusModal.hidden = true;
+    pending = null;
+    syncControls();
+  }
+  statusModal.addEventListener("click", (event) => {
+    if (event.target === statusModal || event.target.closest("[data-close]")) closeStatusModal();
+  });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !statusModal.hidden) closeStatusModal(); });
+  statusComment.addEventListener("input", () => {
+    document.getElementById("status-comment-count").textContent = statusComment.value.length;
+    if (statusComment.value.trim().length >= MIN_COMMENT) { commentError.textContent = ""; statusComment.setAttribute("aria-invalid", "false"); }
+  });
+
+  document.getElementById("status-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const comment = statusComment.value.trim();
+    if (comment.length < MIN_COMMENT) {
+      commentError.textContent = `El comentario es obligatorio (mínimo ${MIN_COMMENT} caracteres).`;
+      statusComment.setAttribute("aria-invalid", "true");
+      statusComment.focus();
+      return;
+    }
+    /* API: PUT /api/tickets/<code>/estado  { estado, comentario } → INSERT en ticket_historial */
+    const at = new Date().toISOString();
+    if (pending.tech) recordTechnician(pending.tech, comment, at);
+    const from = ticket.status;
+    ticket.status = pending.status;
+    ticket.history.push({ type: "status", from, to: ticket.status, by: CURRENT_USER.name, role: CURRENT_USER.role, comment, at });
+    saveStore();
+    statusModal.hidden = true;
+    pending = null;
+    syncControls();
+    renderHistory(true);
+    showHistoryTab();
+    notify(`Estado cambiado: ${from} → ${ticket.status}. Registrado en el historial.`);
+  });
+
+  /* ----- Formulario "Estado actual" ----- */
   document.getElementById("ticket-properties").addEventListener("submit", (event) => {
     event.preventDefault();
-    updateStatusTag(statusSelect.value);
     updatePriorityTag(prioritySelect.value);
     document.getElementById("sla-limit").textContent = prioritySelect.value === "Alta" ? "4 h" : prioritySelect.value === "Media" ? "8 h" : "24 h";
-    notify(`Cambios preparados: ${statusSelect.value}, prioridad ${prioritySelect.value}, técnico ${technicianSelect.value}. Falta guardar en el backend.`);
+    const newTech = technicianSelect.value === "Sin asignar" ? null : technicianSelect.value;
+    if (!newTech && ticket.technician) {
+      notify("Un ticket asignado no puede quedar sin técnico. Elige otro técnico para reasignarlo.");
+      technicianSelect.value = ticket.technician;
+      return;
+    }
+    if (statusSelect.value !== ticket.status) {
+      requestStatusChange(statusSelect.value, newTech);
+      return;
+    }
+    if (newTech && recordTechnician(newTech, "", new Date().toISOString())) {
+      saveStore();
+      renderHistory(true);
+      notify(`Ticket asignado a ${newTech}. Registrado en el historial.`);
+      return;
+    }
+    notify(`Cambios preparados: prioridad ${prioritySelect.value}, categoría ${categorySelect.value}. Falta guardar en el backend.`);
   });
 
   document.getElementById("quick-status").addEventListener("change", (event) => {
-    if (!event.target.value) return;
-    statusSelect.value = event.target.value;
-    updateStatusTag(event.target.value);
-    notify(`Estado cambiado visualmente a: ${event.target.value}. Pulsa “Guardar cambios” para confirmar en la interfaz.`);
+    const value = event.target.value;
     event.target.value = "";
+    requestStatusChange(value);
   });
 
   document.getElementById("close-ticket").addEventListener("click", () => {
-    statusSelect.value = "Cerrado";
-    updateStatusTag("Cerrado");
-    notify("El ticket aparece como cerrado. Este cambio aún no se guarda en la base de datos.");
+    if (ticket.status === "Cerrado") { notify("El ticket ya está cerrado."); return; }
+    if (ticket.status !== "Resuelto") { notify("Para cerrar el ticket primero debe estar en estado Resuelto."); return; }
+    requestStatusChange("Cerrado");
   });
 
   document.querySelectorAll(".tab").forEach((tab) => {

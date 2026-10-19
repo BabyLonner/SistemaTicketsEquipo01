@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asignación y estados | Soporte TI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../static/CSS/asignacion.css">
+  <script src="../static/JS/asignacion.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="dashboard.html" aria-label="Soporte TI, inicio">
+      <span class="brand-mark" aria-hidden="true">⌁</span>
+      <span class="brand-copy"><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
+    </a>
+
+    <label class="global-search">
+      <span aria-hidden="true">⌕</span>
+      <input id="global-search" type="search" placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios">
+    </label>
+
+    <div class="top-actions">
+      <a class="notification" href="notificaciones.html" aria-label="Notificaciones, 3 sin leer">♧<span class="notification-count">3</span></a>
+      <div class="profile">
+        <span class="avatar">AD</span>
+        <span class="profile-copy"><strong>Ana Díaz</strong><small>Administrador</small></span>
+        <span class="chevron" aria-hidden="true">⌄</span>
+      </div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <nav class="sidebar-nav" aria-label="Menú principal">
+      <a class="side-link" href="dashboard.html"><span class="side-icon">▦</span>Dashboard</a>
+      <a class="side-link" href="tickets.html"><span class="side-icon">▤</span>Tickets</a>
+      <a class="side-link" href="nuevo_ticket.html"><span class="side-icon">⊕</span>Nuevo Ticket</a>
+      <a class="side-link" href="conocimientos.html"><span class="side-icon">▣</span>Base de Conocimientos</a>
+      <a class="side-link" href="usuarios.html"><span class="side-icon">♙</span>Usuarios</a>
+      <a class="side-link active" href="asignacion.html" aria-current="page"><span class="side-icon">♧</span>Asignación</a>
+      <a class="side-link" href="sla.html"><span class="side-icon">◷</span>SLA</a>
+      <a class="side-link" href="reportes.html"><span class="side-icon">▥</span>Reportes</a>
+      <a class="side-link" href="notificaciones.html"><span class="side-icon">♧</span>Notificaciones</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <a class="side-link" href="configuracion.html"><span class="side-icon">⚙</span>Configuración</a>
+      <a class="side-link" href="index.html"><span class="side-icon">⇥</span>Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="page-heading">
+      <div class="heading-copy">
+        <div class="title-line"><span class="title-icon" aria-hidden="true">♧</span><h1>Asignación y estados</h1></div>
+        <p>Asigna tickets a los técnicos, cambia su estado y revisa el historial de cada caso</p>
+      </div>
+      <a class="btn-outline" href="tickets.html"><span aria-hidden="true">▤</span> Ir al listado de tickets</a>
+    </section>
+
+    <!-- Indicadores del módulo: se recalculan desde asignacion.js -->
+    <section class="metrics" aria-label="Resumen de asignación">
+      <article class="metric metric-red">
+        <span class="metric-icon">!</span>
+        <div class="metric-data"><strong id="metric-unassigned">0</strong><span>Sin asignar</span></div>
+        <small>Esperando técnico</small>
+      </article>
+      <article class="metric metric-blue">
+        <span class="metric-icon">⟳</span>
+        <div class="metric-data"><strong id="metric-progress">0</strong><span>En proceso</span></div>
+        <small>Atendiéndose ahora</small>
+      </article>
+      <article class="metric metric-green">
+        <span class="metric-icon">✓</span>
+        <div class="metric-data"><strong id="metric-resolved">0</strong><span>Resueltos</span></div>
+        <small>Pendientes de cierre</small>
+      </article>
+      <article class="metric metric-slate">
+        <span class="metric-icon">◷</span>
+        <div class="metric-data"><strong id="metric-changes">0</strong><span>Movimientos hoy</span></div>
+        <small>Registrados en el historial</small>
+      </article>
+    </section>
+
+    <div class="assign-layout">
+      <div class="main-column">
+        <form class="filters-panel" id="assign-filters">
+          <label class="search-filter">
+            <span aria-hidden="true">⌕</span>
+            <input id="assign-search" type="search" placeholder="Buscar por código, asunto o solicitante" aria-label="Buscar por código, asunto o solicitante">
+          </label>
+          <label class="select-filter"><span class="filter-label">Estado</span>
+            <select id="assign-status-filter" aria-label="Filtrar por estado">
+              <option value="">Todos</option><option>Abierto</option><option>En proceso</option><option>Resuelto</option><option>Cerrado</option>
+            </select>
+          </label>
+          <label class="select-filter"><span class="filter-label">Técnico</span>
+            <select id="assign-tech-filter" aria-label="Filtrar por técnico">
+              <option value="">Todos</option><option>Sin asignar</option><option>Luis Ramos</option><option>Carla Mendoza</option><option>Pedro Salazar</option>
+            </select>
+          </label>
+          <button class="filter-reset" id="assign-reset" type="button" title="Limpiar filtros" aria-label="Limpiar filtros">↻</button>
+        </form>
+
+        <section class="table-panel" aria-label="Bandeja de asignación">
+          <div class="panel-heading">
+            <h2><span class="section-icon">▤</span>Bandeja de tickets</h2>
+            <div class="quick-tabs" role="tablist" aria-label="Vista rápida">
+              <button type="button" class="quick-tab active" data-view="todos" role="tab" aria-selected="true">Todos</button>
+              <button type="button" class="quick-tab" data-view="sin-asignar" role="tab" aria-selected="false">Sin asignar <b id="tab-unassigned-count">0</b></button>
+              <button type="button" class="quick-tab" data-view="activos" role="tab" aria-selected="false">Activos</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="assign-table">
+              <thead>
+                <tr><th>Código</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Técnico</th><th>Actualizado</th><th>Acciones</th></tr>
+              </thead>
+              <tbody id="assign-body"><!-- Filas generadas por asignacion.js --></tbody>
+            </table>
+            <div class="empty-state" id="assign-empty" hidden>No hay tickets con esos filtros.</div>
+          </div>
+          <div class="table-footer"><span id="assign-count">Mostrando 0 tickets</span><span class="legend"><i class="dot dot-open"></i>Abierto <i class="dot dot-progress"></i>En proceso <i class="dot dot-resolved"></i>Resuelto <i class="dot dot-closed"></i>Cerrado</span></div>
+        </section>
+
+        <section class="panel flow-panel" aria-label="Flujo de estados permitido">
+          <h2><span class="section-icon">⟳</span>Flujo de estados permitido</h2>
+          <ol class="state-flow">
+            <li class="flow-step flow-open"><strong>Abierto</strong><small>Ticket registrado</small></li>
+            <li class="flow-arrow" aria-hidden="true">→</li>
+            <li class="flow-step flow-progress"><strong>En proceso</strong><small>Requiere técnico</small></li>
+            <li class="flow-arrow" aria-hidden="true">→</li>
+            <li class="flow-step flow-resolved"><strong>Resuelto</strong><small>Solución aplicada</small></li>
+            <li class="flow-arrow" aria-hidden="true">→</li>
+            <li class="flow-step flow-closed"><strong>Cerrado</strong><small>Estado final</small></li>
+          </ol>
+          <p class="flow-note">Cada cambio exige un comentario del técnico y queda registrado en el historial. Un ticket <b>Resuelto</b> puede reabrirse a <b>En proceso</b> si el problema persiste.</p>
+        </section>
+      </div>
+
+      <aside class="side-column">
+        <section class="panel workload-panel">
+          <div class="panel-heading"><h2><span class="section-icon">♙</span>Carga por técnico</h2><span class="muted">Tickets activos</span></div>
+          <ul class="workload-list" id="workload-list"><!-- Generado por asignacion.js --></ul>
+        </section>
+
+        <section class="panel activity-panel">
+          <div class="panel-heading"><h2><span class="section-icon">◷</span>Actividad reciente</h2><span class="muted" id="activity-count"></span></div>
+          <ol class="timeline" id="activity-feed"><!-- Generado por asignacion.js --></ol>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span id="page-message">Datos de demostración · pendiente de conectar con Flask</span></footer>
+  </main>
+
+  <!-- Modal: asignar / reasignar técnico -->
+  <div class="modal" id="assign-modal" role="dialog" aria-modal="true" aria-labelledby="assign-modal-title" hidden>
+    <form class="modal-card" id="assign-form" novalidate>
+      <button type="button" class="modal-close" data-close aria-label="Cerrar">×</button>
+      <div class="modal-head"><span class="modal-icon">♙</span><div><h2 id="assign-modal-title">Asignar técnico</h2><p class="modal-sub" id="assign-ticket-label">—</p></div></div>
+      <fieldset class="tech-options" id="tech-options"><legend>Selecciona el técnico responsable <span class="req">*</span></legend><!-- Generado por asignacion.js --></fieldset>
+      <p class="field-error" id="assign-tech-error"></p>
+      <label class="check-row" id="auto-progress-row"><input type="checkbox" id="auto-progress" checked> Pasar el ticket a <b>En proceso</b> al asignarlo</label>
+      <label class="form-field"><span>Comentario <span class="req" id="assign-comment-req">*</span></span>
+        <textarea id="assign-comment" rows="3" maxlength="500" placeholder="Ej.: Se asigna a Luis por ser especialista en servidores."></textarea>
+        <small class="char-count"><span id="assign-comment-count">0</span>/500</small>
+      </label>
+      <p class="field-error" id="assign-comment-error"></p>
+      <div class="modal-actions"><button type="button" class="btn-secondary" data-close>Cancelar</button><button type="submit" class="btn-primary"><span>✓</span>Confirmar asignación</button></div>
+    </form>
+  </div>
+
+  <!-- Modal: cambiar estado con comentario obligatorio -->
+  <div class="modal" id="status-modal" role="dialog" aria-modal="true" aria-labelledby="status-modal-title" hidden>
+    <form class="modal-card" id="status-form" novalidate>
+      <button type="button" class="modal-close" data-close aria-label="Cerrar">×</button>
+      <div class="modal-head"><span class="modal-icon">⟳</span><div><h2 id="status-modal-title">Cambiar estado</h2><p class="modal-sub" id="status-ticket-label">—</p></div></div>
+      <div class="status-transition"><div><small>Estado actual</small><span class="badge" id="status-current">—</span></div><span class="transition-arrow" aria-hidden="true">→</span><div><small>Nuevo estado</small><span class="badge category-tag" id="status-preview">Selecciona</span></div></div>
+      <fieldset class="status-options" id="status-options"><legend>Nuevo estado <span class="req">*</span></legend><!-- Generado por asignacion.js --></fieldset>
+      <p class="field-error" id="status-option-error"></p>
+      <label class="form-field"><span>Comentario del técnico <span class="req">*</span></span>
+        <textarea id="status-comment" rows="4" maxlength="500" placeholder="Describe qué se hizo o por qué cambia el estado (mínimo 10 caracteres)."></textarea>
+        <small class="char-count"><span id="status-comment-count">0</span>/500</small>
+      </label>
+      <p class="field-error" id="status-comment-error"></p>
+      <div class="modal-actions"><button type="button" class="btn-secondary" data-close>Cancelar</button><button type="submit" class="btn-primary"><span>✓</span>Guardar cambio</button></div>
+    </form>
+  </div>
+
+  <!-- Modal: historial (línea de tiempo) del ticket -->
+  <div class="modal" id="history-modal" role="dialog" aria-modal="true" aria-labelledby="history-modal-title" hidden>
+    <div class="modal-card modal-wide">
+      <button type="button" class="modal-close" data-close aria-label="Cerrar">×</button>
+      <div class="modal-head"><span class="modal-icon">◷</span><div><h2 id="history-modal-title">Historial del ticket</h2><p class="modal-sub" id="history-ticket-label">—</p></div></div>
+      <ol class="timeline timeline-full" id="history-timeline"></ol>
+      <div class="modal-actions"><a class="btn-secondary" href="detalle_ticket.html">Abrir detalle</a><button type="button" class="btn-primary" data-close>Cerrar</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
