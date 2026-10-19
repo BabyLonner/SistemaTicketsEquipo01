@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const rows = [...tbody.querySelectorAll("tr")];
   const toast = document.getElementById("toast");
   const modal = document.getElementById("ticket-modal");
+  const globalSearch = document.getElementById("global-search");
   let currentSla = "all";
   let currentPage = 1;
   const pageSize = 10;
@@ -19,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return (value || "").toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
   function getMatches() {
-    const query = normalize(document.getElementById("ticket-search").value.trim());
+    const query = normalize(globalSearch ? globalSearch.value.trim() : "");
     const priority = document.getElementById("priority-filter").value;
     const category = document.getElementById("category-filter").value;
     const technician = document.getElementById("technician-filter").value;
@@ -65,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function closeModal() { modal.hidden = true; }
 
+  // Filtrado por pestañas superiores (Todos, En tiempo, Por vencer, Vencidos)
   document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => {
     currentSla = tab.dataset.sla;
     currentPage = 1;
@@ -75,33 +77,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     render();
   }));
-  document.getElementById("apply-filters").addEventListener("click", () => {
-    currentPage = 1;
-    render();
-    notify("Filtros aplicados a los tickets de ejemplo.");
-  });
-  document.getElementById("clear-filters").addEventListener("click", () => {
-    document.getElementById("ticket-search").value = "";
-    ["priority-filter", "category-filter", "technician-filter", "status-filter"].forEach(id => document.getElementById(id).value = "");
-    currentSla = "all";
-    currentPage = 1;
-    document.querySelectorAll(".tab").forEach(tab => {
-      const active = tab.dataset.sla === "all";
-      tab.classList.toggle("active", active);
-      tab.setAttribute("aria-selected", String(active));
-    });
-    render();
-    notify("Filtros limpiados.");
-  });
-  document.getElementById("ticket-search").addEventListener("input", () => { currentPage = 1; render(); });
-  document.getElementById("global-search").addEventListener("keydown", event => {
-    if (event.key === "Enter" && event.target.value.trim()) {
-      document.getElementById("ticket-search").value = event.target.value.trim();
-      currentPage = 1;
-      render();
-      notify("Búsqueda aplicada a la tabla SLA.");
+
+  // Filtrado automático al seleccionar de las listas desplegables
+  ["priority-filter", "category-filter", "technician-filter", "status-filter"].forEach(id => {
+    const selectElement = document.getElementById(id);
+    if (selectElement) {
+      selectElement.addEventListener("change", () => {
+        currentPage = 1;
+        render();
+      });
     }
   });
+
+  // Búsqueda desde la barra superior general
+  if (globalSearch) {
+    globalSearch.addEventListener("input", () => {
+      currentPage = 1;
+      render();
+    });
+  }
+
   document.getElementById("select-all").addEventListener("change", event => {
     rows.filter(row => !row.hidden).forEach(row => row.querySelector(".row-check").checked = event.target.checked);
   });
