@@ -1,72 +1,320 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mis Tickets | Soporte TI</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../static/CSS/mis_tickets.css"><script src="../static/JS/mis_tickets.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mis Tickets | Soporte TI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../static/CSS/mis_tickets.css">
+    <script src="../static/JS/mis_tickets.js" defer></script>
 </head>
+
 <body>
-<header class="topbar">
-<a class="brand" href="dashboard_solicitante.html"><span class="brand-mark">◉</span><span><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span></a>
-<label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Buscar en mis tickets, artículos de ayuda..."></label>
-<div class="top-actions"><button class="notification" id="notifications-button" aria-label="Notificaciones">♧<b>3</b></button><button class="profile" id="profile-button"><span class="avatar">CM</span><span><strong>Carlos Martínez</strong><small>Solicitante</small></span><span>⌄</span></button></div>
-</header>
-<aside class="sidebar"><nav>
-<a class="side-link" href="dashboard_solicitante.html"><span>⌂</span>Inicio</a>
-<a class="side-link" href="nuevo_ticket.html"><span>⊕</span>Nuevo Ticket</a>
-<a class="side-link active" href="mis_tickets.html"><span>▤</span>Mis Tickets</a>
-<a class="side-link" href="base_conocimientos.html"><span>◫</span>Base de Conocimientos</a>
-<a class="side-link" href="notificaciones.html"><span>♧</span>Notificaciones</a>
-</nav>
-<nav class="bottom-nav"><a class="side-link" href="perfil.html"><span>♙</span>Mi Perfil</a><a class="side-link" href="index.html"><span>⇥</span>Cerrar Sesión</a></nav></aside>
-<main class="main">
-<section class="page-heading"><span class="heading-icon">▤</span><div><h1>Mis Tickets</h1><p>Consulta el estado de tus solicitudes de soporte técnico</p></div></section>
-<div class="content-grid"><section class="main-column">
-<section class="stats-grid">
-<article class="stat-card blue"><span class="stat-icon">●</span><strong id="total-count">12</strong><label>Total de tickets</label><small class="trend good">↑ 8% <em>vs. mes anterior</em></small></article>
-<article class="stat-card green"><span class="stat-icon">✓</span><strong id="resolved-count">4</strong><label>Resueltos</label><small class="trend good">↑ 33% <em>vs. mes anterior</em></small></article>
-<article class="stat-card amber"><span class="stat-icon">◷</span><strong id="progress-count">3</strong><label>En proceso</label><small class="trend good">↑ 25% <em>vs. mes anterior</em></small></article>
-<article class="stat-card red"><span class="stat-icon">!</span><strong id="pending-count">3</strong><label>Pendientes</label><small class="trend bad">↓ 40% <em>vs. mes anterior</em></small></article>
-</section>
-<section class="filter-panel">
-<label class="search-field"><span>⌕</span><input id="ticket-search" type="search" placeholder="Buscar por código, asunto o descripción..."></label>
-<label class="filter-field"><span>Estado</span><select id="status-filter"><option value="">Todos</option><option>Pendiente</option><option>En proceso</option><option>Resuelto</option></select></label>
-<label class="filter-field"><span>Prioridad</span><select id="priority-filter"><option value="">Todas</option><option>Alta</option><option>Media</option><option>Baja</option></select></label>
-<label class="filter-field"><span>Categoría</span><select id="category-filter"><option value="">Todas</option><option>Hardware</option><option>Software</option><option>Acceso</option><option>Redes</option></select></label>
-<button class="btn-primary" id="apply-filters">▽ Aplicar filtros</button><button class="clear-button" id="clear-filters">Limpiar</button>
-</section>
-<section class="panel tickets-panel"><div class="table-wrap"><table><thead><tr><th>#</th><th>Ticket</th><th>Asunto</th><th>Categoría</th><th>Prioridad</th><th>Estado</th><th>Técnico asignado</th><th>Fecha de creación</th><th>Acciones</th></tr></thead><tbody id="tickets-tbody">
-<tr data-id="TK-2291" data-subject="La impresora no imprime" data-description="La impresora de mi área no responde al enviar documentos." data-category="Hardware" data-priority="Alta" data-status="En proceso" data-technician="Luis Ramos" data-date="18/08/2026 10:00"><td>1</td><td><b class="ticket-code">TK-2291</b></td><td>La impresora no imprime</td><td>Hardware</td><td><span class="priority high">● Alta</span></td><td><span class="status progress">● En proceso</span></td><td>Luis Ramos</td><td>18/08/2026<br>10:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2291">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2291">···</button></td></tr>
-<tr data-id="TK-2290" data-subject="Mi computadora está muy lenta" data-description="El equipo tarda demasiado en abrir los programas de trabajo." data-category="Software" data-priority="Media" data-status="Pendiente" data-technician="Sin asignar" data-date="19/08/2026 14:00"><td>2</td><td><b class="ticket-code">TK-2290</b></td><td>Mi computadora está muy lenta</td><td>Software</td><td><span class="priority medium">● Media</span></td><td><span class="status pending">● Pendiente</span></td><td>—</td><td>19/08/2026<br>14:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2290">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2290">···</button></td></tr>
-<tr data-id="TK-2289" data-subject="No tengo acceso a un sistema" data-description="Al ingresar al sistema interno aparece un mensaje de acceso denegado." data-category="Acceso" data-priority="Alta" data-status="En proceso" data-technician="Carla Mendoza" data-date="17/08/2026 16:30"><td>3</td><td><b class="ticket-code">TK-2289</b></td><td>No tengo acceso a un sistema</td><td>Acceso</td><td><span class="priority high">● Alta</span></td><td><span class="status progress">● En proceso</span></td><td>Carla Mendoza</td><td>17/08/2026<br>16:30</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2289">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2289">···</button></td></tr>
-<tr data-id="TK-2288" data-subject="Error al enviar correos" data-description="Los correos salientes quedan en la bandeja de salida." data-category="Redes" data-priority="Media" data-status="Resuelto" data-technician="José García" data-date="20/08/2026 11:00"><td>4</td><td><b class="ticket-code">TK-2288</b></td><td>Error al enviar correos</td><td>Redes</td><td><span class="priority medium">● Media</span></td><td><span class="status resolved">● Resuelto</span></td><td>José García</td><td>20/08/2026<br>11:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2288">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2288">···</button></td></tr>
-<tr data-id="TK-2287" data-subject="Instalación de software" data-description="Solicito instalar una aplicación autorizada para mis labores." data-category="Software" data-priority="Baja" data-status="Resuelto" data-technician="María Torres" data-date="21/08/2026 15:00"><td>5</td><td><b class="ticket-code">TK-2287</b></td><td>Instalación de software</td><td>Software</td><td><span class="priority low">● Baja</span></td><td><span class="status resolved">● Resuelto</span></td><td>María Torres</td><td>21/08/2026<br>15:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2287">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2287">···</button></td></tr>
-<tr data-id="TK-2286" data-subject="Problemas con la red WiFi" data-description="La conexión WiFi se interrumpe varias veces durante el día." data-category="Redes" data-priority="Media" data-status="En proceso" data-technician="Rosa Villanueva" data-date="18/08/2026 12:00"><td>6</td><td><b class="ticket-code">TK-2286</b></td><td>Problemas con la red WiFi</td><td>Redes</td><td><span class="priority medium">● Media</span></td><td><span class="status progress">● En proceso</span></td><td>Rosa Villanueva</td><td>18/08/2026<br>12:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2286">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2286">···</button></td></tr>
-<tr data-id="TK-2285" data-subject="Solicitud de nuevo equipo" data-description="Solicito evaluación para reemplazar un equipo que presenta fallas." data-category="Hardware" data-priority="Baja" data-status="Pendiente" data-technician="Sin asignar" data-date="22/08/2026 09:00"><td>7</td><td><b class="ticket-code">TK-2285</b></td><td>Solicitud de nuevo equipo</td><td>Hardware</td><td><span class="priority low">● Baja</span></td><td><span class="status pending">● Pendiente</span></td><td>—</td><td>22/08/2026<br>09:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2285">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2285">···</button></td></tr>
-<tr data-id="TK-2284" data-subject="Pantalla con líneas" data-description="La pantalla del equipo muestra líneas horizontales intermitentes." data-category="Hardware" data-priority="Alta" data-status="Resuelto" data-technician="Luis Ramos" data-date="15/08/2026 13:00"><td>8</td><td><b class="ticket-code">TK-2284</b></td><td>Pantalla con líneas</td><td>Hardware</td><td><span class="priority high">● Alta</span></td><td><span class="status resolved">● Resuelto</span></td><td>Luis Ramos</td><td>15/08/2026<br>13:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2284">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2284">···</button></td></tr>
-<tr data-id="TK-2283" data-subject="Restablecer contraseña" data-description="Necesito restablecer la contraseña de mi cuenta corporativa." data-category="Acceso" data-priority="Baja" data-status="Resuelto" data-technician="José García" data-date="16/08/2026 10:00"><td>9</td><td><b class="ticket-code">TK-2283</b></td><td>Restablecer contraseña</td><td>Acceso</td><td><span class="priority low">● Baja</span></td><td><span class="status resolved">● Resuelto</span></td><td>José García</td><td>16/08/2026<br>10:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2283">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2283">···</button></td></tr>
-<tr data-id="TK-2282" data-subject="No puedo acceder a la VPN" data-description="La aplicación VPN muestra un error de autenticación." data-category="Redes" data-priority="Media" data-status="Pendiente" data-technician="Sin asignar" data-date="21/08/2026 16:00"><td>10</td><td><b class="ticket-code">TK-2282</b></td><td>No puedo acceder a la VPN</td><td>Redes</td><td><span class="priority medium">● Media</span></td><td><span class="status pending">● Pendiente</span></td><td>—</td><td>21/08/2026<br>16:00</td><td><button class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2282">◉</button><button class="icon-button more-action" title="Más acciones" aria-label="Más acciones TK-2282">···</button></td></tr>
-</tbody></table></div>
-<div class="empty-state" id="empty-state" hidden><strong>No encontramos tickets</strong><p>Prueba con otra búsqueda o limpia los filtros.</p><button class="btn-secondary" id="empty-clear">Limpiar filtros</button></div>
-<div class="table-footer"><span id="results-label">Mostrando 10 de 12 tickets</span><div class="pagination"><button id="prev-page" aria-label="Página anterior">‹</button><button class="page-number active" data-page="1">1</button><button class="page-number" data-page="2">2</button><button id="next-page" aria-label="Página siguiente">›</button></div></div>
-</section><footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Portal del solicitante</span></footer>
-</section>
-<aside class="right-column">
-<section class="panel quick-action"><a class="btn-primary new-ticket-link" href="nuevo_ticket.html">＋ Nuevo ticket <span>›</span></a></section>
-<section class="panel recent-panel"><h2><span class="section-icon">◷</span>Mis solicitudes recientes</h2>
-<div class="recent-list">
-<button class="recent-item" data-ticket="TK-2291"><b>TK-2291</b><span>La impresora no imprime</span><small class="status progress">En proceso</small></button>
-<button class="recent-item" data-ticket="TK-2290"><b>TK-2290</b><span>Mi computadora está muy lenta</span><small class="status pending">Pendiente</small></button>
-<button class="recent-item" data-ticket="TK-2289"><b>TK-2289</b><span>No tengo acceso a un sistema</span><small class="status progress">En proceso</small></button>
-<button class="recent-item" data-ticket="TK-2288"><b>TK-2288</b><span>Error al enviar correos</span><small class="status resolved">Resuelto</small></button>
-<button class="recent-item" data-ticket="TK-2287"><b>TK-2287</b><span>Instalación de software</span><small class="status resolved">Resuelto</small></button>
-</div><button class="text-link" id="view-all-tickets">Ver todos mis tickets <span>→</span></button></section>
-<section class="panel help-panel"><h2><span class="section-icon">◫</span>¿Necesitas ayuda?</h2><p>Revisa nuestra base de conocimientos para encontrar soluciones rápidas.</p><a class="btn-outline" href="base_conocimientos.html">▣ Ir a la base de conocimientos</a></section>
-<section class="panel tip-panel"><h2><span class="tip-icon">✦</span>Consejo</h2><p>Antes de crear un nuevo ticket, revisa si tu problema ya tiene una solución en la base de conocimientos. ¡Podrás resolverlo más rápido!</p></section>
-</aside></div>
-</main>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-<div class="modal" id="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden><div class="modal-card"><button class="modal-close" id="modal-close" aria-label="Cerrar">×</button><span class="modal-icon">▤</span><h2 id="modal-title">Detalle del ticket</h2><p id="modal-description"></p><div class="modal-actions"><button class="btn-secondary" id="modal-cancel">Cerrar</button><button class="btn-primary" id="modal-confirm">Entendido</button></div></div></div>
-</body></html>
+    <header class="topbar">
+        <a class="brand" href="dashboard_solicitante.html"><span class="brand-mark">◉</span><span><strong>SOPORTE
+                    TI</strong><small>Sistema de Gestión de Tickets</small></span></a>
+        <label class="global-search"><span>⌕</span><input id="global-search" type="search"
+                placeholder="Buscar en mis tickets, artículos de ayuda..."></label>
+        <div class="top-actions"><button class="notification" id="notifications-button"
+                aria-label="Notificaciones">♧<b>3</b></button><button class="profile" id="profile-button"><span
+                    class="avatar">CM</span><span><strong>Carlos
+                        Martínez</strong><small>Solicitante</small></span><span>⌄</span></button></div>
+    </header>
+    <aside class="sidebar">
+        <nav>
+            <a class="side-link" href="nuevo_ticket.html"><span>⊕</span>Nuevo Ticket</a>
+            <a class="side-link active" href="mis_tickets.html"><span>▤</span>Mis Tickets</a>
+            <a class="side-link" href="configuracion.html"><span class="side-icon">⚙</span>Configuración</a>
+            <a class="side-link" href="index.html"><span>⇥</span>Cerrar Sesión</a>
+        </nav>      
+    </aside>
+    <main class="main">
+        <section class="page-heading"><span class="heading-icon">▤</span>
+            <div>
+                <h1>Mis Tickets</h1>
+                <p>Consulta el estado de tus solicitudes de soporte técnico</p>
+            </div>
+        </section>
+        <div class="content-grid">
+            <section class="main-column">
+                <section class="stats-grid">
+                    <article class="stat-card blue"><span class="stat-icon">●</span><strong
+                            id="total-count">12</strong><label>Total de tickets</label><small class="trend good">↑ 8%
+                            <em>vs. mes anterior</em></small></article>
+                    <article class="stat-card green"><span class="stat-icon">✓</span><strong
+                            id="resolved-count">4</strong><label>Resueltos</label><small class="trend good">↑ 33%
+                            <em>vs. mes anterior</em></small></article>
+                    <article class="stat-card amber"><span class="stat-icon">◷</span><strong
+                            id="progress-count">3</strong><label>En proceso</label><small class="trend good">↑ 25%
+                            <em>vs. mes anterior</em></small></article>
+                    <article class="stat-card red"><span class="stat-icon">!</span><strong
+                            id="pending-count">3</strong><label>Pendientes</label><small class="trend bad">↓ 40% <em>vs.
+                                mes anterior</em></small></article>
+                </section>
+                <section class="filter-panel">
+                    <label class="search-field"><span>⌕</span><input id="ticket-search" type="search"
+                            placeholder="Buscar por código, asunto o descripción..."></label>
+                    <label class="filter-field"><span>Estado</span><select id="status-filter">
+                            <option value="">Todos</option>
+                            <option>Pendiente</option>
+                            <option>En proceso</option>
+                            <option>Resuelto</option>
+                        </select></label>
+                    <label class="filter-field"><span>Prioridad</span><select id="priority-filter">
+                            <option value="">Todas</option>
+                            <option>Alta</option>
+                            <option>Media</option>
+                            <option>Baja</option>
+                        </select></label>
+                    <label class="filter-field"><span>Categoría</span><select id="category-filter">
+                            <option value="">Todas</option>
+                            <option>Hardware</option>
+                            <option>Software</option>
+                            <option>Acceso</option>
+                            <option>Redes</option>
+                        </select></label>
+                    <button class="btn-primary" id="apply-filters">▽ Aplicar filtros</button><button
+                        class="clear-button" id="clear-filters">Limpiar</button>
+                </section>
+                <section class="panel tickets-panel">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Ticket</th>
+                                    <th>Asunto</th>
+                                    <th>Categoría</th>
+                                    <th>Prioridad</th>
+                                    <th>Estado</th>
+                                    <th>Técnico asignado</th>
+                                    <th>Fecha de creación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tickets-tbody">
+                                <tr data-id="TK-2291" data-subject="La impresora no imprime"
+                                    data-description="La impresora de mi área no responde al enviar documentos."
+                                    data-category="Hardware" data-priority="Alta" data-status="En proceso"
+                                    data-technician="Luis Ramos" data-date="18/08/2026 10:00">
+                                    <td>1</td>
+                                    <td><b class="ticket-code">TK-2291</b></td>
+                                    <td>La impresora no imprime</td>
+                                    <td>Hardware</td>
+                                    <td><span class="priority high">● Alta</span></td>
+                                    <td><span class="status progress">● En proceso</span></td>
+                                    <td>Luis Ramos</td>
+                                    <td>18/08/2026<br>10:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2291">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2291">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2290" data-subject="Mi computadora está muy lenta"
+                                    data-description="El equipo tarda demasiado en abrir los programas de trabajo."
+                                    data-category="Software" data-priority="Media" data-status="Pendiente"
+                                    data-technician="Sin asignar" data-date="19/08/2026 14:00">
+                                    <td>2</td>
+                                    <td><b class="ticket-code">TK-2290</b></td>
+                                    <td>Mi computadora está muy lenta</td>
+                                    <td>Software</td>
+                                    <td><span class="priority medium">● Media</span></td>
+                                    <td><span class="status pending">● Pendiente</span></td>
+                                    <td>—</td>
+                                    <td>19/08/2026<br>14:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2290">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2290">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2289" data-subject="No tengo acceso a un sistema"
+                                    data-description="Al ingresar al sistema interno aparece un mensaje de acceso denegado."
+                                    data-category="Acceso" data-priority="Alta" data-status="En proceso"
+                                    data-technician="Carla Mendoza" data-date="17/08/2026 16:30">
+                                    <td>3</td>
+                                    <td><b class="ticket-code">TK-2289</b></td>
+                                    <td>No tengo acceso a un sistema</td>
+                                    <td>Acceso</td>
+                                    <td><span class="priority high">● Alta</span></td>
+                                    <td><span class="status progress">● En proceso</span></td>
+                                    <td>Carla Mendoza</td>
+                                    <td>17/08/2026<br>16:30</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2289">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2289">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2288" data-subject="Error al enviar correos"
+                                    data-description="Los correos salientes quedan en la bandeja de salida."
+                                    data-category="Redes" data-priority="Media" data-status="Resuelto"
+                                    data-technician="José García" data-date="20/08/2026 11:00">
+                                    <td>4</td>
+                                    <td><b class="ticket-code">TK-2288</b></td>
+                                    <td>Error al enviar correos</td>
+                                    <td>Redes</td>
+                                    <td><span class="priority medium">● Media</span></td>
+                                    <td><span class="status resolved">● Resuelto</span></td>
+                                    <td>José García</td>
+                                    <td>20/08/2026<br>11:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2288">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2288">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2287" data-subject="Instalación de software"
+                                    data-description="Solicito instalar una aplicación autorizada para mis labores."
+                                    data-category="Software" data-priority="Baja" data-status="Resuelto"
+                                    data-technician="María Torres" data-date="21/08/2026 15:00">
+                                    <td>5</td>
+                                    <td><b class="ticket-code">TK-2287</b></td>
+                                    <td>Instalación de software</td>
+                                    <td>Software</td>
+                                    <td><span class="priority low">● Baja</span></td>
+                                    <td><span class="status resolved">● Resuelto</span></td>
+                                    <td>María Torres</td>
+                                    <td>21/08/2026<br>15:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2287">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2287">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2286" data-subject="Problemas con la red WiFi"
+                                    data-description="La conexión WiFi se interrumpe varias veces durante el día."
+                                    data-category="Redes" data-priority="Media" data-status="En proceso"
+                                    data-technician="Rosa Villanueva" data-date="18/08/2026 12:00">
+                                    <td>6</td>
+                                    <td><b class="ticket-code">TK-2286</b></td>
+                                    <td>Problemas con la red WiFi</td>
+                                    <td>Redes</td>
+                                    <td><span class="priority medium">● Media</span></td>
+                                    <td><span class="status progress">● En proceso</span></td>
+                                    <td>Rosa Villanueva</td>
+                                    <td>18/08/2026<br>12:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2286">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2286">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2285" data-subject="Solicitud de nuevo equipo"
+                                    data-description="Solicito evaluación para reemplazar un equipo que presenta fallas."
+                                    data-category="Hardware" data-priority="Baja" data-status="Pendiente"
+                                    data-technician="Sin asignar" data-date="22/08/2026 09:00">
+                                    <td>7</td>
+                                    <td><b class="ticket-code">TK-2285</b></td>
+                                    <td>Solicitud de nuevo equipo</td>
+                                    <td>Hardware</td>
+                                    <td><span class="priority low">● Baja</span></td>
+                                    <td><span class="status pending">● Pendiente</span></td>
+                                    <td>—</td>
+                                    <td>22/08/2026<br>09:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2285">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2285">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2284" data-subject="Pantalla con líneas"
+                                    data-description="La pantalla del equipo muestra líneas horizontales intermitentes."
+                                    data-category="Hardware" data-priority="Alta" data-status="Resuelto"
+                                    data-technician="Luis Ramos" data-date="15/08/2026 13:00">
+                                    <td>8</td>
+                                    <td><b class="ticket-code">TK-2284</b></td>
+                                    <td>Pantalla con líneas</td>
+                                    <td>Hardware</td>
+                                    <td><span class="priority high">● Alta</span></td>
+                                    <td><span class="status resolved">● Resuelto</span></td>
+                                    <td>Luis Ramos</td>
+                                    <td>15/08/2026<br>13:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2284">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2284">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2283" data-subject="Restablecer contraseña"
+                                    data-description="Necesito restablecer la contraseña de mi cuenta corporativa."
+                                    data-category="Acceso" data-priority="Baja" data-status="Resuelto"
+                                    data-technician="José García" data-date="16/08/2026 10:00">
+                                    <td>9</td>
+                                    <td><b class="ticket-code">TK-2283</b></td>
+                                    <td>Restablecer contraseña</td>
+                                    <td>Acceso</td>
+                                    <td><span class="priority low">● Baja</span></td>
+                                    <td><span class="status resolved">● Resuelto</span></td>
+                                    <td>José García</td>
+                                    <td>16/08/2026<br>10:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2283">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2283">···</button></td>
+                                </tr>
+                                <tr data-id="TK-2282" data-subject="No puedo acceder a la VPN"
+                                    data-description="La aplicación VPN muestra un error de autenticación."
+                                    data-category="Redes" data-priority="Media" data-status="Pendiente"
+                                    data-technician="Sin asignar" data-date="21/08/2026 16:00">
+                                    <td>10</td>
+                                    <td><b class="ticket-code">TK-2282</b></td>
+                                    <td>No puedo acceder a la VPN</td>
+                                    <td>Redes</td>
+                                    <td><span class="priority medium">● Media</span></td>
+                                    <td><span class="status pending">● Pendiente</span></td>
+                                    <td>—</td>
+                                    <td>21/08/2026<br>16:00</td>
+                                    <td><button class="icon-button view-ticket" title="Ver detalle"
+                                            aria-label="Ver TK-2282">◉</button><button class="icon-button more-action"
+                                            title="Más acciones" aria-label="Más acciones TK-2282">···</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="empty-state" hidden><strong>No encontramos tickets</strong>
+                        <p>Prueba con otra búsqueda o limpia los filtros.</p><button class="btn-secondary"
+                            id="empty-clear">Limpiar filtros</button>
+                    </div>
+                    <div class="table-footer"><span id="results-label">Mostrando 10 de 12 tickets</span>
+                        <div class="pagination"><button id="prev-page" aria-label="Página anterior">‹</button><button
+                                class="page-number active" data-page="1">1</button><button class="page-number"
+                                data-page="2">2</button><button id="next-page" aria-label="Página siguiente">›</button>
+                        </div>
+                    </div>
+                </section>
+                <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Portal
+                        del solicitante</span></footer>
+            </section>
+            <aside class="right-column">
+                <section class="panel quick-action"><a class="btn-primary new-ticket-link" href="nuevo_ticket.html">＋
+                        Nuevo ticket <span>›</span></a></section>
+                <section class="panel recent-panel">
+                    <h2><span class="section-icon">◷</span>Mis solicitudes recientes</h2>
+                    <div class="recent-list">
+                        <button class="recent-item" data-ticket="TK-2291"><b>TK-2291</b><span>La impresora no
+                                imprime</span><small class="status progress">En proceso</small></button>
+                        <button class="recent-item" data-ticket="TK-2290"><b>TK-2290</b><span>Mi computadora está muy
+                                lenta</span><small class="status pending">Pendiente</small></button>
+                        <button class="recent-item" data-ticket="TK-2289"><b>TK-2289</b><span>No tengo acceso a un
+                                sistema</span><small class="status progress">En proceso</small></button>
+                        <button class="recent-item" data-ticket="TK-2288"><b>TK-2288</b><span>Error al enviar
+                                correos</span><small class="status resolved">Resuelto</small></button>
+                        <button class="recent-item" data-ticket="TK-2287"><b>TK-2287</b><span>Instalación de
+                                software</span><small class="status resolved">Resuelto</small></button>
+                    </div><button class="text-link" id="view-all-tickets">Ver todos mis tickets <span>→</span></button>
+                </section>
+                <section class="panel help-panel">
+                    <h2><span class="section-icon">◫</span>¿Necesitas ayuda?</h2>
+                    <p>Revisa nuestra base de conocimientos para encontrar soluciones rápidas.</p><a class="btn-outline"
+                        href="base_conocimientos.html">▣ Ir a la base de conocimientos</a>
+                </section>
+                <section class="panel tip-panel">
+                    <h2><span class="tip-icon">✦</span>Consejo</h2>
+                    <p>Antes de crear un nuevo ticket, revisa si tu problema ya tiene una solución en la base de
+                        conocimientos. ¡Podrás resolverlo más rápido!</p>
+                </section>
+            </aside>
+        </div>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="modal" id="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+        <div class="modal-card"><button class="modal-close" id="modal-close" aria-label="Cerrar">×</button><span
+                class="modal-icon">▤</span>
+            <h2 id="modal-title">Detalle del ticket</h2>
+            <p id="modal-description"></p>
+            <div class="modal-actions"><button class="btn-secondary" id="modal-cancel">Cerrar</button><button
+                    class="btn-primary" id="modal-confirm">Entendido</button></div>
+        </div>
+    </div>
+</body>
+
+</html>
