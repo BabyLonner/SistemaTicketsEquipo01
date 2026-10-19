@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asignaciones | Soporte TI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../static/CSS/asignaciones.css">
+  <script src="../static/JS/asignaciones.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="dashboard.html" aria-label="Soporte TI, inicio">
+      <span class="brand-mark" aria-hidden="true">⌁</span>
+      <span class="brand-copy"><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
+    </a>
+    <label class="global-search"><span aria-hidden="true">⌕</span><input id="global-search" type="search" placeholder="Buscar tickets, usuarios, empresas, etc." aria-label="Buscar en el sistema"></label>
+    <div class="top-actions">
+      <button class="notification top-notification" type="button" aria-label="Ver notificaciones">♧<span class="notification-count" id="top-notification-count">3</span></button>
+      <div class="profile"><span class="avatar">JP</span><span class="profile-copy"><strong>Juan Pérez</strong><small>Administrador</small></span><span class="chevron" aria-hidden="true">⌄</span></div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <nav class="sidebar-nav" aria-label="Menú principal">
+      <a class="side-link" href="dashboard.html"><span class="side-icon">⌂</span>Dashboard</a>
+      <a class="side-link" href="tickets.html"><span class="side-icon">▤</span>Tickets</a>
+      <a class="side-link" href="nuevo_ticket.html"><span class="side-icon">⊕</span>Nuevo Ticket</a>
+      <a class="side-link" href="sla.html"><span class="side-icon">◷</span>SLA</a>
+      <a class="side-link active" href="asignaciones.html" aria-current="page"><span class="side-icon">♟</span>Asignaciones</a>
+      <a class="side-link" href="usuarios.html"><span class="side-icon">♙</span>Usuarios</a>
+      <a class="side-link" href="notificaciones.html"><span class="side-icon">♧</span>Notificaciones</a>
+      <a class="side-link" href="reportes.html"><span class="side-icon">▥</span>Reportes</a>
+      <a class="side-link" href="#api"><span>‹/›</span>API</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <a class="side-link" href="configuracion.html"><span class="side-icon">⚙</span>Configuración</a>
+      <a class="side-link" href="index.html"><span class="side-icon">⇥</span>Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="page-heading">
+      <span class="heading-icon" aria-hidden="true">♟</span>
+      <div><h1>Asignaciones</h1><p>Gestiona la asignación de tickets a los técnicos del equipo de TI.</p></div>
+    </section>
+
+    <section class="stats-grid" aria-label="Resumen de asignaciones">
+      <article class="stat-card stat-pending"><span class="stat-icon">▤</span><div class="stat-number" id="pending-count">28</div><div class="stat-label">Pendientes de asignación</div><div class="stat-trend positive">↓ 15% <small>vs. mes anterior</small></div><span class="stat-wave"></span></article>
+      <article class="stat-card stat-assigned"><span class="stat-icon">♙</span><div class="stat-number" id="assigned-count">12</div><div class="stat-label">Tickets asignados</div><div class="stat-trend positive">↑ 8% <small>vs. mes anterior</small></div><span class="stat-wave"></span></article>
+      <article class="stat-card stat-progress"><span class="stat-icon">◷</span><div class="stat-number" id="progress-count">5</div><div class="stat-label">En proceso</div><div class="stat-trend positive">↑ 25% <small>vs. mes anterior</small></div><span class="stat-wave"></span></article>
+      <article class="stat-card stat-overdue"><span class="stat-icon">!</span><div class="stat-number" id="overdue-count">3</div><div class="stat-label">Vencidos</div><div class="stat-trend negative">↑ 50% <small>vs. mes anterior</small></div><span class="stat-wave"></span></article>
+    </section>
+
+    <div class="assignments-layout">
+      <section class="panel ticket-panel">
+        <div class="tabs" role="tablist" aria-label="Filtrar tickets por estado">
+          <button class="tab active" type="button" role="tab" aria-selected="true" data-state="all">Todos <span id="tab-all-count">(48)</span></button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-state="Pendiente">Pendientes <span>(28)</span></button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-state="Asignado">Asignados <span>(12)</span></button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-state="En proceso">En proceso <span>(5)</span></button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-state="Resuelto">Resueltos <span>(20)</span></button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-state="Vencido">Vencidos <span>(3)</span></button>
+        </div>
+
+        <div class="filter-toolbar">
+          <label class="table-search"><span>⌕</span><input id="ticket-search" type="search" placeholder="Buscar por código, asunto o solicitante..." aria-label="Buscar tickets"></label>
+          <label class="mini-filter"><span>Prioridad</span><select id="priority-filter"><option value="">Todas</option><option>Alta</option><option>Media</option><option>Baja</option></select></label>
+          <label class="mini-filter"><span>Categoría</span><select id="category-filter"><option value="">Todas</option><option>Hardware</option><option>Software</option><option>Redes</option><option>Acceso</option></select></label>
+          <label class="mini-filter"><span>Técnico</span><select id="technician-filter"><option value="">Todos</option><option>Luis Ramos</option><option>Carla Mendoza</option><option>José García</option><option>María Torres</option><option>Sin asignar</option></select></label>
+          <label class="mini-filter"><span>Estado</span><select id="status-filter"><option value="">Todos</option><option>Pendiente</option><option>Asignado</option><option>En proceso</option><option>Resuelto</option><option>Vencido</option></select></label>
+          <button class="btn-primary apply-filters" id="apply-filters" type="button"><span>▽</span>Filtrar</button>
+          <button class="clear-filters" id="clear-filters" type="button">Limpiar</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th class="check-col"><input id="select-all" type="checkbox" aria-label="Seleccionar tickets visibles"></th><th>Ticket</th><th>Asunto</th><th>Prioridad</th><th>Solicitante</th><th>Categoría</th><th>Técnico asignado</th><th>Estado</th><th>Fecha límite</th><th>Acciones</th></tr></thead>
+            <tbody id="tickets-tbody">
+              <tr data-id="TK-2291" data-subject="La impresora no imprime" data-priority="Alta" data-requester="Ana Díaz" data-category="Hardware" data-technician="Sin asignar" data-status="Pendiente" data-due="2026-08-18T10:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2291"></td><td><span class="ticket-code">TK-2291</span></td><td>La impresora no imprime</td><td><span class="priority-badge high"><i></i>Alta</span></td><td>Ana Díaz</td><td>Hardware</td><td><span class="unassigned">Sin asignar</span></td><td><span class="status-badge pending">Pendiente</span></td><td>18/08/2026<br><small>10:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Asignar TK-2291" title="Asignar">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2291" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2290" data-subject="Mi computadora está muy lenta" data-priority="Media" data-requester="Luis García" data-category="Software" data-technician="Luis Ramos" data-status="Asignado" data-due="2026-08-19T14:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2290"></td><td><span class="ticket-code">TK-2290</span></td><td>Mi computadora está muy lenta</td><td><span class="priority-badge medium"><i></i>Media</span></td><td>Luis García</td><td>Software</td><td><span class="technician-chip"><i>LR</i>Luis Ramos</span></td><td><span class="status-badge assigned">Asignado</span></td><td>19/08/2026<br><small>14:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Editar asignación TK-2290" title="Editar asignación">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2290" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2289" data-subject="No tengo acceso a un sistema" data-priority="Alta" data-requester="Carla Mendoza" data-category="Acceso" data-technician="Carla Mendoza" data-status="En proceso" data-due="2026-08-17T16:30:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2289"></td><td><span class="ticket-code">TK-2289</span></td><td>No tengo acceso a un sistema</td><td><span class="priority-badge high"><i></i>Alta</span></td><td>Carla Mendoza</td><td>Acceso</td><td><span class="technician-chip"><i>CM</i>Carla Mendoza</span></td><td><span class="status-badge progress">En proceso</span></td><td>17/08/2026<br><small>16:30</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Editar asignación TK-2289" title="Editar asignación">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2289" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2288" data-subject="Error al enviar correos" data-priority="Media" data-requester="Rosa Villanueva" data-category="Redes" data-technician="José García" data-status="Asignado" data-due="2026-08-20T11:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2288"></td><td><span class="ticket-code">TK-2288</span></td><td>Error al enviar correos</td><td><span class="priority-badge medium"><i></i>Media</span></td><td>Rosa Villanueva</td><td>Redes</td><td><span class="technician-chip"><i>JG</i>José García</span></td><td><span class="status-badge assigned">Asignado</span></td><td>20/08/2026<br><small>11:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Editar asignación TK-2288" title="Editar asignación">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2288" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2287" data-subject="Instalación de software" data-priority="Baja" data-requester="Pedro Salazar" data-category="Software" data-technician="Sin asignar" data-status="Pendiente" data-due="2026-08-21T15:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2287"></td><td><span class="ticket-code">TK-2287</span></td><td>Instalación de software</td><td><span class="priority-badge low"><i></i>Baja</span></td><td>Pedro Salazar</td><td>Software</td><td><span class="unassigned">Sin asignar</span></td><td><span class="status-badge pending">Pendiente</span></td><td>21/08/2026<br><small>15:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Asignar TK-2287" title="Asignar">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2287" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2286" data-subject="Problemas con la red WiFi" data-priority="Media" data-requester="María Torres" data-category="Redes" data-technician="Luis Ramos" data-status="En proceso" data-due="2026-08-18T12:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2286"></td><td><span class="ticket-code">TK-2286</span></td><td>Problemas con la red WiFi</td><td><span class="priority-badge medium"><i></i>Media</span></td><td>María Torres</td><td>Redes</td><td><span class="technician-chip"><i>LR</i>Luis Ramos</span></td><td><span class="status-badge progress">En proceso</span></td><td>18/08/2026<br><small>12:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Editar asignación TK-2286" title="Editar asignación">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2286" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2285" data-subject="Solicitud de nuevo equipo" data-priority="Baja" data-requester="José Hernández" data-category="Hardware" data-technician="Carla Mendoza" data-status="Asignado" data-due="2026-08-22T09:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2285"></td><td><span class="ticket-code">TK-2285</span></td><td>Solicitud de nuevo equipo</td><td><span class="priority-badge low"><i></i>Baja</span></td><td>José Hernández</td><td>Hardware</td><td><span class="technician-chip"><i>CM</i>Carla Mendoza</span></td><td><span class="status-badge assigned">Asignado</span></td><td>22/08/2026<br><small>09:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Editar asignación TK-2285" title="Editar asignación">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2285" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2284" data-subject="Pantalla con líneas" data-priority="Alta" data-requester="Lucía Fernández" data-category="Hardware" data-technician="María Torres" data-status="Vencido" data-due="2026-08-15T13:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2284"></td><td><span class="ticket-code">TK-2284</span></td><td>Pantalla con líneas</td><td><span class="priority-badge high"><i></i>Alta</span></td><td>Lucía Fernández</td><td>Hardware</td><td><span class="technician-chip"><i>MT</i>María Torres</span></td><td><span class="status-badge overdue">Vencido</span></td><td>15/08/2026<br><small>13:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Editar asignación TK-2284" title="Editar asignación">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2284" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2283" data-subject="Restablecer contraseña" data-priority="Baja" data-requester="Juan Pérez" data-category="Acceso" data-technician="José García" data-status="Resuelto" data-due="2026-08-16T10:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2283"></td><td><span class="ticket-code">TK-2283</span></td><td>Restablecer contraseña</td><td><span class="priority-badge low"><i></i>Baja</span></td><td>Juan Pérez</td><td>Acceso</td><td><span class="technician-chip"><i>JG</i>José García</span></td><td><span class="status-badge resolved">Resuelto</span></td><td>16/08/2026<br><small>10:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Ver asignación TK-2283" title="Ver asignación">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2283" title="Más acciones">···</button></div></td></tr>
+              <tr data-id="TK-2282" data-subject="No puedo acceder a la VPN" data-priority="Media" data-requester="María López" data-category="Redes" data-technician="Luis Ramos" data-status="Asignado" data-due="2026-08-21T16:00:00"><td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2282"></td><td><span class="ticket-code">TK-2282</span></td><td>No puedo acceder a la VPN</td><td><span class="priority-badge medium"><i></i>Media</span></td><td>María López</td><td>Redes</td><td><span class="technician-chip"><i>LR</i>Luis Ramos</span></td><td><span class="status-badge assigned">Asignado</span></td><td>21/08/2026<br><small>16:00</small></td><td><div class="row-actions"><button class="icon-button edit-assignment" type="button" aria-label="Editar asignación TK-2282" title="Editar asignación">✎</button><button class="icon-button more-action" type="button" aria-label="Más acciones TK-2282" title="Más acciones">···</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer"><span id="results-label">Mostrando 10 de 48 tickets</span><div class="pagination"><button id="prev-page" type="button" aria-label="Página anterior">‹</button><button class="page-number active" type="button" data-page="1">1</button><button class="page-number" type="button" data-page="2">2</button><button class="page-number" type="button" data-page="3">3</button><button class="page-number" type="button" data-page="4">4</button><button class="page-number" type="button" data-page="5">5</button><button id="next-page" type="button" aria-label="Página siguiente">›</button></div></div>
+      </section>
+
+      <aside class="right-column">
+        <section class="panel assign-panel">
+          <h2><span class="section-icon">♙<b>＋</b></span>Asignar ticket</h2>
+          <form id="assignment-form" novalidate>
+            <div class="form-field"><label for="ticket-select">Ticket <span>*</span></label><select id="ticket-select" required><option value="">Selecciona un ticket</option><option value="TK-2291">TK-2291 · La impresora no imprime</option><option value="TK-2290">TK-2290 · Computadora lenta</option><option value="TK-2289">TK-2289 · Problema de acceso</option><option value="TK-2288">TK-2288 · Error al enviar correos</option><option value="TK-2287">TK-2287 · Instalación de software</option><option value="TK-2286">TK-2286 · Problemas con WiFi</option><option value="TK-2285">TK-2285 · Solicitud de equipo</option><option value="TK-2284">TK-2284 · Pantalla con líneas</option><option value="TK-2283">TK-2283 · Restablecer contraseña</option><option value="TK-2282">TK-2282 · Acceso a VPN</option></select><small class="field-error" id="ticket-error"></small></div>
+            <div class="form-field"><label for="technician-select">Técnico <span>*</span></label><select id="technician-select" required><option value="">Selecciona un técnico</option><option>Luis Ramos</option><option>Carla Mendoza</option><option>José García</option><option>María Torres</option><option>Rosa Villanueva</option></select><small class="field-error" id="technician-error"></small></div>
+            <div class="form-field"><label for="assignment-priority">Prioridad</label><select id="assignment-priority"><option>Alta</option><option selected>Media</option><option>Baja</option></select></div>
+            <div class="form-field"><label for="assignment-note">Observaciones <span class="optional">(opcional)</span></label><textarea id="assignment-note" maxlength="500" placeholder="Agrega una nota sobre la asignación..."></textarea><div class="char-count"><span id="note-count">0</span>/500</div></div>
+            <button class="btn-primary assign-button" type="submit"><span>♙</span>Asignar ticket</button>
+          </form>
+        </section>
+
+        <section class="panel workload-panel">
+          <h2><span class="workload-icon">▥</span>Carga de trabajo por técnico</h2>
+          <div class="workload-list" id="workload-list">
+            <div class="workload-item" data-tech="Luis Ramos"><span class="tech-avatar">LR</span><strong>Luis Ramos</strong><span class="workload-number"><b>8</b> / 10</span><div class="progress-track"><span style="width:80%"></span></div></div>
+            <div class="workload-item" data-tech="Carla Mendoza"><span class="tech-avatar">CM</span><strong>Carla Mendoza</strong><span class="workload-number"><b>6</b> / 10</span><div class="progress-track amber"><span style="width:60%"></span></div></div>
+            <div class="workload-item" data-tech="José García"><span class="tech-avatar">JG</span><strong>José García</strong><span class="workload-number"><b>5</b> / 10</span><div class="progress-track green"><span style="width:50%"></span></div></div>
+            <div class="workload-item" data-tech="María Torres"><span class="tech-avatar">MT</span><strong>María Torres</strong><span class="workload-number"><b>4</b> / 10</span><div class="progress-track cyan"><span style="width:40%"></span></div></div>
+            <div class="workload-item" data-tech="Rosa Villanueva"><span class="tech-avatar">RV</span><strong>Rosa Villanueva</strong><span class="workload-number"><b>3</b> / 10</span><div class="progress-track purple"><span style="width:30%"></span></div></div>
+          </div>
+          <p class="workload-note">La carga se actualizará visualmente al asignar tickets.</p>
+        </section>
+
+        <section class="panel info-panel">
+          <h2><span class="info-icon">i</span>Información</h2>
+          <ul><li>Asigna los tickets según la especialidad del técnico.</li><li>Considera la carga de trabajo actual.</li><li>Los tickets vencidos deben revisarse con prioridad.</li><li>Puedes agregar observaciones para el técnico.</li></ul>
+        </section>
+      </aside>
+    </div>
+    <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Prototipo visual · Datos de ejemplo</span></footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="modal" id="assignment-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-card"><button class="modal-close" id="modal-close" type="button" aria-label="Cerrar">×</button><span class="modal-icon">♙</span><h2 id="modal-title">Detalle de asignación</h2><p id="modal-description"></p><div class="modal-actions"><button class="btn-secondary" id="modal-cancel" type="button">Cerrar</button><button class="btn-primary" id="modal-confirm" type="button">Entendido</button></div></div>
+  </div>
+</body>
+</html>
