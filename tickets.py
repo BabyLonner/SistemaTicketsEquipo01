@@ -18,8 +18,16 @@ import warnings
 from functools import wraps
 
 import pymysql
-from flask import (Blueprint, current_app, g, jsonify, render_template, request,
-                   send_from_directory, url_for)
+from flask import (
+    Blueprint,
+    current_app,
+    g,
+    jsonify,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
