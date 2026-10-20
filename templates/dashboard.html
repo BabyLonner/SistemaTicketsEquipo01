@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,20 +8,32 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/CSS/dashboard.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='CSS/dashboard.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="../static/JS/dashboard.js" defer></script>
+  <script id="dashboard-data" type="application/json">
+    {{ datos | tojson }}
+  </script>
+  <script src="{{ url_for('static', filename='JS/dashboard.js') }}" defer></script>
 </head>
+
 <body>
   <header class="topbar">
     <a class="brand" href="dashboard.html" aria-label="Soporte TI, inicio">
       <span class="brand-mark">⌁</span>
       <span><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
     </a>
-    <label class="global-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios"></label>
+    <label class="global-search"><span aria-hidden="true">⌕</span><input type="search"
+        placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios"></label>
     <div class="top-actions">
       <a class="notification" href="notificaciones.html" aria-label="Notificaciones, 3 sin leer">♧<i>3</i></a>
-      <div class="profile"><span class="avatar">CP</span><span><strong>Carlos Pérez</strong><small>Administrador</small></span><span class="chevron">⌄</span></div>
+      <div class="profile">
+        <span class="avatar">{{ usuario_nombre[:2] | upper }}</span>
+        <span>
+          <strong>{{ usuario_nombre }}</strong>
+          <small>{{ usuario_rol }}</small>
+        </span>
+        <span class="chevron">⌄</span>
+      </div>
     </div>
   </header>
 
@@ -36,25 +49,52 @@
       <a class="side-link" href="reportes.html"><span>▥</span>Reportes</a>
       <a class="side-link" href="#api"><span>‹/›</span>API</a>
       <a class="side-link" href="#"><span>⚙</span>Configuración</a>
-      <a class="side-link" href="index.html"><span>⇥</span>Cerrar sesión</a>
+      <a class="side-link" href="{{ url_for('cerrar_sesion') }}"><span class="side-icon">⇥</span>Cerrar sesión</a>
     </nav>
   </aside>
 
   <main class="main">
     <div class="page-heading">
-      <div><h1>Dashboard de Soporte TI</h1><p>Resumen general de tickets y métricas clave</p></div>
+      <div>
+        <h1>Dashboard de Soporte TI</h1>
+        <p>Resumen general de tickets y métricas clave</p>
+      </div>
       <form class="filters" id="filters-form">
-        <label class="date-filter"><span>▦</span><input id="desde" type="date" value="2026-08-01" aria-label="Fecha inicial"><span>–</span><input id="hasta" type="date" value="2026-08-31" aria-label="Fecha final"></label>
-        <label class="area-filter"><span>▦</span><select id="area" aria-label="Área"><option value="todas">Todas las áreas</option><option>Administración</option><option>Logística</option><option>Ventas</option><option>Recursos Humanos</option></select></label>
+        <label class="date-filter"><span>▦</span><input id="desde" type="date" value="2026-08-01"
+            aria-label="Fecha inicial"><span>–</span><input id="hasta" type="date" value="2026-08-31"
+            aria-label="Fecha final"></label>
+        <label class="area-filter"><span>▦</span><select id="area" aria-label="Área">
+            <option value="todas">Todas las áreas</option>
+            <option>Administración</option>
+            <option>Logística</option>
+            <option>Ventas</option>
+            <option>Recursos Humanos</option>
+          </select></label>
         <button class="btn-primary" type="submit"><span>▽</span> Aplicar filtros</button>
       </form>
     </div>
 
     <section class="kpis" aria-label="Resumen de tickets">
-      <article class="kpi kpi-blue"><span class="kpi-icon">▤</span><div><strong id="total-tickets">125</strong><span>Total de tickets</span></div><small>↗ 12% <em>vs. mes anterior</em></small></article>
-      <article class="kpi kpi-red"><span class="kpi-icon">!</span><div><strong id="open-tickets">32</strong><span>Abiertos</span></div><small>↗ 8% <em>vs. mes anterior</em></small></article>
-      <article class="kpi kpi-green"><span class="kpi-icon">✓</span><div><strong id="resolved-tickets">78</strong><span>Resueltos</span></div><small>↗ 5% <em>vs. mes anterior</em></small></article>
-      <article class="kpi kpi-amber"><span class="kpi-icon">◷</span><div><strong id="late-tickets">18</strong><span>Vencidos (SLA)</span></div><small>↗ 30% <em>vs. mes anterior</em></small></article>
+      <article class="kpi kpi-blue"><span class="kpi-icon">▤</span>
+        <div><strong id="total-tickets">{{ datos.kpis.total or 0 }}</strong><span>Total de tickets</span></div><small>↗
+          datos actuales <em>vs. mes
+            anterior</em></small>
+      </article>
+      <article class="kpi kpi-red"><span class="kpi-icon">!</span>
+        <div><strong id="open-tickets">{{ datos.kpis.abiertos or 0 }}</strong><span>Abiertos</span></div><small>↗ datos
+          actuales <em>vs. mes
+            anterior</em></small>
+      </article>
+      <article class="kpi kpi-green"><span class="kpi-icon">✓</span>
+        <div><strong id="resolved-tickets">{{ datos.kpis.resueltos or 0 }}</strong><span>Resueltos</span></div><small>↗
+          datos actuales <em>vs. mes
+            anterior</em></small>
+      </article>
+      <article class="kpi kpi-amber"><span class="kpi-icon">◷</span>
+        <div><strong id="late-tickets">{{ datos.kpis.vencidos or 0 }}</strong><span>Vencidos (SLA)</span></div><small>↗
+          datos actuales<em>vs. mes
+            anterior</em></small>
+      </article>
     </section>
 
     <section class="charts-grid" aria-label="Gráficos de tickets">
@@ -75,25 +115,49 @@
     <section class="bottom-grid">
       <article class="panel category-panel">
         <h2><span class="panel-icon">▰</span>Tickets por categoría</h2>
-        <div class="category-chart"><canvas id="categoryChart" aria-label="Gráfico de tickets por categoría"></canvas></div>
+        <div class="category-chart"><canvas id="categoryChart" aria-label="Gráfico de tickets por categoría"></canvas>
+        </div>
       </article>
       <article class="panel recent-panel" id="reportes">
-        <div class="panel-heading"><h2><span class="panel-icon">▤</span>Tickets recientes</h2><a href="tickets.html">Ver todos los tickets <span>→</span></a></div>
+        <div class="panel-heading">
+          <h2><span class="panel-icon">▤</span>Tickets recientes</h2><a href="tickets.html">Ver todos los tickets
+            <span>→</span></a>
+        </div>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>ID</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Técnico</th><th>Fecha</th></tr></thead>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Asunto</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+                <th>Técnico</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
             <tbody id="recent-tickets">
-              <tr><td>TCK-001</td><td>No enciende PC</td><td><span class="pill high">Alta</span></td><td><span class="pill status-open">Abierto</span></td><td>Juan Pérez</td><td>01/08/2026 10:24</td></tr>
-              <tr><td>TCK-002</td><td>Error en sistema</td><td><span class="pill medium">Media</span></td><td><span class="pill status-progress">En proceso</span></td><td>María López</td><td>01/08/2026 11:03</td></tr>
-              <tr><td>TCK-003</td><td>Sin acceso a VPN</td><td><span class="pill high">Alta</span></td><td><span class="pill status-resolved">Resuelto</span></td><td>Carlos Ruiz</td><td>02/08/2026 09:17</td></tr>
-              <tr><td>TCK-004</td><td>Impresora no funciona</td><td><span class="pill low">Baja</span></td><td><span class="pill status-closed">Cerrado</span></td><td>Ana Torres</td><td>02/08/2026 14:32</td></tr>
-              <tr><td>TCK-005</td><td>Lento en red</td><td><span class="pill medium">Media</span></td><td><span class="pill status-progress">En proceso</span></td><td>Juan Pérez</td><td>03/08/2026 08:50</td></tr>
+              {% for ticket in datos.recientes %}
+              <tr>
+                <td>{{ ticket.id }}</td>
+                <td>{{ ticket.asunto }}</td>
+                <td><span class="pill">{{ ticket.prioridad }}</span></td>
+                <td><span class="pill">{{ ticket.estado }}</span></td>
+                <td>{{ ticket.tecnico or 'Sin asignar' }}</td>
+                <td>{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') if ticket.created_at else '-' }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6">No hay tickets registrados para esta empresa.</td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
       </article>
     </section>
-    <footer class="page-footer">© 2026 Soporte TI · Sistema de Gestión de Tickets <span id="filter-feedback">Mostrando datos de ejemplo</span></footer>
+    <footer class="page-footer">© 2026 Soporte TI · Sistema de Gestión de Tickets <span id="filter-feedback">Mostrando
+        datos de ejemplo</span></footer>
   </main>
 </body>
+
 </html>
