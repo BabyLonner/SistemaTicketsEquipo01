@@ -1,2 +1,6 @@
-uploads/
+
+.env
+.venv/
 __pycache__/
+*.py[cod]
+uploads/
