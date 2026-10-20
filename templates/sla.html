@@ -53,15 +53,15 @@
           <button class="tab" type="button" data-sla="Vencido" role="tab" aria-selected="false">Vencidos <span>(6)</span></button>
           <label class="period-select"><span>▣</span><select id="period-filter" aria-label="Periodo"><option value="month">Este mes</option><option value="week">Esta semana</option><option value="all">Todo el periodo</option></select></label>
         </div>
+        
+        <!-- BARRA DE FILTROS SIMPLIFICADA Y AUTOMÁTICA -->
         <div class="filter-toolbar">
-          <label class="table-search"><span>⌕</span><input id="ticket-search" type="search" placeholder="Buscar por código, asunto o solicitante..." aria-label="Buscar tickets"></label>
           <label class="mini-filter"><span>Prioridad</span><select id="priority-filter"><option value="">Todas</option><option>Alta</option><option>Media</option><option>Baja</option></select></label>
           <label class="mini-filter"><span>Categoría</span><select id="category-filter"><option value="">Todas</option><option>Hardware</option><option>Software</option><option>Redes</option><option>Acceso</option></select></label>
           <label class="mini-filter"><span>Técnico</span><select id="technician-filter"><option value="">Todos</option><option>Luis Ramos</option><option>Carla Mendoza</option><option>José García</option><option>María Torres</option><option>Rosa Villanueva</option><option>Sin asignar</option></select></label>
           <label class="mini-filter"><span>Estado</span><select id="status-filter"><option value="">Todos</option><option>Pendiente</option><option>Asignado</option><option>En proceso</option><option>Resuelto</option></select></label>
-          <button class="btn-primary apply-filters" id="apply-filters" type="button"><span>▽</span>Aplicar filtros</button>
-          <button class="clear-filters" id="clear-filters" type="button">Limpiar</button>
         </div>
+
         <div class="table-wrap"><table>
           <thead><tr><th class="check-col"><input id="select-all" type="checkbox" aria-label="Seleccionar tickets visibles"></th><th>Ticket</th><th>Asunto</th><th>Prioridad</th><th>Tiempo transcurrido</th><th>Tiempo límite</th><th>Estado SLA</th><th>Técnico</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody id="tickets-tbody">
