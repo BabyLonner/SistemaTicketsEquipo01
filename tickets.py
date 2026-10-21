@@ -15,6 +15,7 @@ Contenido (patrón MVC):
 
 Se registra en run.py con:  app.register_blueprint(tickets_bp)
 """
+
 import io
 import os
 import shutil
@@ -76,6 +77,9 @@ class Catalogo:
             return cur.fetchall()
 
 
+
+
+
 class Ticket:
     ESTADOS = ("Abierto", "En proceso", "Resuelto", "Cerrado")
 
@@ -121,7 +125,7 @@ class Ticket:
         return limpios, errores
 
     @staticmethod
-    def crear(cur, datos, solicitante_id):
+    def crear(cur, datos, solicitante_id, empresa_id):
         cur.execute(
             """INSERT INTO tickets (solicitante_id, area_id, categoria_id, prioridad_id, asunto, descripcion)
                VALUES (%s, %s, %s, %s, %s, %s)""",
@@ -131,7 +135,7 @@ class Ticket:
         return cur.lastrowid
 
     @staticmethod
-    def actualizar(cur, ticket_id, datos):
+    def actualizar(cur, ticket_id, datos, empresa_id):
         cur.execute(
             """UPDATE tickets
                   SET asunto = %s, descripcion = %s, categoria_id = %s, prioridad_id = %s, area_id = %s
@@ -170,6 +174,13 @@ class Ticket:
         elif usuario["rol"] == "Técnico":
             condiciones.append("v.tecnico_id = %s")
             params.append(usuario["id"])
+        elif usuario["rol"] == ROL_TECNICO:
+            # El técnico ve los tickets asignados y los aún no asignados de su empresa.
+            condiciones.append("(t.tecnico_id=%s OR t.tecnico_id IS NULL)")
+            params.append(usuario["id"])
+        elif filtros.get("mios"):
+            condiciones.append("(t.solicitante_id=%s OR t.tecnico_id=%s)")
+            params.extend([usuario["id"], usuario["id"]])
         if filtros.get("estado") in Ticket.ESTADOS:
             condiciones.append("v.estado = %s")
             params.append(filtros["estado"])
@@ -197,11 +208,12 @@ class Ticket:
 
 class Evidencia:
     MAX_POR_TICKET = 3
-
     @staticmethod
     def ordenes_usados(cur, ticket_id):
         cur.execute("SELECT orden FROM ticket_evidencias WHERE ticket_id = %s", (ticket_id,))
         return {fila["orden"] for fila in cur.fetchall()}
+
+
 
     @staticmethod
     def insertar(cur, ticket_id, orden, info, subido_por):
@@ -213,6 +225,8 @@ class Evidencia:
              info["mime_type"], info["tamano_bytes"], subido_por),
         )
         return cur.lastrowid
+
+
 
     @staticmethod
     def listar_por_ticket(ticket_id):
@@ -228,11 +242,14 @@ class Evidencia:
             )
             return cur.fetchall()
 
+
     @staticmethod
     def obtener(evidencia_id):
         with conexion().cursor() as cur:
             cur.execute("SELECT * FROM ticket_evidencias WHERE id = %s", (evidencia_id,))
             return cur.fetchone()
+
+
 
     @staticmethod
     def eliminar(cur, evidencia_id):
@@ -268,15 +285,17 @@ FORMATO_POR_MIME = {
 }
 
 
+
+
+
 class ErrorEvidencia(ValueError):
     """Error de validación de una foto (se muestra tal cual al usuario)."""
-
-
 def detectar_mime_real(cabecera: bytes):
     """Tipo MIME según los primeros bytes del archivo, o None.
 
         JPEG: FF D8 FF      PNG: 89 50 4E 47 0D 0A 1A 0A      WEBP: 'RIFF' ... 'WEBP'
     """
+
     if cabecera[:3] == b"\xff\xd8\xff":
         return "image/jpeg"
     if cabecera[:8] == b"\x89PNG\r\n\x1a\n":
@@ -286,16 +305,25 @@ def detectar_mime_real(cabecera: bytes):
     return None
 
 
+
+
+
 def validar_foto(archivo):
     """Valida un archivo de request.files. Devuelve bytes + MIME real o lanza ErrorEvidencia."""
     nombre = archivo.filename or "archivo"
 
-    # 1) Extensión
+
+
+    #* 1) Extensión*
+
     extension = nombre.rsplit(".", 1)[-1].lower() if "." in nombre else ""
     if extension not in EXTENSIONES_PERMITIDAS:
         raise ErrorEvidencia(f"«{nombre}»: solo se permiten imágenes JPG, PNG o WEBP.")
 
-    # 2) MIME declarado por el navegador
+
+
+    #* 2) MIME declarado por el navegador*
+
     if (archivo.mimetype or "").lower() not in MIME_PERMITIDOS:
         raise ErrorEvidencia(f"«{nombre}»: el tipo de archivo no es una imagen permitida.")
 
@@ -305,12 +333,18 @@ def validar_foto(archivo):
     if len(contenido) > TAMANO_MAXIMO:
         raise ErrorEvidencia(f"«{nombre}»: supera el máximo de 5 MB.")
 
-    # 3) MIME real por firma binaria
+
+
+    #* 3) MIME real por firma binaria*
+
     mime_real = detectar_mime_real(contenido[:12])
     if mime_real is None:
         raise ErrorEvidencia(f"«{nombre}»: el contenido no es una imagen real (firma no válida).")
 
-    # 4) Pillow debe poder abrirla y su formato debe coincidir con la firma
+
+
+    #* 4) Pillow debe poder abrirla y su formato debe coincidir con la firma*
+
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
@@ -326,7 +360,11 @@ def validar_foto(archivo):
     return {"nombre_original": nombre[-255:], "contenido": contenido, "mime_type": mime_real}
 
 
+
+
+
 def _a_rgb(img):
+
     """Convierte a RGB; si la imagen tiene transparencia la pone sobre blanco."""
     if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
         img = img.convert("RGBA")
@@ -411,6 +449,11 @@ ROL_TECNICO = "Técnico"
 ROL_SOLICITANTE = "Solicitante"
 
 
+
+
+
+
+
 def login_requerido(vista):
     @wraps(vista)
     def envoltura(*args, **kwargs):
@@ -444,7 +487,31 @@ def puede_editar(usuario, ticket):
         return False
     if usuario["rol"] == ROL_ADMIN:
         return True
-    return ticket["solicitante_id"] == usuario["id"] and ticket["estado"] == "Abierto"
+
+
+
+    #* El solicitante puede editar su ticket mientras esté abierto.*
+
+    if usuario["rol"] == ROL_SOLICITANTE:
+        return (
+            ticket["solicitante_id"] == usuario["id"]
+            and ticket["estado"] == "Abierto"
+        )
+
+
+
+    #* El técnico no puede editar los datos generales del ticket*
+
+    #* mediante esta función.*
+
+    return False
+
+
+
+
+
+
+
 
 
 def puede_adjuntar(usuario, ticket):
@@ -489,6 +556,9 @@ def _demasiado_grande(error):
     return error
 
 
+
+
+
 @tickets_bp.errorhandler(pymysql.MySQLError)
 def _error_mysql(error):
     """Los triggers usan SIGNAL (código 1644) con un mensaje para el usuario."""
@@ -502,11 +572,17 @@ def _fecha(valor):
     return valor.isoformat(timespec="seconds") if valor else None
 
 
+
+
+
 def _urls_evidencia(evidencia_id):
     return {
         "miniatura_url": url_for("tickets.ver_evidencia", evidencia_id=evidencia_id, tipo="miniatura"),
         "imagen_url": url_for("tickets.ver_evidencia", evidencia_id=evidencia_id, tipo="imagen"),
     }
+
+
+
 
 
 def _ticket_base(t):
@@ -533,6 +609,9 @@ def _ticket_resumen(t):
     return datos
 
 
+
+
+
 def _ticket_detalle(t, usuario):
     datos = _ticket_base(t)
     datos["descripcion"] = t["descripcion"]
@@ -554,6 +633,9 @@ def _ticket_detalle(t, usuario):
 def _fotos_de_la_peticion():
     """Archivos del campo 'fotos' (flask.request.files); se ignoran los vacíos."""
     return [a for a in request.files.getlist("fotos") if a and a.filename]
+
+
+
 
 
 def _ticket_o_error(ticket_id):
@@ -592,6 +674,9 @@ def sesion_actual():
     )
 
 
+
+
+
 @tickets_bp.post("/api/tickets")
 @login_requerido
 def crear_ticket():
@@ -610,6 +695,7 @@ def crear_ticket():
 
     con = conexion()
     ticket_id = None
+
     try:
         with con.cursor() as cur:
             # Solicitante automático: sale de la sesión, nunca del formulario
@@ -625,7 +711,11 @@ def crear_ticket():
     ticket = _ticket_detalle(Ticket.obtener(ticket_id, g.usuario["empresa_id"]), g.usuario)
     return jsonify(mensaje=f"Ticket {ticket['codigo']} registrado.", ticket=ticket), 201, {
         "Location": url_for("tickets.obtener_ticket", ticket_id=ticket_id)
+
     }
+
+
+
 
 
 @tickets_bp.get("/api/tickets")
@@ -639,6 +729,7 @@ def listar_tickets():
         "mios": request.args.get("mios") == "1",
         "limite": max(1, min(limite, 500)),
     }
+
     tickets = [_ticket_resumen(t) for t in Ticket.listar(g.usuario, filtros)]
     return jsonify(tickets=tickets, total=len(tickets))
 
@@ -652,6 +743,9 @@ def obtener_ticket(ticket_id):
     return jsonify(ticket=_ticket_detalle(ticket, g.usuario))
 
 
+
+
+
 @tickets_bp.put("/api/tickets/<int:ticket_id>")
 @login_requerido
 def editar_ticket(ticket_id):
@@ -660,6 +754,7 @@ def editar_ticket(ticket_id):
         return error
     if not puede_editar(g.usuario, ticket):
         return jsonify(error="Solo puedes editar tus tickets mientras estén «Abierto»."), 403
+    datos, errores = Ticket.validar(request.get_json(silent=True) or request.form, g.usuario["empresa_id"])
 
     datos, errores = Ticket.validar(request.get_json(silent=True) or request.form, g.usuario)
     if errores:
@@ -690,6 +785,9 @@ def eliminar_ticket(ticket_id):
     return jsonify(mensaje=f"Ticket {ticket['codigo']} eliminado.")
 
 
+
+
+
 @tickets_bp.post("/api/tickets/<int:ticket_id>/evidencias")
 @login_requerido
 def agregar_evidencias(ticket_id):
@@ -698,7 +796,7 @@ def agregar_evidencias(ticket_id):
         return error
     if not puede_adjuntar(g.usuario, ticket):
         return jsonify(error="No puedes adjuntar fotos a este ticket."), 403
-
+    
     archivos = _fotos_de_la_peticion()
     if not archivos:
         msg = "Selecciona al menos una foto."
@@ -726,7 +824,6 @@ def agregar_evidencias(ticket_id):
         con.rollback()
         borrar_archivos(guardadas)
         raise
-
     return jsonify(mensaje=f"{len(fotos)} foto(s) agregada(s).",
                    ticket=_ticket_detalle(Ticket.obtener(ticket_id, g.usuario["empresa_id"]), g.usuario)), 201
 
@@ -762,7 +859,6 @@ def ver_evidencia(evidencia_id, tipo):
         return jsonify(error="La foto no existe."), 404
     if not puede_ver(g.usuario, ticket):
         return jsonify(error="No tienes acceso a esta foto."), 403
-
     if tipo == "miniatura":
         ruta, mime = ruta_miniatura(evidencia["ruta"]), "image/jpeg"
     else:
