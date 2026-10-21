@@ -19,16 +19,15 @@
    Centraliza las llamadas fetch al backend Flask para que
    las tres pantallas de tickets no repitan código.
 
-   - Envía el JWT del login en "Authorization: Bearer ...".
-   - Las fotos se piden con el token (no son públicas), por eso
-     se descargan como blob y se muestran con URL.createObjectURL.
+   - Usa la sesión del login (cookie de Flask): solo un usuario con
+     sesión iniciada puede usar la API y ver las fotos.
+   - Las fotos no son públicas: se piden a /api/evidencias/... y se
+     muestran con URL.createObjectURL.
    - Incluye la validación de imágenes por firma binaria
      (magic numbers), igual que en el servidor.
    ========================================================= */
 const TicketsAPI = (() => {
   const BASE = window.API_BASE || "";
-  // Claves donde el login puede guardar el token tras el login
-  const CLAVES_TOKEN = ["access_token", "token", "jwt"];
 
   const MIME_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];
   const MAX_FOTOS = 3;
@@ -42,25 +41,10 @@ const TicketsAPI = (() => {
     }
   }
 
-  function obtenerToken() {
-    try {
-      for (const clave of CLAVES_TOKEN) {
-        const valor = localStorage.getItem(clave) || sessionStorage.getItem(clave);
-        if (valor) return valor;
-      }
-    } catch (e) { /* almacenamiento bloqueado */ }
-    return null;
-  }
-
-  function cabeceras(extra = {}) {
-    const token = obtenerToken();
-    return token ? { ...extra, Authorization: `Bearer ${token}` } : { ...extra };
-  }
-
   async function pedir(ruta, opciones = {}) {
     let respuesta;
     try {
-      respuesta = await fetch(BASE + ruta, { ...opciones, headers: cabeceras(opciones.headers) });
+      respuesta = await fetch(BASE + ruta, { credentials: "same-origin", ...opciones });
     } catch (e) {
       throw new ErrorAPI("No se pudo conectar con el servidor. Verifica que Flask esté en ejecución.", 0);
     }
@@ -76,7 +60,6 @@ const TicketsAPI = (() => {
     return new Promise((resolver, rechazar) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", BASE + ruta);
-      Object.entries(cabeceras()).forEach(([k, v]) => xhr.setRequestHeader(k, v));
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && alProgresar) alProgresar(Math.round((e.loaded / e.total) * 100));
       };
@@ -109,7 +92,7 @@ const TicketsAPI = (() => {
   const cacheImagenes = new Map();
   async function urlImagen(ruta) {
     if (cacheImagenes.has(ruta)) return cacheImagenes.get(ruta);
-    const promesa = fetch(BASE + ruta, { headers: cabeceras() }).then((r) => {
+    const promesa = fetch(BASE + ruta, { credentials: "same-origin" }).then((r) => {
       if (!r.ok) throw new ErrorAPI("No se pudo cargar la imagen.", r.status);
       return r.blob();
     }).then((blob) => URL.createObjectURL(blob));
@@ -201,7 +184,7 @@ const TicketsAPI = (() => {
 
   return {
     ErrorAPI, pintarPerfil, MIME_PERMITIDOS, MAX_FOTOS, MAX_BYTES,
-    obtenerToken, sesion, listar, obtener, crear, actualizar, eliminar,
+    sesion, listar, obtener, crear, actualizar, eliminar,
     agregarEvidencias, eliminarEvidencia, urlImagen,
     detectarMimeReal, prepararFoto, formatearPeso, formatearFecha
   };
@@ -458,6 +441,8 @@ const Evidencias = (() => {
     if (estado) estado.className = `badge ${claseEstado[t.estado] || ""}`;
     const categoria = document.querySelector(".ticket-tags .category-tag");
     if (categoria) categoria.textContent = `◉ ${t.categoria}`;
+    const empresa = document.querySelectorAll(".ticket-tags .category-tag")[1];
+    if (empresa && t.empresa) empresa.textContent = `▦ ${t.empresa}`;
     // Valores actuales en el panel "Estado actual"
     [["property-status", t.estado], ["property-priority", t.prioridad], ["property-category", t.categoria],
      ["property-technician", t.tecnico || "Sin asignar"]].forEach(([id, valor]) => {
@@ -473,6 +458,7 @@ const Evidencias = (() => {
       if (etiqueta === "Solicitante") valor.textContent = t.solicitante;
       if (etiqueta === "Área") valor.textContent = t.area;
       if (etiqueta === "Creado") valor.textContent = TicketsAPI.formatearFecha(t.created_at);
+      if (etiqueta === "Empresa" && t.empresa) valor.textContent = t.empresa;
     });
     document.title = `${t.codigo} · ${t.asunto} | Soporte TI`;
   }
@@ -505,7 +491,7 @@ const Evidencias = (() => {
               </button>
               <figcaption>
                 <span class="m2-galeria__nombre" title="${escapar(f.nombre)}">${escapar(f.nombre)}</span>
-                <small>${f.ancho}×${f.alto} · ${TicketsAPI.formatearPeso(f.tamano_bytes)} · ${escapar(f.subido_por)}</small>
+                <small>Foto ${f.orden} · ${TicketsAPI.formatearPeso(f.tamano_bytes)} · ${escapar(f.subido_por)}</small>
               </figcaption>
               ${ticket.permisos.editar ? `<button type="button" class="m2-galeria__quitar" data-quitar="${f.id}" aria-label="Quitar ${escapar(f.nombre)}">×</button>` : ""}
             </figure>`).join("")}
@@ -629,8 +615,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const technician = $("technician-filter");
   const selectAll = $("select-all");
   const POR_PAGINA = 10;
-  // Plazo máximo de atención por prioridad (horas) — referencia del módulo SLA
-  const PLAZO_HORAS = { Alta: 4, Media: 24, Baja: 72 };
   const CLASE_PRIORIDAD = { Alta: "priority-high", Media: "priority-medium", Baja: "priority-low" };
   const CLASE_ESTADO = { "Abierto": "status-open", "En proceso": "status-progress", "Resuelto": "status-resolved", "Cerrado": "status-closed" };
 
@@ -644,17 +628,22 @@ document.addEventListener("DOMContentLoaded", () => {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   /* ---------- Plazo (semáforo) ---------- */
+  // El semáforo y los minutos restantes los calcula la vista v_tickets de la BD
   function calcularPlazo(t) {
-    if (t.estado === "Resuelto" || t.estado === "Cerrado") return { texto: "—", clase: "sla-neutral", nivel: "" };
-    const limite = PLAZO_HORAS[t.prioridad] * 3600000;
-    const restante = new Date(t.created_at).getTime() + limite - Date.now();
-    const horas = (ms) => {
-      const min = Math.round(Math.abs(ms) / 60000);
-      return min < 60 ? `${min} min` : `${Math.round(min / 60)} h`;
+    const tiempo = (min) => {
+      min = Math.abs(min || 0);
+      if (min < 60) return `${min} min`;
+      if (min < 2880) return `${Math.round(min / 60)} h`;
+      return `${Math.round(min / 1440)} d`;
     };
-    if (restante <= 0) return { texto: `Vencido hace ${horas(restante)}`, clase: "sla-danger", nivel: "Vencido" };
-    if (restante < limite * 0.25) return { texto: `Por vencer (${horas(restante)})`, clase: "sla-warning", nivel: "Por vencer" };
-    return { texto: `Quedan ${horas(restante)}`, clase: "sla-ok", nivel: "A tiempo" };
+    switch (t.semaforo) {
+      case "rojo": return { texto: `Vencido hace ${tiempo(t.minutos_restantes)}`, clase: "sla-danger", nivel: "Vencido" };
+      case "amarillo": return { texto: `Por vencer (${tiempo(t.minutos_restantes)})`, clase: "sla-warning", nivel: "Por vencer" };
+      case "verde": return { texto: `Quedan ${tiempo(t.minutos_restantes)}`, clase: "sla-ok", nivel: "A tiempo" };
+      case "cumplido": return { texto: "Cumplido", clase: "sla-ok", nivel: "" };
+      case "incumplido": return { texto: "Fuera de plazo", clase: "sla-danger", nivel: "" };
+      default: return { texto: "—", clase: "sla-neutral", nivel: "" };
+    }
   }
 
   /* ---------- Fila de la tabla ---------- */
@@ -696,6 +685,7 @@ document.addEventListener("DOMContentLoaded", () => {
       technician.innerHTML = `<option value="">Todos los técnicos</option>` +
         tecnicos.map((n) => `<option>${escapar(n)}</option>`).join("");
     } catch (e) {
+      if (e.estado === 401) { location.href = "/"; return; }
       // Sin backend: se mantienen las filas de ejemplo del HTML
       $("page-message").textContent = e.estado === 401
         ? "Inicia sesión para ver los tickets."

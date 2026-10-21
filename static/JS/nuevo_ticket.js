@@ -14,12 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = $("new-ticket-form");
   const campos = {
     asunto: $("subject"), descripcion: $("description"),
-    categoria: $("category"), area: $("area")
+    categoria_id: $("category"), area_id: $("area")
   };
   // Nombre del campo en la API -> id del mensaje de error en el HTML
   const ERRORES = {
-    asunto: "subject-error", descripcion: "description-error", categoria: "category-error",
-    area: "area-error", prioridad: "priority-error", fotos: "attachments-error"
+    asunto: "subject-error", descripcion: "description-error", categoria_id: "category-error",
+    area_id: "area-error", prioridad: "priority-error", fotos: "attachments-error"
   };
   const MAX = TicketsAPI.MAX_FOTOS;
 
@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let ticketEditando = null; // ticket cargado en modo edición
   let fotosNuevas = [];      // [{ archivo, url, optimizada, pesoOriginal }]
   let enviando = false;
+  let areaUsuario = "";      // área del usuario en sesión (se preselecciona)
 
   const avisar = (msg) => Evidencias.avisar(msg);
   const escapar = (t) => String(t ?? "").replace(/[&<>"']/g, (c) =>
@@ -46,7 +47,11 @@ document.addEventListener("DOMContentLoaded", () => {
      ======================================================= */
   async function cargarSesion() {
     try {
-      const { usuario } = await TicketsAPI.sesion();
+      const { usuario, catalogos } = await TicketsAPI.sesion();
+      llenarSelect(campos.categoria_id, catalogos.categorias, "Selecciona una categoría");
+      llenarSelect(campos.area_id, catalogos.areas, "Selecciona tu área");
+      areaUsuario = usuario.area_id || "";
+      campos.area_id.value = areaUsuario;   // su área por defecto
       $("perfil-nombre").textContent = usuario.nombre;
       $("perfil-rol").textContent = usuario.rol;
       $("perfil-iniciales").textContent = iniciales(usuario.nombre);
@@ -56,8 +61,9 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) {
       $("solicitante-nombre").textContent = "Sin sesión";
       $("submit-button").disabled = true;
-      if (e.estado === 401 || e.estado === 422) {
-        mostrarAlerta(`Tu sesión no es válida o expiró. <a href="index.html">Inicia sesión</a> para registrar tickets.`);
+      if (e.estado === 401) {
+        location.href = "/";   // sin sesión: al login
+        return false;
       } else if (e.estado === 0 || e.estado === 404 || e.estado === 405) {
         mostrarAlerta(`No se encontró el servidor Flask. Ejecuta <b>python run.py</b> y abre <a href="http://127.0.0.1:5000/nuevo_ticket.html">http://127.0.0.1:5000/nuevo_ticket.html</a>.`);
       } else {
@@ -65,6 +71,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       return false;
     }
+  }
+
+  /* Categorías y áreas vienen de la base de datos (cada empresa tiene sus áreas) */
+  function llenarSelect(select, opciones, textoVacio) {
+    select.innerHTML = `<option value="">${textoVacio}</option>` +
+      opciones.map((o) => `<option value="${o.id}">${escapar(o.nombre)}</option>`).join("");
   }
 
   /* =======================================================
@@ -192,8 +204,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return {
       asunto: campos.asunto.value.trim(),
       descripcion: campos.descripcion.value.trim(),
-      categoria: campos.categoria.value,
-      area: campos.area.value,
+      categoria_id: campos.categoria_id.value,
+      area_id: campos.area_id.value,
       prioridad: form.querySelector('input[name="prioridad"]:checked')?.value || ""
     };
   }
@@ -202,8 +214,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const errores = {};
     if (v.asunto.length < 5) errores.asunto = "El asunto debe tener al menos 5 caracteres.";
     if (v.descripcion.length < 10) errores.descripcion = "Describe el problema (mínimo 10 caracteres).";
-    if (!v.categoria) errores.categoria = "Selecciona una categoría.";
-    if (!v.area) errores.area = "Selecciona tu área.";
+    if (!v.categoria_id) errores.categoria_id = "Selecciona una categoría.";
+    if (!v.area_id) errores.area_id = "Selecciona tu área.";
     if (!v.prioridad) errores.prioridad = "Selecciona una prioridad.";
     return errores;
   }
@@ -338,6 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function reiniciarFormulario() {
     form.reset();
+    campos.area_id.value = areaUsuario;
     fotosNuevas.forEach((f) => URL.revokeObjectURL(f.url));
     fotosNuevas = [];
     limpiarErrores();
@@ -359,7 +372,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("cancel-button").addEventListener("click", () => {
     if (ticketEditando) { location.href = `detalle_ticket.html?id=${ticketEditando.id}`; return; }
     const v = leerValores();
-    if ((v.asunto || v.descripcion || v.categoria || v.area || fotosNuevas.length) &&
+    if ((v.asunto || v.descripcion || v.categoria_id || fotosNuevas.length) &&
         !confirm("¿Quieres limpiar los datos ingresados en el formulario?")) return;
     reiniciarFormulario();
     avisar("Formulario limpiado.");
@@ -392,8 +405,8 @@ document.addEventListener("DOMContentLoaded", () => {
       document.title = `Editar ${ticket.codigo} | Soporte TI`;
       campos.asunto.value = ticket.asunto;
       campos.descripcion.value = ticket.descripcion;
-      campos.categoria.value = ticket.categoria;
-      campos.area.value = ticket.area;
+      campos.categoria_id.value = ticket.categoria_id;
+      campos.area_id.value = ticket.area_id || "";
       form.querySelector(`input[name="prioridad"][value="${ticket.prioridad}"]`).checked = true;
       marcarPrioridad();
       actualizarContador();
@@ -443,7 +456,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (ticketEditando) return;
       campos.asunto.value = boton.dataset.subject || "";
       campos.descripcion.value = boton.dataset.description || "";
-      if (boton.dataset.category) campos.categoria.value = boton.dataset.category;
+      const opcion = [...campos.categoria_id.options].find((o) => o.textContent === boton.dataset.category);
+      if (opcion) campos.categoria_id.value = opcion.value;
       actualizarContador();
       limpiarErrores();
       campos.asunto.focus();
