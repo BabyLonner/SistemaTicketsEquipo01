@@ -1,5 +1,4 @@
 import os
-<<<<<<< HEAD
 import unicodedata
 import bcrypt
 from dotenv import load_dotenv
@@ -20,7 +19,7 @@ from flask import (
     session,
     url_for,
 )
->>>>>>> ce55750865b9393c7726d7b7ee40512a9194db7e
+
 from jinja2 import TemplateNotFound
 
 from db import obtener_conexion
@@ -28,7 +27,6 @@ from tickets import tickets_bp
 
 load_dotenv()
 app = Flask(__name__)
-<<<<<<< HEAD
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "clave-local-solo-desarrollo")
 app.register_blueprint(tickets_bp)
 
@@ -69,56 +67,6 @@ def obtener_identidad_empresa(empresa_id):
         conexion.close()
 
 
-=======
-app.secret_key = os.getenv(
-    "FLASK_SECRET_KEY",
-    "clave-local-solo-desarrollo",
-)
-
-# =====================================================================
-# REGISTRO DE BLUEPRINTS
-# =====================================================================
-# Módulo de tickets: registro con evidencias (API en /api/tickets)
-app.register_blueprint(tickets_bp)
-
-
-# =====================================================================
-# MIDDLEWARES Y UTILIDADES DE SESIÓN
-# =====================================================================
-def login_requerido(f):
-    """Decorador para proteger rutas que requieren sesión activa."""
-    @wraps(f)
-    def decorador(*args, **kwargs):
-        if not session.get("usuario_id"):
-            return redirect(url_for("inicio"))
-        return f(*args, **kwargs)
-    return decorador
-
-
-@app.context_processor
-def inyectar_datos_globales():
-    """
-    Inyecta automáticamente las variables de sesión en TODOS los templates HTML.
-    Así todas las vistas tienen acceso al nombre, rol y colores de la empresa.
-    """
-    return {
-        "usuario_id": session.get("usuario_id"),
-        "usuario_nombre": session.get("nombre"),
-        "usuario_rol": session.get("rol"),
-        "usuario_area": session.get("area"),
-        "empresa_id": session.get("empresa_id"),
-        "empresa_nombre": session.get("empresa_nombre"),
-        "titulo_sistema": session.get("titulo_sistema", "Mesa de Ayuda TI"),
-        "color_primario": session.get("color_primario", "#0077B6"),
-        "color_secundario": session.get("color_secundario", "#D6EEF8"),
-        "logo_url": session.get("logo_url"),
-    }
-
-
-# =====================================================================
-# MÓDULO 1: AUTENTICACIÓN Y ACCESO
-# =====================================================================
->>>>>>> ce55750865b9393c7726d7b7ee40512a9194db7e
 @app.route("/", methods=["GET", "POST"])
 def inicio():
     if request.method == "POST":
@@ -130,7 +78,6 @@ def inicio():
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
-<<<<<<< HEAD
                 cursor.execute("""
                     SELECT id, empresa_id, nombre, correo, password_hash, rol, activo
                     FROM users WHERE correo = %s LIMIT 1
@@ -138,50 +85,16 @@ def inicio():
                 usuario = cursor.fetchone()
             if not usuario or not usuario["activo"]:
                 flash("Correo o contraseña incorrectos.", "error")
-=======
-                # Usamos la vista v_usuarios_sesion de mesa_ayuda_ti.sql
-                cursor.execute(
-                    """
-                    SELECT id, nombre, correo, password_hash, rol, activo,
-                           area_id, area, empresa_id, empresa, titulo_sistema,
-                           color_primario, color_secundario, logo_url, empresa_activa
-                    FROM v_usuarios_sesion
-                    WHERE correo = %s
-                    LIMIT 1
-                    """,
-                    (correo,),
-                )
-                usuario = cursor.fetchone()
-
-            if not usuario or not usuario["activo"] or not usuario["empresa_activa"]:
-                flash("Correo o contraseña incorrectos, o cuenta inactiva.", "error")
->>>>>>> ce55750865b9393c7726d7b7ee40512a9194db7e
                 return redirect(url_for("inicio"))
             if not bcrypt.checkpw(clave.encode("utf-8"), usuario["password_hash"].encode("utf-8")):
                 flash("Correo o contraseña incorrectos.", "error")
                 return redirect(url_for("inicio"))
-<<<<<<< HEAD
-=======
-
-            # Guardar datos del usuario y personalización de su empresa en la sesión
->>>>>>> ce55750865b9393c7726d7b7ee40512a9194db7e
             session.clear()
             session["usuario_id"] = usuario["id"]
             session["empresa_id"] = usuario["empresa_id"]
             session["nombre"] = usuario["nombre"]
             session["correo"] = usuario["correo"]
             session["rol"] = usuario["rol"]
-<<<<<<< HEAD
-=======
-            session["area_id"] = usuario["area_id"]
-            session["area"] = usuario["area"]
-            session["empresa_nombre"] = usuario["empresa"]
-            session["titulo_sistema"] = usuario["titulo_sistema"]
-            session["color_primario"] = usuario["color_primario"]
-            session["color_secundario"] = usuario["color_secundario"]
-            session["logo_url"] = usuario["logo_url"]
-
->>>>>>> ce55750865b9393c7726d7b7ee40512a9194db7e
             with conexion.cursor() as cursor:
                 cursor.execute("UPDATE users SET ultimo_acceso = NOW() WHERE id = %s", (usuario["id"],))
             conexion.commit()
@@ -318,7 +231,6 @@ def obtener_datos_dashboard(empresa_id):
     conexion = obtener_conexion()
     try:
         with conexion.cursor() as cursor:
-<<<<<<< HEAD
             cursor.execute("""
                 SELECT COUNT(*) AS total,
                     COALESCE(SUM(estado = 'Abierto'), 0) AS abiertos,
@@ -327,26 +239,6 @@ def obtener_datos_dashboard(empresa_id):
                         AND fecha_limite IS NOT NULL AND fecha_limite < NOW()), 0) AS vencidos
                 FROM tickets WHERE empresa_id = %s
             """, (empresa_id,))
-=======
-            cursor.execute(
-                """
-                SELECT
-                    COUNT(*) AS total,
-                    COALESCE(SUM(estado = 'Abierto'), 0) AS abiertos,
-                    COALESCE(SUM(estado = 'Resuelto'), 0) AS resueltos,
-                    COALESCE(
-                        SUM(
-                            estado NOT IN ('Resuelto', 'Cerrado')
-                            AND fecha_limite IS NOT NULL
-                            AND fecha_limite < NOW()
-                        ), 0
-                    ) AS vencidos
-                FROM tickets
-                WHERE empresa_id = %s
-                """,
-                (empresa_id,),
-            )
->>>>>>> ce55750865b9393c7726d7b7ee40512a9194db7e
             kpis = cursor.fetchone()
             cursor.execute("SELECT estado, COUNT(*) AS total FROM tickets WHERE empresa_id=%s GROUP BY estado", (empresa_id,))
             estados = cursor.fetchall()
@@ -386,7 +278,6 @@ def obtener_datos_dashboard(empresa_id):
 @login_requerido
 def dashboard():
     datos = obtener_datos_dashboard(session["empresa_id"])
-<<<<<<< HEAD
     empresa = obtener_identidad_empresa(session["empresa_id"])
 
     return render_template(
@@ -451,14 +342,6 @@ def cerrar_sesion():
     return redirect(url_for("inicio"))
 
 
-=======
-    return render_template("dashboard.html", datos=datos)
-
-
-# Rutas limpias y con .html para las pantallas del menú
-# (tickets.html, nuevo_ticket.html, notificaciones.html, etc.)
-@app.route("/<pagina>")
->>>>>>> ce55750865b9393c7726d7b7ee40512a9194db7e
 @app.route("/<pagina>.html")
 def pantalla(pagina):
     if pagina == "index":
