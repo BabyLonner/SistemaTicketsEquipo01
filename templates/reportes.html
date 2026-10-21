@@ -9,34 +9,33 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="../static/CSS/reportes.css">
-    <script src="../static/JS/reportes.js" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/reportes.css') }}">
+    <script src="{{ url_for('static', filename='JS/reportes.js') }}" defer></script>
 </head>
 
 <body>
     <header class="topbar">
-        <a class="brand" href="dashboard.html"><span class="logo">◉</span><span><b>SOPORTE TI</b><small>Sistema de
+        <a class="brand" href="{{ url_for('dashboard') }}"><span class="logo">◉</span><span><b>SOPORTE TI</b><small>Sistema de
                     Gestión de Tickets</small></span></a>
         <label class="global-search">⌕ <input id="global-search" placeholder="Buscar tickets, usuarios, reportes..."
                 aria-label="Búsqueda global"></label>
         <div class="top-actions"><button id="notifications-button" class="notification"
                 aria-label="Notificaciones">♧<i>3</i></button><button id="profile-button" class="profile"><span
-                    class="avatar">JP</span><span><b>Juan
-                        Pérez</b><small>Administrador</small></span><span>⌄</span></button></div>
+                    class="avatar">JP</span><span><b>{{ usuario_nombre }}</b><small>{{ usuario_rol|capitalize }}</small></span><span>⌄</span></button></div>
     </header>
     <aside class="sidebar">
         <nav>
-            <a class="side-link" href="dashboard.html"><span>▦</span>Dashboard</a>
-            <a class="side-link" href="tickets.html"><span>▤</span>Tickets</a>
-            <a class="side-link" href="nuevo_ticket.html"><span>♙</span>Nuevo Ticket</a>
-            <a class="side-link" href="sla.html"><span>◷</span>SLA</a>
-            <a class="side-link" href="asignaciones.html"><span class="side-icon">♧</span>Asignación</a>
-            <a class="side-link" href="usuarios.html"><span>♙</span>Usuarios</a>
-            <a class="side-link" href="notificaciones.html"><span>♧</span>Notificaciones</a>
-            <a href="reportes.html" class="side-link active"><span>▥</span>Reportes</a>
+            <a class="side-link" href="{{ url_for('dashboard') }}"><span>▦</span>Dashboard</a>
+            <a class="side-link" href="{{ url_for('pantalla', pagina='tickets') }}"><span>▤</span>Tickets</a>
+            <a class="side-link" href="{{ url_for('pantalla', pagina='nuevo_ticket') }}"><span>♙</span>Nuevo Ticket</a>
+            <a class="side-link" href="{{ url_for('pantalla', pagina='sla') }}"><span>◷</span>SLA</a>
+            <a class="side-link" href="{{ url_for('pantalla', pagina='asignaciones') }}"><span class="side-icon">♧</span>Asignación</a>
+            <a class="side-link" href="{{ url_for('pantalla', pagina='usuarios') }}"><span>♙</span>Usuarios</a>
+            <a class="side-link" href="{{ url_for('pantalla', pagina='notificaciones') }}"><span>♧</span>Notificaciones</a>
+            <a href="{{ url_for('reportes') }}" class="side-link active"><span>▥</span>Reportes</a>
             <a class="side-link" href="#api"><span>‹/›</span>API</a>
             <a class="side-link" href="#"><span>⚙</span>Configuración</a>
-            <a class="side-link" href="index.html"><span>⇥</span>Cerrar sesión</a>
+            <a class="side-link" href="{{ url_for('cerrar_sesion') }}"><span>⇥</span>Cerrar sesión</a>
         </nav>
     </aside>
     <main class="main">
@@ -52,53 +51,38 @@
             <div class="panel-title"><b>▽ Filtros del reporte</b><small>Personaliza los resultados</small></div>
             <div class="filters-grid">
                 <label class="control date-control"><span>Rango de fechas</span>
-                    <div class="date-range"><input id="date-from" type="date" value="2026-08-01"><span>–</span><input
-                            id="date-to" type="date" value="2026-08-31"></div>
+                    <div class="date-range"><input id="date-from" type="date" value=""><span>–</span><input
+                            id="date-to" type="date" value=""></div>
                 </label>
                 <label class="control"><span>Área / Empresa</span><select id="area-filter">
                         <option value="">Todas</option>
-                        <option>Administración</option>
-                        <option>Recursos Humanos</option>
-                        <option>Contabilidad</option>
-                        <option>Ventas</option>
-                        <option>Operaciones</option>
+                        {% for area in areas %}<option value="{{ area }}">{{ area }}</option>{% endfor %}
                     </select></label>
                 <label class="control"><span>Categoría</span><select id="category-filter">
                         <option value="">Todas</option>
-                        <option>Hardware</option>
-                        <option>Software</option>
-                        <option>Redes</option>
-                        <option>Acceso</option>
-                        <option>Impresoras</option>
-                        <option>Otros</option>
+                        {% for categoria in categorias %}<option value="{{ categoria }}">{{ categoria }}</option>{% endfor %}
                     </select></label>
                 <label class="control"><span>Prioridad</span><select id="priority-filter">
                         <option value="">Todas</option>
-                        <option>Alta</option>
-                        <option>Media</option>
-                        <option>Baja</option>
+                        {% for prioridad in prioridades %}<option value="{{ prioridad }}">{{ prioridad }}</option>{% endfor %}
                     </select></label>
                 <label class="control"><span>Estado</span><select id="status-filter">
                         <option value="">Todos</option>
-                        <option>Resuelto</option>
-                        <option>En proceso</option>
-                        <option>Pendiente</option>
-                        <option>Vencido</option>
+                        <option value="Abierto">Abierto</option>
+                        <option value="En proceso">En proceso</option>
+                        <option value="Resuelto">Resuelto</option>
+                        <option value="Cerrado">Cerrado</option>
+                        <option value="Vencido">Vencido (fuera de plazo)</option>
                     </select></label>
                 <label class="control"><span>Técnico</span><select id="technician-filter">
                         <option value="">Todos</option>
-                        <option>Luis Ramos</option>
-                        <option>Carla Mendoza</option>
-                        <option>José García</option>
-                        <option>María Torres</option>
-                        <option>Rosa Villanueva</option>
-                        <option>Sin asignar</option>
+                        {% for tecnico in tecnicos %}<option value="{{ tecnico }}">{{ tecnico }}</option>{% endfor %}
+                        <option value="Sin asignar">Sin asignar</option>
                     </select></label>
                 <button class="primary generate" id="generate-report">⌕ Generar reporte</button><button class="clear"
                     id="clear-filters">↻ Limpiar</button>
             </div>
-            <p id="filter-message" class="filter-message" role="status">Mostrando datos de ejemplo del periodo
-                seleccionado.</p>
+            <p id="filter-message" class="filter-message" role="status">Los datos corresponden a los tickets reales de tu empresa.</p>
         </section>
         <section class="stats">
             <article class="stat blue"><span class="stat-icon">▤</span>
@@ -162,171 +146,28 @@
                         </tr>
                     </thead>
                     <tbody id="report-tbody">
-                        <tr data-id="TK-2291" data-subject="La impresora no imprime" data-requester="Carlos Martínez"
-                            data-area="Administración" data-category="Hardware" data-priority="Alta"
-                            data-status="En proceso" data-technician="Luis Ramos" data-created="2026-08-02"
-                            data-resolved="">
-                            <td>1</td>
-                            <td><b class="code">TK-2291</b></td>
-                            <td>La impresora no imprime</td>
-                            <td>Carlos Martínez</td>
-                            <td>Administración</td>
-                            <td>Hardware</td>
-                            <td><span class="priority high">● Alta</span></td>
-                            <td><span class="status progress">● En proceso</span></td>
-                            <td>Luis Ramos</td>
-                            <td>02/08/2026 10:24</td>
-                            <td>—</td>
-                            <td><button class="view" aria-label="Ver TK-2291">◉</button></td>
+                        {% for t in tickets %}
+                        {% set codigo = t.numero if t.numero else ('TK-' ~ '%04d'|format(t.id)) %}
+                        {% set fecha_creacion = t.created_at.strftime('%Y-%m-%d') if t.created_at else '' %}
+                        {% set fecha_limite = t.fecha_limite.strftime('%Y-%m-%d') if t.fecha_limite else '' %}
+                        {% set fecha_actualizacion = t.updated_at.strftime('%Y-%m-%d %H:%M') if t.updated_at else '' %}
+                        <tr data-id="{{ codigo }}" data-subject="{{ t.asunto or '' }}"
+                            data-requester="{{ t.solicitante or 'Sin solicitante' }}"
+                            data-area="{{ t.area or 'Sin área' }}" data-category="{{ t.categoria or 'Sin categoría' }}"
+                            data-priority="{{ t.prioridad or 'Sin prioridad' }}" data-status="{{ t.estado or '' }}"
+                            data-technician="{{ t.tecnico or 'Sin asignar' }}" data-created="{{ fecha_creacion }}"
+                            data-deadline="{{ fecha_limite }}" data-updated="{{ fecha_actualizacion }}">
+                            <td>{{ loop.index }}</td><td><b class="code">{{ codigo }}</b></td>
+                            <td>{{ t.asunto or 'Sin asunto' }}</td><td>{{ t.solicitante or 'Sin solicitante' }}</td>
+                            <td>{{ t.area or 'Sin área' }}</td><td>{{ t.categoria or 'Sin categoría' }}</td>
+                            <td><span class="priority">{{ t.prioridad or 'Sin prioridad' }}</span></td>
+                            <td><span class="status">{{ t.estado or 'Sin estado' }}</span></td>
+                            <td>{{ t.tecnico or 'Sin asignar' }}</td>
+                            <td>{{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at else '—' }}</td>
+                            <td>{{ t.updated_at.strftime('%d/%m/%Y %H:%M') if t.estado == 'Resuelto' and t.updated_at else '—' }}</td>
+                            <td><button class="view" aria-label="Ver {{ codigo }}">◉</button></td>
                         </tr>
-                        <tr data-id="TK-2290" data-subject="Mi computadora está muy lenta" data-requester="Ana Torres"
-                            data-area="Recursos Humanos" data-category="Software" data-priority="Media"
-                            data-status="Resuelto" data-technician="Carla Mendoza" data-created="2026-08-02"
-                            data-resolved="2026-08-03">
-                            <td>2</td>
-                            <td><b class="code">TK-2290</b></td>
-                            <td>Mi computadora está muy lenta</td>
-                            <td>Ana Torres</td>
-                            <td>Recursos Humanos</td>
-                            <td>Software</td>
-                            <td><span class="priority medium">▲ Media</span></td>
-                            <td><span class="status resolved">● Resuelto</span></td>
-                            <td>Carla Mendoza</td>
-                            <td>02/08/2026 14:10</td>
-                            <td>03/08/2026 14:20</td>
-                            <td><button class="view" aria-label="Ver TK-2290">◉</button></td>
-                        </tr>
-                        <tr data-id="TK-2289" data-subject="No tengo acceso a un sistema" data-requester="Luis Mendoza"
-                            data-area="Contabilidad" data-category="Acceso" data-priority="Alta" data-status="Vencido"
-                            data-technician="José García" data-created="2026-08-05" data-resolved="">
-                            <td>3</td>
-                            <td><b class="code">TK-2289</b></td>
-                            <td>No tengo acceso a un sistema</td>
-                            <td>Luis Mendoza</td>
-                            <td>Contabilidad</td>
-                            <td>Acceso</td>
-                            <td><span class="priority high">● Alta</span></td>
-                            <td><span class="status overdue">● Vencido</span></td>
-                            <td>José García</td>
-                            <td>05/08/2026 16:30</td>
-                            <td>—</td>
-                            <td><button class="view" aria-label="Ver TK-2289">◉</button></td>
-                        </tr>
-                        <tr data-id="TK-2288" data-subject="Error al enviar correos" data-requester="Daniela Ruiz"
-                            data-area="Ventas" data-category="Redes" data-priority="Media" data-status="Resuelto"
-                            data-technician="María Torres" data-created="2026-08-06" data-resolved="2026-08-06">
-                            <td>4</td>
-                            <td><b class="code">TK-2288</b></td>
-                            <td>Error al enviar correos</td>
-                            <td>Daniela Ruiz</td>
-                            <td>Ventas</td>
-                            <td>Redes</td>
-                            <td><span class="priority medium">▲ Media</span></td>
-                            <td><span class="status resolved">● Resuelto</span></td>
-                            <td>María Torres</td>
-                            <td>06/08/2026 11:20</td>
-                            <td>06/08/2026 17:35</td>
-                            <td><button class="view" aria-label="Ver TK-2288">◉</button></td>
-                        </tr>
-                        <tr data-id="TK-2287" data-subject="Instalación de software" data-requester="Javier López"
-                            data-area="Operaciones" data-category="Software" data-priority="Baja" data-status="Resuelto"
-                            data-technician="Rosa Villanueva" data-created="2026-08-07" data-resolved="2026-08-07">
-                            <td>5</td>
-                            <td><b class="code">TK-2287</b></td>
-                            <td>Instalación de software</td>
-                            <td>Javier López</td>
-                            <td>Operaciones</td>
-                            <td>Software</td>
-                            <td><span class="priority low">● Baja</span></td>
-                            <td><span class="status resolved">● Resuelto</span></td>
-                            <td>Rosa Villanueva</td>
-                            <td>07/08/2026 15:00</td>
-                            <td>07/08/2026 17:40</td>
-                            <td><button class="view" aria-label="Ver TK-2287">◉</button></td>
-                        </tr>
-                        <tr data-id="TK-2286" data-subject="Problemas con la red WiFi" data-requester="Pedro Castillo"
-                            data-area="Administración" data-category="Redes" data-priority="Media"
-                            data-status="En proceso" data-technician="Luis Ramos" data-created="2026-08-08"
-                            data-resolved="">
-                            <td>6</td>
-                            <td><b class="code">TK-2286</b></td>
-                            <td>Problemas con la red WiFi</td>
-                            <td>Pedro Castillo</td>
-                            <td>Administración</td>
-                            <td>Redes</td>
-                            <td><span class="priority medium">▲ Media</span></td>
-                            <td><span class="status progress">● En proceso</span></td>
-                            <td>Luis Ramos</td>
-                            <td>08/08/2026 12:00</td>
-                            <td>—</td>
-                            <td><button class="view" aria-label="Ver TK-2286">◉</button></td>
-                        </tr>
-                        <tr data-id="TK-2285" data-subject="Solicitud de nuevo equipo" data-requester="María León"
-                            data-area="Recursos Humanos" data-category="Hardware" data-priority="Baja"
-                            data-status="Pendiente" data-technician="Sin asignar" data-created="2026-08-10"
-                            data-resolved="">
-                            <td>7</td>
-                            <td><b class="code">TK-2285</b></td>
-                            <td>Solicitud de nuevo equipo</td>
-                            <td>María León</td>
-                            <td>Recursos Humanos</td>
-                            <td>Hardware</td>
-                            <td><span class="priority low">● Baja</span></td>
-                            <td><span class="status pending">● Pendiente</span></td>
-                            <td>Sin asignar</td>
-                            <td>10/08/2026 09:30</td>
-                            <td>—</td>
-                            <td><button class="view" aria-label="Ver TK-2285">◉</button></td>
-                        </tr>
-                        <tr data-id="TK-2284" data-subject="Pantalla con líneas" data-requester="Carlos Martínez"
-                            data-area="Administración" data-category="Hardware" data-priority="Alta"
-                            data-status="Resuelto" data-technician="Carla Mendoza" data-created="2026-08-11"
-                            data-resolved="2026-08-11">
-                            <td>8</td>
-                            <td><b class="code">TK-2284</b></td>
-                            <td>Pantalla con líneas</td>
-                            <td>Carlos Martínez</td>
-                            <td>Administración</td>
-                            <td>Hardware</td>
-                            <td><span class="priority high">● Alta</span></td>
-                            <td><span class="status resolved">● Resuelto</span></td>
-                            <td>Carla Mendoza</td>
-                            <td>11/08/2026 13:00</td>
-                            <td>11/08/2026 18:10</td>
-                            <td><button class="view" aria-label="Ver TK-2284">◉</button></td>
-                        </tr>
-                        <tr data-id="TK-2283" data-subject="Restablecer contraseña" data-requester="Elena Rojas"
-                            data-area="Contabilidad" data-category="Acceso" data-priority="Baja" data-status="Resuelto"
-                            data-technician="José García" data-created="2026-08-12" data-resolved="2026-08-12">
-                            <td>9</td>
-                            <td><b class="code">TK-2283</b></td>
-                            <td>Restablecer contraseña</td>
-                            <td>Elena Rojas</td>
-                            <td>Contabilidad</td>
-                            <td>Acceso</td>
-                            <td><span class="priority low">● Baja</span></td>
-                            <td><span class="status resolved">● Resuelto</span></td>
-                            <td>José García</td>
-                            <td>12/08/2026 10:00</td>
-                            <td>12/08/2026 11:30</td>
-                            <td><button class="view" aria-label="Ver TK-2283">◉</button></td>
-                        </tr>
-                        <tr data-id="TK-2282" data-subject="No puedo acceder a la VPN" data-requester="Pedro Castillo"
-                            data-area="Operaciones" data-category="Redes" data-priority="Media" data-status="Pendiente"
-                            data-technician="Sin asignar" data-created="2026-08-14" data-resolved="">
-                            <td>10</td>
-                            <td><b class="code">TK-2282</b></td>
-                            <td>No puedo acceder a la VPN</td>
-                            <td>Pedro Castillo</td>
-                            <td>Operaciones</td>
-                            <td>Redes</td>
-                            <td><span class="priority medium">▲ Media</span></td>
-                            <td><span class="status pending">● Pendiente</span></td>
-                            <td>Sin asignar</td>
-                            <td>14/08/2026 16:00</td>
-                            <td>—</td>
-                            <td><button class="view" aria-label="Ver TK-2282">◉</button></td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -334,7 +175,7 @@
                 <p>Modifica los criterios o limpia los filtros.</p><button class="secondary" id="empty-clear">Limpiar
                     filtros</button>
             </div>
-            <div class="table-footer"><span id="results-label">Mostrando 10 de 48 registros</span>
+            <div class="table-footer"><span id="results-label">Cargando tickets...</span>
                 <div class="pagination"><button id="prev-page">‹</button><button class="page-number active"
                         data-page="1">1</button><button class="page-number" data-page="2">2</button><button
                         class="page-number" data-page="3">3</button><button class="page-number"
