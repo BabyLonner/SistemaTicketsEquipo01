@@ -39,14 +39,14 @@
 
   <aside class="sidebar">
     <nav aria-label="Menú principal">
-      <a class="side-link active" href="dashboard.html"><span>▦</span>Dashboard</a>
-      <a class="side-link" href="tickets.html"><span>▤</span>Tickets</a>
-      <a class="side-link" href="nuevo_ticket.html"><span>♙</span>Nuevo Ticket</a>
-      <a class="side-link" href="sla.html"><span>◷</span>SLA</a>
-      <a class="side-link" href="asignaciones.html"><span class="side-icon">♧</span>Asignación</a>
-      <a class="side-link" href="usuarios.html"><span>♙</span>Usuarios</a>
-      <a class="side-link" href="notificaciones.html"><span>♧</span>Notificaciones</a>
-      <a class="side-link" href="reportes.html"><span>▥</span>Reportes</a>
+      <a class="side-link active" href="{{ url_for('dashboard') }}"><span>▦</span>Dashboard</a>
+      <a class="side-link" href="{{ url_for('pantalla', pagina='tickets') }}"><span>▤</span>Tickets</a>
+      <a class="side-link" href="{{ url_for('pantalla', pagina='nuevo_ticket') }}"><span>♙</span>Nuevo Ticket</a>
+      <a class="side-link" href="{{ url_for('pantalla', pagina='sla') }}"><span>◷</span>SLA</a>
+      <a class="side-link" href="{{ url_for('pantalla', pagina='asignaciones') }}"><span class="side-icon">♧</span>Asignación</a>
+      <a class="side-link" href="{{ url_for('pantalla', pagina='usuarios') }}"><span>♙</span>Usuarios</a>
+      <a class="side-link" href="{{ url_for('pantalla', pagina='notificaciones') }}"><span>♧</span>Notificaciones</a>
+      <a class="side-link" href="{{ url_for('reportes') }}"><span>▥</span>Reportes</a>
       <a class="side-link" href="#api"><span>‹/›</span>API</a>
       <a class="side-link" href="#"><span>⚙</span>Configuración</a>
       <a class="side-link" href="{{ url_for('cerrar_sesion') }}"><span class="side-icon">⇥</span>Cerrar sesión</a>
