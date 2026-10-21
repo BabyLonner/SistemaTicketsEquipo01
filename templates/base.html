@@ -1,20 +1,23 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Soporte TI{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='CSS/global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='CSS/dashboard.css') }}">
-    
+
     <!-- Script de notificaciones global para todo el proyecto -->
     <script src="{{ url_for('static', filename='JS/notificaciones.js') }}" defer></script>
-    
+
     {% block extra_head %}{% endblock %}
 </head>
+
 <body style="--company-color: {{ color_primario | default('#0077B6') }};">
     <header class="topbar">
         <a class="brand" href="{{ url_for('dashboard') }}" aria-label="Soporte TI, inicio">
@@ -25,7 +28,7 @@
             </span>
             <span class="company-badge" title="Empresa activa">{{ empresa_nombre | default('Empresa') }}</span>
         </a>
-        
+
         <label class="global-search">
             <span aria-hidden="true">⌕</span>
             <input type="search" placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios" />
@@ -35,7 +38,8 @@
             <!-- CAMPANA DE NOTIFICACIONES GLOBAL -->
             <div class="notif-wrapper" id="notifWrapper">
                 <button type="button" class="notif-bell-btn" id="btnCampanaNotif" aria-label="Notificaciones">
-                    <svg class="notif-bell-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="notif-bell-icon" viewBox="0 0 24 24" width="22" height="22" fill="none"
+                        stroke="currentColor" stroke-width="2">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                     </svg>
@@ -58,13 +62,12 @@
                 </div>
             </div>
             <!-- FIN DE LA CAMPANA -->
-
             <div class="profile">
-                <span class="avatar">{{ usuario_nombre[:2] | upper if usuario_nombre else 'US' }}</span>
-                <span>
-                    <strong>{{ usuario_nombre }}</strong>
-                    <small>{{ usuario_rol }}</small>
-                </span>
+                <span class="avatar" id="perfil-iniciales">US</span>
+                <div class="profile-copy">
+                    <strong id="perfil-nombre">Cargando...</strong>
+                    <small id="perfil-rol">Cargando...</small>
+                </div>
                 <span class="chevron">⌄</span>
             </div>
         </div>
@@ -73,20 +76,42 @@
     <aside class="sidebar">
         <nav aria-label="Menú principal">
             <!-- Bloque de navegación completo tal como en image_bfa6bc.png -->
-            <a class="side-link" href="{{ url_for('dashboard') }}"><span>▦</span>Dashboard</a>
-            <a class="side-link" href="/tickets"><span>▤</span>Tickets</a>
-            <a class="side-link" href="/nuevo_ticket"><span>♙</span>Nuevo Ticket</a>
-            
-            <a class="side-link" href="/sla"><span>◷</span>SLA</a>
-            <a class="side-link" href="/asignaciones"><span class="side-icon">♧</span>Asignación</a>
-            <a class="side-link" href="/usuarios"><span>♙</span>Usuarios</a>
-            
-            <a class="side-link" href="/notificaciones"><span>♧</span>Notificaciones</a>
-            <a class="side-link" href="/reportes"><span>▥</span>Reportes</a>
-            <a class="side-link" href="#api"><span>‹/›</span>API</a>
-            <a class="side-link" href="/configuracion"><span>⚙</span>Configuración</a>
-            
-            <a class="side-link" href="{{ url_for('cerrar_sesion') }}"><span class="side-icon">⇥</span>Cerrar sesión</a>
+            <a href="/dashboard" class="side-link {% if active_page == 'dashboard' %}active{% endif %}">
+                <span class="side-icon">▤</span> Dashboard
+            </a>
+            <a href="/tickets" class="side-link {% if active_page == 'tickets' %}active{% endif %}">
+                <span class="side-icon">目</span> Tickets
+            </a>
+            <a href="/nuevo_ticket" class="side-link {% if active_page == 'nuevo_ticket' %}active{% endif %}">
+                <span class="side-icon">♙</span> Nuevo Ticket
+            </a>
+
+            <a href="/sla" class="side-link {% if active_page == 'sla' %}active{% endif %}">
+                <span class="side-icon">◷</span> SLA
+            </a>
+            <a href="/asignaciones" class="side-link {% if active_page == 'asignaciones' %}active{% endif %}">
+                <span class="side-icon">♧</span> Asignación
+            </a>
+            <a href="/usuarios" class="side-link {% if active_page == 'usuarios' %}active{% endif %}">
+                <span class="side-icon">♙</span> Usuarios
+            </a>
+
+            <a href="/notificaciones" class="side-link {% if active_page == 'notificaciones' %}active{% endif %}">
+                <span class="side-icon">♧</span> Notificaciones
+            </a>
+            <a href="/reportes" class="side-link {% if active_page == 'reportes' %}active{% endif %}">
+                <span class="side-icon">▥</span> Reportes
+            </a>
+            <a href="#api" class="side-link {% if active_page == 'api' %}active{% endif %}">
+                <span class="side-icon">‹/›</span> API
+            </a>
+            <a href="/configuracion" class="side-link {% if active_page == 'configuracion' %}active{% endif %}">
+                <span class="side-icon">⚙</span> Configuración
+            </a>
+
+            <a class="side-link" href="{{ url_for('cerrar_sesion') }}">
+                <span class="side-icon">⇥</span> Cerrar sesión
+            </a>
         </nav>
     </aside>
 
@@ -95,4 +120,5 @@
         {% block content %}{% endblock %}
     </main>
 </body>
-</html> 
+
+</html>

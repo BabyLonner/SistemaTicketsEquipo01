@@ -96,6 +96,25 @@ textarea {
   margin-top: 3px;
 }
 
+.company-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 145px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: auto;
+  padding: 7px 10px;
+  border: 1px solid #ffffff75;
+  border-radius: 7px;
+  background: #ffffff20;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
 .global-search {
   height: 46px;
   display: flex;
