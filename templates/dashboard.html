@@ -79,7 +79,8 @@
       <a class="side-link" href="{{ url_for('pantalla', pagina='tickets') }}"><span>▤</span>Tickets</a>
       <a class="side-link" href="{{ url_for('pantalla', pagina='nuevo_ticket') }}"><span>♙</span>Nuevo Ticket</a>
       <a class="side-link" href="{{ url_for('pantalla', pagina='sla') }}"><span>◷</span>SLA</a>
-      <a class="side-link" href="{{ url_for('pantalla', pagina='asignaciones') }}"><span class="side-icon">♧</span>Asignación</a>
+      <a class="side-link" href="{{ url_for('pantalla', pagina='asignaciones') }}"><span
+          class="side-icon">♧</span>Asignación</a>
       <a class="side-link" href="{{ url_for('pantalla', pagina='usuarios') }}"><span>♙</span>Usuarios</a>
       <a class="side-link" href="{{ url_for('pantalla', pagina='notificaciones') }}"><span>♧</span>Notificaciones</a>
       <a class="side-link" href="{{ url_for('reportes') }}"><span>▥</span>Reportes</a>
@@ -95,21 +96,37 @@
         <h1>Dashboard de Soporte TI</h1>
         <p>Resumen general de tickets y métricas clave</p>
       </div>
+
       <form class="filters" id="filters-form">
-        <label class="date-filter"><span>▦</span><input id="desde" type="date" value="2026-08-01"
-            aria-label="Fecha inicial" /><span>–</span><input id="hasta" type="date" value="2026-08-31"
-            aria-label="Fecha final" /></label>
-        <label class="area-filter"><span>▦</span><select id="area" aria-label="Área">
+        <label class="date-filter">
+          <span>▦</span>
+
+          <input id="desde" type="date" aria-label="Fecha inicial" />
+
+          <span>–</span>
+
+          <input id="hasta" type="date" aria-label="Fecha final" />
+        </label>
+
+        <label class="area-filter">
+          <span>▦</span>
+
+          <select id="area" aria-label="Área">
             <option value="todas">Todas las áreas</option>
-            <option>Administración</option>
-            <option>Logística</option>
-            <option>Ventas</option>
-            <option>Recursos Humanos</option>
-          </select></label>
+
+            {% for area in datos.areas %}
+            <option value="{{ area.nombre }}">
+              {{ area.nombre }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
         <button class="btn-primary" type="submit">
           <span>▽</span> Aplicar filtros
         </button>
       </form>
+
     </div>
 
     <section class="kpis" aria-label="Resumen de tickets">
