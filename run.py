@@ -5,6 +5,7 @@ import bcrypt
 from dotenv import load_dotenv
 from flask import (
     Flask,
+    abort,
     render_template,
     request,
     redirect,
@@ -13,7 +14,10 @@ from flask import (
     flash,
 )
 
+from jinja2 import TemplateNotFound
+
 from db import obtener_conexion
+from tickets import tickets_bp
 
 load_dotenv()
 
@@ -22,6 +26,9 @@ app.secret_key = os.getenv(
     "FLASK_SECRET_KEY",
     "clave-local-solo-desarrollo",
 )
+
+# Módulo de tickets: registro con evidencias (API en /api/tickets)
+app.register_blueprint(tickets_bp)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -217,64 +224,20 @@ def cerrar_sesion():
     return redirect(url_for("inicio"))
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
-"""
-Mesa de Ayuda TI — servidor Flask del proyecto.
-
-    pip install -r requirements.txt
-    python run.py            ->  http://127.0.0.1:5000
-
-Antes, ejecutar tickets.sql en MySQL.
-Variables de entorno opcionales (si no se definen se usan estos valores):
-    DB_HOST=localhost  DB_PORT=3306  DB_USER=root  DB_PASSWORD=  DB_NAME=sistema_tickets
-"""
-import os
-
-from flask import Flask, abort, redirect, render_template
-from flask_jwt_extended import JWTManager
-from jinja2 import TemplateNotFound
-
-from tickets import tickets_bp
-
-app = Flask(__name__)
-app.config.update(
-    DB_HOST=os.getenv("DB_HOST", "localhost"),
-    DB_PORT=int(os.getenv("DB_PORT", "3306")),
-    DB_USER=os.getenv("DB_USER", "root"),
-    DB_PASSWORD=os.getenv("DB_PASSWORD", ""),
-    DB_NAME=os.getenv("DB_NAME", "sistema_tickets"),
-    JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY", "cambiar-esta-clave-en-produccion-2026"),
-    # Mientras el login con JWT (módulo de usuarios) no esté conectado, las
-    # peticiones sin token usan este usuario. Quitar cuando el login funcione.
-    # 1 = Juan Pérez (Solicitante), 2 = Luis Ramos (Técnico), 3 = Ana Díaz (Administrador)
-    TICKETS_USUARIO_DEMO=int(os.getenv("TICKETS_USUARIO_DEMO", "1")),
-)
-JWTManager(app)
-
-# ---- Módulos del sistema ----
-app.register_blueprint(tickets_bp)      # Tickets: registro con evidencias
-
-
-# ---- Pantallas (templates/) ----
-@app.get("/")
-def inicio():
-    return render_template("index.html")
-
-
-@app.get("/<pagina>.html")
+# Pantallas del menú (tickets.html, nuevo_ticket.html, detalle_ticket.html, ...)
+# Solo con sesión iniciada.
+@app.route("/<pagina>.html")
 def pantalla(pagina):
+    if pagina == "index":
+        return redirect(url_for("cerrar_sesion"))   # el menú usa index.html para "Cerrar sesión"
+    if not session.get("usuario_id"):
+        return redirect(url_for("inicio"))
+    if pagina == "dashboard":
+        return redirect(url_for("dashboard"))
     try:
         return render_template(f"{pagina}.html")
     except TemplateNotFound:
         abort(404)
-
-
-@app.get("/dev/usar/<int:usuario_id>")
-def usar_usuario_demo(usuario_id):
-    """Solo pruebas: /dev/usar/2 actúa como técnico, /dev/usar/3 como administrador."""
-    app.config["TICKETS_USUARIO_DEMO"] = usuario_id
-    return redirect("/tickets.html")
 
 
 if __name__ == "__main__":

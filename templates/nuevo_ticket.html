@@ -55,7 +55,7 @@
         <form id="new-ticket-form" novalidate>
           <div class="form-field">
             <label for="subject">Asunto <span class="required">*</span></label>
-            <input id="subject" name="asunto" type="text" minlength="5" maxlength="120" placeholder="Ej. La impresora de despachos no imprime" required>
+            <input id="subject" name="asunto" type="text" minlength="5" maxlength="150" placeholder="Ej. La impresora de despachos no imprime" required>
             <small class="field-error" id="subject-error"></small>
           </div>
           <div class="form-field">
@@ -66,12 +66,12 @@
           <div class="field-grid">
             <div class="form-field">
               <label for="category">Categoría <span class="required">*</span></label>
-              <div class="select-wrap"><span class="select-icon">◉</span><select id="category" name="categoria" required><option value="">Selecciona una categoría</option><option>Hardware</option><option>Software</option><option>Red e internet</option><option>Accesos y cuentas</option><option>Impresoras</option><option>Correo corporativo</option><option>Otros</option></select></div>
+              <div class="select-wrap"><span class="select-icon">◉</span><select id="category" name="categoria_id" required><option value="">Cargando categorías…</option></select></div>
               <small class="field-error" id="category-error"></small>
             </div>
             <div class="form-field">
               <label for="area">Área <span class="required">*</span></label>
-              <div class="select-wrap"><span class="select-icon">▦</span><select id="area" name="area" required><option value="">Selecciona tu área</option><option>Administración</option><option>Recursos Humanos</option><option>Contabilidad</option><option>Operaciones</option><option>Ventas</option><option>Logística</option><option>Atención al cliente</option><option>Otra área</option></select></div>
+              <div class="select-wrap"><span class="select-icon">▦</span><select id="area" name="area_id" required><option value="">Cargando áreas…</option></select></div>
               <small class="field-error" id="area-error"></small>
             </div>
           </div>
@@ -135,7 +135,7 @@
         <section class="panel side-panel examples-panel">
           <h2><span class="section-icon">▤</span>Ejemplos de incidencias</h2>
           <div class="example-list">
-            <button type="button" class="example-item" data-subject="No puedo acceder al correo corporativo" data-description="No puedo iniciar sesión en mi correo corporativo. El sistema muestra un mensaje de error al ingresar mis credenciales." data-category="Correo corporativo"><span>No puedo acceder al correo corporativo</span><b>›</b></button>
+            <button type="button" class="example-item" data-subject="No puedo acceder al correo corporativo" data-description="No puedo iniciar sesión en mi correo corporativo. El sistema muestra un mensaje de error al ingresar mis credenciales." data-category="Correo"><span>No puedo acceder al correo corporativo</span><b>›</b></button>
             <button type="button" class="example-item" data-subject="Mi computadora está muy lenta" data-description="Mi computadora tarda demasiado en iniciar y las aplicaciones demoran en responder. El problema comenzó hoy." data-category="Hardware"><span>Mi computadora está muy lenta</span><b>›</b></button>
             <button type="button" class="example-item" data-subject="Error al imprimir documentos" data-description="Al enviar documentos a imprimir, la impresora no responde o muestra un error. Ya revisé que esté encendida." data-category="Impresoras"><span>Error al imprimir documentos</span><b>›</b></button>
             <button type="button" class="example-item" data-subject="Solicitud de acceso a un sistema" data-description="Necesito acceso a un sistema de trabajo para realizar mis tareas. Indico el motivo y el área a la que pertenezco." data-category="Accesos y cuentas"><span>Solicitud de acceso a un sistema</span><b>›</b></button>
