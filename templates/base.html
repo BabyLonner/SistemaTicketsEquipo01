@@ -61,13 +61,24 @@
                     </div>
                 </div>
             </div>
-            <!-- FIN DE LA CAMPANA -->
             <div class="profile">
-                <span class="avatar" id="perfil-iniciales">US</span>
+                <!-- Extrae las 2 primeras letras del nombre o pone 'US' por defecto -->
+                <span class="avatar" id="perfil-iniciales">
+                    {{ (session.nombre[:2] | upper) if session.nombre else (usuario_nombre[:2] | upper if usuario_nombre
+                    else 'US') }}
+                </span>
+
                 <div class="profile-copy">
-                    <strong id="perfil-nombre">Cargando...</strong>
-                    <small id="perfil-rol">Cargando...</small>
+                    <!-- Imprime el nombre o un valor por defecto si la sesión falla -->
+                    <strong id="perfil-nombre">
+                        {{ session.nombre if session.nombre else (usuario_nombre | default('Usuario')) }}
+                    </strong>
+                    <!-- Imprime el rol -->
+                    <small id="perfil-rol">
+                        {{ session.rol if session.rol else (usuario_rol | default('Soporte TI')) }}
+                    </small>
                 </div>
+
                 <span class="chevron">⌄</span>
             </div>
         </div>
