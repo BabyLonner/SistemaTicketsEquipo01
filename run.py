@@ -6,14 +6,13 @@ from dotenv import load_dotenv
 from flask import (
     Flask,
     abort,
+    flash,
+    redirect,
     render_template,
     request,
-    redirect,
-    url_for,
     session,
-    flash,
+    url_for,
 )
-
 from jinja2 import TemplateNotFound
 
 from db import obtener_conexion
