@@ -10,6 +10,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap"
     rel="stylesheet">
+  <link rel="stylesheet" href="../static/CSS/global.css">
   <link rel="stylesheet" href="../static/CSS/estilos.css">
 </head>
 
@@ -103,11 +104,11 @@
 
           <span id="login-alerta-texto">
             {% with mensajes = get_flashed_messages(with_categories=true) %}
-              {% if mensajes %}
-                {% for categoria, mensaje in mensajes %}
-                  {{ mensaje }}
-                {% endfor %}
-              {% endif %}
+            {% if mensajes %}
+            {% for categoria, mensaje in mensajes %}
+            {{ mensaje }}
+            {% endfor %}
+            {% endif %}
             {% endwith %}
           </span>
         </div>

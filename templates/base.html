@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Soporte TI{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/global.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/dashboard.css') }}">
+    
+    <!-- Script de notificaciones global para todo el proyecto -->
+    <script src="{{ url_for('static', filename='JS/notificaciones.js') }}" defer></script>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body style="--company-color: {{ color_primario | default('#0077B6') }};">
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('dashboard') }}" aria-label="Soporte TI, inicio">
+            <span class="brand-mark">⌁</span>
+            <span class="brand-copy">
+                <strong>SOPORTE TI</strong>
+                <small>Sistema de Gestión de Tickets</small>
+            </span>
+            <span class="company-badge" title="Empresa activa">{{ empresa_nombre | default('Empresa') }}</span>
+        </a>
+        
+        <label class="global-search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios" />
+        </label>
+
+        <div class="top-actions">
+            <!-- CAMPANA DE NOTIFICACIONES GLOBAL -->
+            <div class="notif-wrapper" id="notifWrapper">
+                <button type="button" class="notif-bell-btn" id="btnCampanaNotif" aria-label="Notificaciones">
+                    <svg class="notif-bell-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <span id="badgeNotificaciones" class="notif-badge oculto">0</span>
+                </button>
+
+                <div class="notif-dropdown oculto" id="dropdownNotificaciones">
+                    <div class="notif-dropdown__header">
+                        <span class="notif-dropdown__title">Notificaciones</span>
+                        <button type="button" id="btnLeerTodas" class="notif-dropdown__mark-all">
+                            Marcar todas como leídas
+                        </button>
+                    </div>
+                    <div id="listaNotificacionesDropdown" class="notif-dropdown__list">
+                        <div class="notif-dropdown__empty">Cargando notificaciones...</div>
+                    </div>
+                    <div class="notif-dropdown__footer">
+                        <a href="/notificaciones" class="notif-dropdown__view-all">Ver todo el historial</a>
+                    </div>
+                </div>
+            </div>
+            <!-- FIN DE LA CAMPANA -->
+
+            <div class="profile">
+                <span class="avatar">{{ usuario_nombre[:2] | upper if usuario_nombre else 'US' }}</span>
+                <span>
+                    <strong>{{ usuario_nombre }}</strong>
+                    <small>{{ usuario_rol }}</small>
+                </span>
+                <span class="chevron">⌄</span>
+            </div>
+        </div>
+    </header>
+
+    <aside class="sidebar">
+        <nav aria-label="Menú principal">
+            <!-- Bloque de navegación completo tal como en image_bfa6bc.png -->
+            <a class="side-link" href="{{ url_for('dashboard') }}"><span>▦</span>Dashboard</a>
+            <a class="side-link" href="/tickets"><span>▤</span>Tickets</a>
+            <a class="side-link" href="/nuevo_ticket"><span>♙</span>Nuevo Ticket</a>
+            
+            <a class="side-link" href="/sla"><span>◷</span>SLA</a>
+            <a class="side-link" href="/asignaciones"><span class="side-icon">♧</span>Asignación</a>
+            <a class="side-link" href="/usuarios"><span>♙</span>Usuarios</a>
+            
+            <a class="side-link" href="/notificaciones"><span>♧</span>Notificaciones</a>
+            <a class="side-link" href="/reportes"><span>▥</span>Reportes</a>
+            <a class="side-link" href="#api"><span>‹/›</span>API</a>
+            <a class="side-link" href="/configuracion"><span>⚙</span>Configuración</a>
+            
+            <a class="side-link" href="{{ url_for('cerrar_sesion') }}"><span class="side-icon">⇥</span>Cerrar sesión</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <!-- Aquí se inyecta el contenido de dashboard.html, tickets.html, etc. -->
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html> 

@@ -1,159 +1,112 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Notificaciones | Soporte TI</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/CSS/notificaciones.css">
-  <script src="../static/JS/notificaciones.js" defer></script>
-</head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="dashboard.html" aria-label="Soporte TI, inicio">
-      <span class="brand-mark" aria-hidden="true">⌁</span>
-      <span class="brand-copy"><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
-    </a>
-    <label class="global-search"><span aria-hidden="true">⌕</span><input id="global-search" type="search" placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios"></label>
-    <div class="top-actions">
-      <button class="notification top-notification" type="button" aria-label="Notificaciones, 3 sin leer">♧<span class="notification-count" id="top-unread-count">3</span></button>
-      <div class="profile"><span class="avatar">JP</span><span class="profile-copy"><strong>Juan Pérez</strong><small>Administrador</small></span><span class="chevron" aria-hidden="true">⌄</span></div>
-    </div>
-  </header>
+{% extends "base.html" %}
 
-  <aside class="sidebar">
-    <nav class="sidebar-nav" aria-label="Menú principal">
-      <a class="side-link" href="dashboard.html"><span>▦</span>Dashboard</a>
-      <a class="side-link" href="tickets.html"><span>▤</span>Tickets</a>
-      <a class="side-link" href="nuevo_ticket.html"><span>♙</span>Nuevo Ticket</a>
-      <a class="side-link" href="sla.html"><span>◷</span>SLA</a>
-      <a class="side-link" href="asignaciones.html"><span class="side-icon">♧</span>Asignación</a>
-      <a class="side-link" href="usuarios.html"><span>♙</span>Usuarios</a>
-      <a class="side-link active" href="notificaciones.html" aria-current="page"><span class="side-icon">♧</span>Notificaciones</a>
-      <a class="side-link" href="reportes.html"><span>▥</span>Reportes</a>
-      <a class="side-link" href="#api"><span>‹/›</span>API</a>
-      <a class="side-link" href="#"><span>⚙</span>Configuración</a>
-      <a class="side-link" href="index.html"><span>⇥</span>Cerrar sesión</a>
-    </nav>
+{% block title %}Notificaciones | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/notificaciones.css') }}">
+<!-- notificaciones.js ya está cargado en base.html, no hace falta repetirlo -->
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <span class="heading-icon" aria-hidden="true">♧</span>
+  <div class="heading-copy">
+    <h1>Notificaciones</h1>
+    <p>Mantente al día con las actividades del sistema</p>
+  </div>
+  <!-- Botón adicional para la página completa -->
+  <button class="btn-outline mark-all-button" id="mark-all-read-page" type="button"
+    onclick="marcarTodasComoLeidas()"><span>✓</span>Marcar todas como leídas</button>
+</section>
+
+<section class="stats-grid" aria-label="Resumen de notificaciones">
+  <article class="stat-card stat-total"><span class="stat-icon">♧</span>
+    <div class="stat-number" id="total-count">-</div>
+    <div class="stat-label">Total</div>
+    <div class="stat-trend positive">↑ 8% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+  </article>
+  <article class="stat-card stat-unread"><span class="stat-icon">♧</span>
+    <div class="stat-number" id="unread-count">-</div>
+    <div class="stat-label">No leídas</div>
+    <div class="stat-trend negative">↓ 25% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+  </article>
+  <article class="stat-card stat-tickets"><span class="stat-icon">▤</span>
+    <div class="stat-number" id="ticket-count">-</div>
+    <div class="stat-label">Tickets</div>
+    <div class="stat-trend positive">↑ 20% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+  </article>
+  <article class="stat-card stat-system"><span class="stat-icon">⚙</span>
+    <div class="stat-number" id="system-count">-</div>
+    <div class="stat-label">Sistema</div>
+    <div class="stat-trend positive">↑ 50% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+  </article>
+</section>
+
+<div class="notifications-layout">
+  <section class="panel notification-panel">
+    <div class="list-toolbar">
+      <div class="tabs" role="tablist" aria-label="Filtrar notificaciones">
+        <button class="tab active" type="button" role="tab" aria-selected="true" data-type="all">Todas</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-type="unread">No leídas</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-type="ticket">Tickets</button>
+      </div>
+      <div class="list-controls">
+        <label class="list-search"><span>⌕</span><input id="notification-search" type="search"
+            placeholder="Buscar en notificaciones..." aria-label="Buscar en notificaciones"></label>
+        <select id="sort-order" aria-label="Orden de notificaciones">
+          <option value="newest">Más recientes</option>
+          <option value="oldest">Más antiguas</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="bulk-toolbar" id="bulk-toolbar" hidden><span id="selected-count">0 seleccionadas</span><button
+        type="button" id="mark-selected-read">Marcar como leídas</button><button type="button"
+        id="delete-selected">Eliminar de la vista</button><button type="button" id="clear-selection">Cancelar
+        selección</button></div>
+
+    <!-- El script JS (renderizarLista) inyectará las filas aquí -->
+    <div class="notification-list" id="contenedorPaginaNotificaciones" aria-live="polite">
+      <div class="text-center py-4 text-muted small">Cargando notificaciones desde la base de datos...</div>
+    </div>
+
+    <div class="list-footer"><span id="results-label">Mostrando notificaciones actuales</span>
+      <div class="pagination"><button id="prev-page" type="button" aria-label="Página anterior">‹</button><button
+          class="page-number active" type="button" data-page="1">1</button><button class="page-number" type="button"
+          data-page="2">2</button><button id="next-page" type="button" aria-label="Página siguiente">›</button></div>
+    </div>
+  </section>
+
+  <aside class="right-column">
+    <section class="panel filters-panel">
+      <h2><span class="panel-icon">▽</span>Filtros</h2>
+      <label for="type-filter">Tipo</label><select id="type-filter">
+        <option value="">Todos los tipos</option>
+        <option value="ticket">Tickets</option>
+        <option value="system">Sistema</option>
+        <option value="user">Usuarios</option>
+      </select>
+      <label for="state-filter">Estado</label><select id="state-filter">
+        <option value="">Todas</option>
+        <option value="unread">No leídas</option>
+        <option value="read">Leídas</option>
+      </select>
+      <label for="date-filter">Fecha</label><select id="date-filter">
+        <option value="">Todos los periodos</option>
+        <option value="today">Últimas 24 horas</option>
+        <option value="week">Últimos 7 días</option>
+      </select>
+      <button class="btn-primary apply-filter-button" id="apply-filters" type="button"><span>▽</span>Aplicar
+        filtros</button>
+    </section>
+
+    <section class="panel info-panel">
+      <h2><span class="info-icon">i</span>Información</h2>
+      <p>Las notificaciones te mantienen informado sobre las actividades importantes del sistema. Los eventos del
+        historial de tickets se generan automáticamente.</p>
+    </section>
   </aside>
-
-  <main class="main">
-    <section class="page-heading">
-      <span class="heading-icon" aria-hidden="true">♧</span>
-      <div class="heading-copy"><h1>Notificaciones</h1><p>Mantente al día con las actividades del sistema</p></div>
-      <button class="btn-outline mark-all-button" id="mark-all-read" type="button"><span>✓</span>Marcar todas como leídas</button>
-    </section>
-
-    <section class="stats-grid" aria-label="Resumen de notificaciones">
-      <article class="stat-card stat-total"><span class="stat-icon">♧</span><div class="stat-number" id="total-count">12</div><div class="stat-label">Total</div><div class="stat-trend positive">↑ 8% <small>vs. mes anterior</small></div><span class="stat-wave"></span></article>
-      <article class="stat-card stat-unread"><span class="stat-icon">♧</span><div class="stat-number" id="unread-count">3</div><div class="stat-label">No leídas</div><div class="stat-trend negative">↓ 25% <small>vs. mes anterior</small></div><span class="stat-wave"></span></article>
-      <article class="stat-card stat-tickets"><span class="stat-icon">▤</span><div class="stat-number" id="ticket-count">6</div><div class="stat-label">Tickets</div><div class="stat-trend positive">↑ 20% <small>vs. mes anterior</small></div><span class="stat-wave"></span></article>
-      <article class="stat-card stat-system"><span class="stat-icon">⚙</span><div class="stat-number" id="system-count">3</div><div class="stat-label">Sistema</div><div class="stat-trend positive">↑ 50% <small>vs. mes anterior</small></div><span class="stat-wave"></span></article>
-    </section>
-
-    <div class="notifications-layout">
-      <section class="panel notification-panel">
-        <div class="list-toolbar">
-          <div class="tabs" role="tablist" aria-label="Filtrar notificaciones">
-            <button class="tab active" type="button" role="tab" aria-selected="true" data-type="all">Todas</button>
-            <button class="tab" type="button" role="tab" aria-selected="false" data-type="unread">No leídas</button>
-            <button class="tab" type="button" role="tab" aria-selected="false" data-type="ticket">Tickets</button>
-            <button class="tab" type="button" role="tab" aria-selected="false" data-type="system">Sistema</button>
-            <button class="tab" type="button" role="tab" aria-selected="false" data-type="user">Usuarios</button>
-          </div>
-          <div class="list-controls">
-            <label class="list-search"><span>⌕</span><input id="notification-search" type="search" placeholder="Buscar en notificaciones..." aria-label="Buscar en notificaciones"></label>
-            <select id="sort-order" aria-label="Orden de notificaciones"><option value="newest">Más recientes</option><option value="oldest">Más antiguas</option></select>
-          </div>
-        </div>
-
-        <div class="bulk-toolbar" id="bulk-toolbar" hidden><span id="selected-count">0 seleccionadas</span><button type="button" id="mark-selected-read">Marcar como leídas</button><button type="button" id="delete-selected">Eliminar de la vista</button><button type="button" id="clear-selection">Cancelar selección</button></div>
-
-        <div class="notification-list" id="notification-list" aria-live="polite">
-          <article class="notification-row unread" data-id="1" data-type="ticket" data-read="false" data-priority="high" data-time="2026-08-03T10:30:00" data-title="Ticket TK-2291 requiere atención inmediata" data-description="El ticket ha excedido el tiempo límite de respuesta establecido (SLA)." data-age="Hace 30 min">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-danger">!</span><div class="notice-content"><div class="notice-title">Ticket TK-2291 requiere atención inmediata <span class="priority-tag">Alta</span></div><p>El ticket ha excedido el tiempo límite de respuesta establecido (SLA).</p></div><time datetime="2026-08-03T10:30:00">Hace 30 min</time><span class="unread-dot" aria-label="No leída"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row unread" data-id="2" data-type="ticket" data-read="false" data-priority="normal" data-time="2026-08-03T10:00:00" data-title="Nuevo comentario en el ticket TK-2290" data-description="Carla Mendoza ha agregado un comentario en tu ticket." data-age="Hace 1 h">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-blue">●</span><div class="notice-content"><div class="notice-title">Nuevo comentario en el ticket TK-2290</div><p>Carla Mendoza ha agregado un comentario en tu ticket.</p></div><time datetime="2026-08-03T10:00:00">Hace 1 h</time><span class="unread-dot" aria-label="No leída"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row unread" data-id="3" data-type="ticket" data-read="false" data-priority="normal" data-time="2026-08-03T09:00:00" data-title="Ticket TK-2288 resuelto" data-description="El ticket ha sido marcado como resuelto por Luis Ramos." data-age="Hace 2 h">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-green">✓</span><div class="notice-content"><div class="notice-title">Ticket TK-2288 resuelto</div><p>El ticket ha sido marcado como resuelto por Luis Ramos.</p></div><time datetime="2026-08-03T09:00:00">Hace 2 h</time><span class="unread-dot" aria-label="No leída"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="4" data-type="user" data-read="true" data-priority="normal" data-time="2026-08-03T08:00:00" data-title="Nuevo usuario registrado" data-description="María López se ha registrado en el sistema como Solicitante." data-age="Hace 3 h">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-purple">♟</span><div class="notice-content"><div class="notice-title">Nuevo usuario registrado</div><p>María López se ha registrado en el sistema como Solicitante.</p></div><time datetime="2026-08-03T08:00:00">Hace 3 h</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="5" data-type="ticket" data-read="true" data-priority="normal" data-time="2026-08-03T06:00:00" data-title="Ticket TK-2287 asignado" data-description="Se te ha asignado un nuevo ticket: Impresora no funciona." data-age="Hace 5 h">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-blue">▤</span><div class="notice-content"><div class="notice-title">Ticket TK-2287 asignado</div><p>Se te ha asignado un nuevo ticket: Impresora no funciona.</p></div><time datetime="2026-08-03T06:00:00">Hace 5 h</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="6" data-type="ticket" data-read="true" data-priority="normal" data-time="2026-08-02T10:00:00" data-title="Recordatorio de ticket pendiente" data-description="El ticket TK-2285 lleva más de 24 horas sin actualización." data-age="Hace 1 día">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-amber">▲</span><div class="notice-content"><div class="notice-title">Recordatorio de ticket pendiente</div><p>El ticket TK-2285 lleva más de 24 horas sin actualización.</p></div><time datetime="2026-08-02T10:00:00">Hace 1 día</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="7" data-type="system" data-read="true" data-priority="normal" data-time="2026-08-02T09:00:00" data-title="Actualización del sistema" data-description="Se ha realizado una actualización en el sistema de tickets." data-age="Hace 1 día">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-blue">i</span><div class="notice-content"><div class="notice-title">Actualización del sistema</div><p>Se ha realizado una actualización en el sistema de tickets.</p></div><time datetime="2026-08-02T09:00:00">Hace 1 día</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="8" data-type="ticket" data-read="true" data-priority="normal" data-time="2026-08-01T10:00:00" data-title="Ticket TK-2286 cerrado" data-description="El ticket ha sido cerrado por el solicitante." data-age="Hace 2 días">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-green">✓</span><div class="notice-content"><div class="notice-title">Ticket TK-2286 cerrado</div><p>El ticket ha sido cerrado por el solicitante.</p></div><time datetime="2026-08-01T10:00:00">Hace 2 días</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="9" data-type="system" data-read="true" data-priority="normal" data-time="2026-07-31T10:00:00" data-title="Mantenimiento programado" data-description="Se realizará mantenimiento del sistema fuera del horario laboral." data-age="Hace 3 días">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-purple">⚙</span><div class="notice-content"><div class="notice-title">Mantenimiento programado</div><p>Se realizará mantenimiento del sistema fuera del horario laboral.</p></div><time datetime="2026-07-31T10:00:00">Hace 3 días</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="10" data-type="user" data-read="true" data-priority="normal" data-time="2026-07-30T10:00:00" data-title="Perfil de usuario actualizado" data-description="Se han actualizado los datos de un usuario del sistema." data-age="Hace 4 días">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-purple">♟</span><div class="notice-content"><div class="notice-title">Perfil de usuario actualizado</div><p>Se han actualizado los datos de un usuario del sistema.</p></div><time datetime="2026-07-30T10:00:00">Hace 4 días</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="11" data-type="system" data-read="true" data-priority="normal" data-time="2026-07-29T10:00:00" data-title="Copia de seguridad completada" data-description="La copia de seguridad de ejemplo se completó correctamente." data-age="Hace 5 días">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-green">✓</span><div class="notice-content"><div class="notice-title">Copia de seguridad completada</div><p>La copia de seguridad de ejemplo se completó correctamente.</p></div><time datetime="2026-07-29T10:00:00">Hace 5 días</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-          <article class="notification-row" data-id="12" data-type="ticket" data-read="true" data-priority="normal" data-time="2026-07-28T10:00:00" data-title="Se actualizó un ticket seguido" data-description="Se ha añadido nueva información a un ticket que sigues." data-age="Hace 6 días">
-            <input class="row-check" type="checkbox" aria-label="Seleccionar notificación">
-            <span class="notice-icon notice-blue">▤</span><div class="notice-content"><div class="notice-title">Se actualizó un ticket seguido</div><p>Se ha añadido nueva información a un ticket que sigues.</p></div><time datetime="2026-07-28T10:00:00">Hace 6 días</time><span class="unread-dot"></span><button class="notice-menu" type="button" aria-label="Acciones de notificación">···</button>
-          </article>
-        </div>
-        <div class="empty-state" id="empty-state" hidden><span>♧</span><strong>No hay notificaciones para mostrar</strong><p>Prueba con otro filtro o término de búsqueda.</p></div>
-        <div class="list-footer"><span id="results-label">Mostrando 8 de 12 notificaciones</span><div class="pagination"><button id="prev-page" type="button" aria-label="Página anterior">‹</button><button class="page-number active" type="button" data-page="1">1</button><button class="page-number" type="button" data-page="2">2</button><button id="next-page" type="button" aria-label="Página siguiente">›</button></div></div>
-      </section>
-
-      <aside class="right-column">
-        <section class="panel filters-panel">
-          <h2><span class="panel-icon">▽</span>Filtros</h2>
-          <label for="type-filter">Tipo</label><select id="type-filter"><option value="">Todos los tipos</option><option value="ticket">Tickets</option><option value="system">Sistema</option><option value="user">Usuarios</option></select>
-          <label for="state-filter">Estado</label><select id="state-filter"><option value="">Todas</option><option value="unread">No leídas</option><option value="read">Leídas</option></select>
-          <label for="date-filter">Fecha</label><select id="date-filter"><option value="">Todos los periodos</option><option value="today">Últimas 24 horas</option><option value="week">Últimos 7 días</option></select>
-          <button class="btn-primary apply-filter-button" id="apply-filters" type="button"><span>▽</span>Aplicar filtros</button>
-        </section>
-
-        <section class="panel preferences-panel">
-          <h2><span class="panel-icon">⚙</span>Configuración de notificaciones</h2>
-          <label class="preference-row"><span class="preference-symbol">◌</span><span class="preference-copy"><strong>Nuevos tickets asignados</strong><small>Recibe una notificación cuando se te asigne un ticket.</small></span><input type="checkbox" class="toggle-input" checked><span class="toggle"></span></label>
-          <label class="preference-row"><span class="preference-symbol">◌</span><span class="preference-copy"><strong>Comentarios en tickets</strong><small>Recibe notificaciones de nuevos comentarios.</small></span><input type="checkbox" class="toggle-input" checked><span class="toggle"></span></label>
-          <label class="preference-row"><span class="preference-symbol">◌</span><span class="preference-copy"><strong>Cambios de estado</strong><small>Recibe notificaciones cuando cambie el estado de un ticket.</small></span><input type="checkbox" class="toggle-input" checked><span class="toggle"></span></label>
-          <label class="preference-row"><span class="preference-symbol">◌</span><span class="preference-copy"><strong>Nuevos usuarios</strong><small>Recibe notificaciones de registros de nuevos usuarios.</small></span><input type="checkbox" class="toggle-input" checked><span class="toggle"></span></label>
-          <label class="preference-row"><span class="preference-symbol">◌</span><span class="preference-copy"><strong>Mantenimiento del sistema</strong><small>Recibe notificaciones sobre actualizaciones.</small></span><input type="checkbox" class="toggle-input" checked><span class="toggle"></span></label>
-          <p class="preferences-note" id="preferences-note" aria-live="polite">Las preferencias se muestran solo en esta demostración.</p>
-        </section>
-
-        <section class="panel info-panel">
-          <h2><span class="info-icon">i</span>Información</h2>
-          <p>Las notificaciones te mantienen informado sobre las actividades importantes del sistema. Puedes personalizar qué tipo de notificaciones deseas recibir.</p>
-        </section>
-      </aside>
-    </div>
-    <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Prototipo visual · Datos de ejemplo</span></footer>
-  </main>
-
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <div class="context-menu" id="context-menu" hidden><button type="button" data-action="read">Marcar como leída</button><button type="button" data-action="delete">Eliminar de la vista</button></div>
-</body>
-</html>
+</div>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span></footer>
+{% endblock %}

@@ -1,198 +1,169 @@
-<!doctype html>
-<html lang="es">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Reportes | Soporte TI</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/reportes.css') }}">
-    <script src="{{ url_for('static', filename='JS/reportes.js') }}" defer></script>
-</head>
+{% block title %}Reportes | Soporte TI{% endblock %}
 
-<body>
-    <header class="topbar">
-        <a class="brand" href="{{ url_for('dashboard') }}"><span class="logo">◉</span><span><b>SOPORTE TI</b><small>Sistema de
-                    Gestión de Tickets</small></span></a>
-        <label class="global-search">⌕ <input id="global-search" placeholder="Buscar tickets, usuarios, reportes..."
-                aria-label="Búsqueda global"></label>
-        <div class="top-actions"><button id="notifications-button" class="notification"
-                aria-label="Notificaciones">♧<i>3</i></button><button id="profile-button" class="profile"><span
-                    class="avatar">JP</span><span><b>{{ usuario_nombre }}</b><small>{{ usuario_rol|capitalize }}</small></span><span>⌄</span></button></div>
-    </header>
-    <aside class="sidebar">
-        <nav>
-            <a class="side-link" href="{{ url_for('dashboard') }}"><span>▦</span>Dashboard</a>
-            <a class="side-link" href="{{ url_for('pantalla', pagina='tickets') }}"><span>▤</span>Tickets</a>
-            <a class="side-link" href="{{ url_for('pantalla', pagina='nuevo_ticket') }}"><span>♙</span>Nuevo Ticket</a>
-            <a class="side-link" href="{{ url_for('pantalla', pagina='sla') }}"><span>◷</span>SLA</a>
-            <a class="side-link" href="{{ url_for('pantalla', pagina='asignaciones') }}"><span class="side-icon">♧</span>Asignación</a>
-            <a class="side-link" href="{{ url_for('pantalla', pagina='usuarios') }}"><span>♙</span>Usuarios</a>
-            <a class="side-link" href="{{ url_for('pantalla', pagina='notificaciones') }}"><span>♧</span>Notificaciones</a>
-            <a href="{{ url_for('reportes') }}" class="side-link active"><span>▥</span>Reportes</a>
-            <a class="side-link" href="#api"><span>‹/›</span>API</a>
-            <a class="side-link" href="#"><span>⚙</span>Configuración</a>
-            <a class="side-link" href="{{ url_for('cerrar_sesion') }}"><span>⇥</span>Cerrar sesión</a>
-        </nav>
-    </aside>
-    <main class="main">
-        <section class="page-heading"><span class="heading-icon">▥</span>
-            <div>
-                <h1>Reportes</h1>
-                <p>Analiza y genera informes del sistema de soporte técnico</p>
-            </div>
-            <div class="heading-actions"><button id="export-csv" class="export excel">▦ Exportar a Excel</button><button
-                    id="export-print" class="export pdf">▧ Exportar a PDF</button></div>
-        </section>
-        <section class="panel filters">
-            <div class="panel-title"><b>▽ Filtros del reporte</b><small>Personaliza los resultados</small></div>
-            <div class="filters-grid">
-                <label class="control date-control"><span>Rango de fechas</span>
-                    <div class="date-range"><input id="date-from" type="date" value=""><span>–</span><input
-                            id="date-to" type="date" value=""></div>
-                </label>
-                <label class="control"><span>Área / Empresa</span><select id="area-filter">
-                        <option value="">Todas</option>
-                        {% for area in areas %}<option value="{{ area }}">{{ area }}</option>{% endfor %}
-                    </select></label>
-                <label class="control"><span>Categoría</span><select id="category-filter">
-                        <option value="">Todas</option>
-                        {% for categoria in categorias %}<option value="{{ categoria }}">{{ categoria }}</option>{% endfor %}
-                    </select></label>
-                <label class="control"><span>Prioridad</span><select id="priority-filter">
-                        <option value="">Todas</option>
-                        {% for prioridad in prioridades %}<option value="{{ prioridad }}">{{ prioridad }}</option>{% endfor %}
-                    </select></label>
-                <label class="control"><span>Estado</span><select id="status-filter">
-                        <option value="">Todos</option>
-                        <option value="Abierto">Abierto</option>
-                        <option value="En proceso">En proceso</option>
-                        <option value="Resuelto">Resuelto</option>
-                        <option value="Cerrado">Cerrado</option>
-                        <option value="Vencido">Vencido (fuera de plazo)</option>
-                    </select></label>
-                <label class="control"><span>Técnico</span><select id="technician-filter">
-                        <option value="">Todos</option>
-                        {% for tecnico in tecnicos %}<option value="{{ tecnico }}">{{ tecnico }}</option>{% endfor %}
-                        <option value="Sin asignar">Sin asignar</option>
-                    </select></label>
-                <button class="primary generate" id="generate-report">⌕ Generar reporte</button><button class="clear"
-                    id="clear-filters">↻ Limpiar</button>
-            </div>
-            <p id="filter-message" class="filter-message" role="status">Los datos corresponden a los tickets reales de tu empresa.</p>
-        </section>
-        <section class="stats">
-            <article class="stat blue"><span class="stat-icon">▤</span>
-                <div><strong id="total-count">48</strong><span>Total de tickets</span></div><small class="trend up">↑
-                    12% <i>vs. periodo anterior</i></small><span class="wave"></span>
-            </article>
-            <article class="stat green"><span class="stat-icon">✓</span>
-                <div><strong id="resolved-count">26</strong><span>Resueltos</span></div><small class="trend up">↑ 30%
-                    <i>vs. periodo anterior</i></small><span class="wave"></span>
-            </article>
-            <article class="stat amber"><span class="stat-icon">◷</span>
-                <div><strong id="progress-count">16</strong><span>En proceso</span></div><small class="trend up">↑ 7%
-                    <i>vs. periodo anterior</i></small><span class="wave"></span>
-            </article>
-            <article class="stat red"><span class="stat-icon">!</span>
-                <div><strong id="pending-count">6</strong><span>Pendientes / vencidos</span></div><small
-                    class="trend down">↓ 25% <i>vs. periodo anterior</i></small><span class="wave"></span>
-            </article>
-        </section>
-        <section class="charts">
-            <article class="panel chart">
-                <h2>◉ Tickets por estado</h2>
-                <div class="donut-row">
-                    <div class="donut" id="status-donut">
-                        <div><b id="donut-total">48</b><small>Tickets</small></div>
-                    </div>
-                    <ul id="status-legend" class="legend"></ul>
-                </div>
-            </article>
-            <article class="panel chart">
-                <h2>▥ Tickets por prioridad</h2>
-                <div id="priority-chart" class="bars"></div>
-            </article>
-            <article class="panel chart">
-                <h2>◷ Tickets por categoría</h2>
-                <div id="category-chart" class="category-chart"></div>
-            </article>
-        </section>
-        <section class="panel details">
-            <div class="detail-heading">
-                <h2>▤ Detalle de tickets del periodo</h2><label class="table-search">⌕ <input id="table-search"
-                        placeholder="Buscar por código, asunto o solicitante..."
-                        aria-label="Buscar en el reporte"></label>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Ticket</th>
-                            <th>Asunto</th>
-                            <th>Solicitante</th>
-                            <th>Área</th>
-                            <th>Categoría</th>
-                            <th>Prioridad</th>
-                            <th>Estado</th>
-                            <th>Técnico</th>
-                            <th>Fecha de creación</th>
-                            <th>Fecha de resolución</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="report-tbody">
-                        {% for t in tickets %}
-                        {% set codigo = t.numero if t.numero else ('TK-' ~ '%04d'|format(t.id)) %}
-                        {% set fecha_creacion = t.created_at.strftime('%Y-%m-%d') if t.created_at else '' %}
-                        {% set fecha_limite = t.fecha_limite.strftime('%Y-%m-%d') if t.fecha_limite else '' %}
-                        {% set fecha_actualizacion = t.updated_at.strftime('%Y-%m-%d %H:%M') if t.updated_at else '' %}
-                        <tr data-id="{{ codigo }}" data-subject="{{ t.asunto or '' }}"
-                            data-requester="{{ t.solicitante or 'Sin solicitante' }}"
-                            data-area="{{ t.area or 'Sin área' }}" data-category="{{ t.categoria or 'Sin categoría' }}"
-                            data-priority="{{ t.prioridad or 'Sin prioridad' }}" data-status="{{ t.estado or '' }}"
-                            data-technician="{{ t.tecnico or 'Sin asignar' }}" data-created="{{ fecha_creacion }}"
-                            data-deadline="{{ fecha_limite }}" data-updated="{{ fecha_actualizacion }}">
-                            <td>{{ loop.index }}</td><td><b class="code">{{ codigo }}</b></td>
-                            <td>{{ t.asunto or 'Sin asunto' }}</td><td>{{ t.solicitante or 'Sin solicitante' }}</td>
-                            <td>{{ t.area or 'Sin área' }}</td><td>{{ t.categoria or 'Sin categoría' }}</td>
-                            <td><span class="priority">{{ t.prioridad or 'Sin prioridad' }}</span></td>
-                            <td><span class="status">{{ t.estado or 'Sin estado' }}</span></td>
-                            <td>{{ t.tecnico or 'Sin asignar' }}</td>
-                            <td>{{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at else '—' }}</td>
-                            <td>{{ t.updated_at.strftime('%d/%m/%Y %H:%M') if t.estado == 'Resuelto' and t.updated_at else '—' }}</td>
-                            <td><button class="view" aria-label="Ver {{ codigo }}">◉</button></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div id="empty-state" class="empty-state" hidden><b>No hay resultados para estos filtros</b>
-                <p>Modifica los criterios o limpia los filtros.</p><button class="secondary" id="empty-clear">Limpiar
-                    filtros</button>
-            </div>
-            <div class="table-footer"><span id="results-label">Cargando tickets...</span>
-                <div class="pagination"><button id="prev-page">‹</button><button class="page-number active"
-                        data-page="1">1</button><button class="page-number" data-page="2">2</button><button
-                        class="page-number" data-page="3">3</button><button class="page-number"
-                        data-page="4">4</button><button class="page-number" data-page="5">5</button><button
-                        id="next-page">›</button></div>
-            </div>
-        </section>
-        <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Panel
-                administrativo</span></footer>
-    </main>
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <div class="modal" id="ticket-modal" hidden>
-        <div class="modal-card"><button class="modal-close" id="modal-close">×</button><span class="modal-icon">▤</span>
-            <h2 id="modal-title">Detalle del ticket</h2>
-            <p id="modal-description"></p><button class="primary" id="modal-ok">Entendido</button>
-        </div>
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/reportes.css') }}">
+<script src="{{ url_for('static', filename='JS/reportes.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading"><span class="heading-icon">▥</span>
+    <div>
+        <h1>Reportes</h1>
+        <p>Analiza y genera informes del sistema de soporte técnico</p>
     </div>
-</body>
+    <div class="heading-actions"><button id="export-csv" class="export excel">▦ Exportar a Excel</button><button
+            id="export-print" class="export pdf">▧ Exportar a PDF</button></div>
+</section>
+<section class="panel filters">
+    <div class="panel-title"><b>▽ Filtros del reporte</b><small>Personaliza los resultados</small></div>
+    <div class="filters-grid">
+        <label class="control date-control"><span>Rango de fechas</span>
+            <div class="date-range"><input id="date-from" type="date" value=""><span>–</span><input id="date-to"
+                    type="date" value=""></div>
+        </label>
+        <label class="control"><span>Área / Empresa</span><select id="area-filter">
+                <option value="">Todas</option>
+                {% for area in areas %}<option value="{{ area }}">{{ area }}</option>{% endfor %}
+            </select></label>
+        <label class="control"><span>Categoría</span><select id="category-filter">
+                <option value="">Todas</option>
+                {% for categoria in categorias %}<option value="{{ categoria }}">{{ categoria }}</option>{% endfor %}
+            </select></label>
+        <label class="control"><span>Prioridad</span><select id="priority-filter">
+                <option value="">Todas</option>
+                {% for prioridad in prioridades %}<option value="{{ prioridad }}">{{ prioridad }}</option>{% endfor %}
+            </select></label>
+        <label class="control"><span>Estado</span><select id="status-filter">
+                <option value="">Todos</option>
+                <option value="Abierto">Abierto</option>
+                <option value="En proceso">En proceso</option>
+                <option value="Resuelto">Resuelto</option>
+                <option value="Cerrado">Cerrado</option>
+                <option value="Vencido">Vencido (fuera de plazo)</option>
+            </select></label>
+        <label class="control"><span>Técnico</span><select id="technician-filter">
+                <option value="">Todos</option>
+                {% for tecnico in tecnicos %}<option value="{{ tecnico }}">{{ tecnico }}</option>{% endfor %}
+                <option value="Sin asignar">Sin asignar</option>
+            </select></label>
+        <button class="primary generate" id="generate-report">⌕ Generar reporte</button><button class="clear"
+            id="clear-filters">↻ Limpiar</button>
+    </div>
+    <p id="filter-message" class="filter-message" role="status">Los datos corresponden a los tickets reales de tu
+        empresa.</p>
+</section>
+<section class="stats">
+    <article class="stat blue"><span class="stat-icon">▤</span>
+        <div><strong id="total-count">48</strong><span>Total de tickets</span></div><small class="trend up">↑
+            12% <i>vs. periodo anterior</i></small><span class="wave"></span>
+    </article>
+    <article class="stat green"><span class="stat-icon">✓</span>
+        <div><strong id="resolved-count">26</strong><span>Resueltos</span></div><small class="trend up">↑ 30%
+            <i>vs. periodo anterior</i></small><span class="wave"></span>
+    </article>
+    <article class="stat amber"><span class="stat-icon">◷</span>
+        <div><strong id="progress-count">16</strong><span>En proceso</span></div><small class="trend up">↑ 7%
+            <i>vs. periodo anterior</i></small><span class="wave"></span>
+    </article>
+    <article class="stat red"><span class="stat-icon">!</span>
+        <div><strong id="pending-count">6</strong><span>Pendientes / vencidos</span></div><small class="trend down">↓
+            25% <i>vs. periodo anterior</i></small><span class="wave"></span>
+    </article>
+</section>
+<section class="charts">
+    <article class="panel chart">
+        <h2>◉ Tickets por estado</h2>
+        <div class="donut-row">
+            <div class="donut" id="status-donut">
+                <div><b id="donut-total">48</b><small>Tickets</small></div>
+            </div>
+            <ul id="status-legend" class="legend"></ul>
+        </div>
+    </article>
+    <article class="panel chart">
+        <h2>▥ Tickets por prioridad</h2>
+        <div id="priority-chart" class="bars"></div>
+    </article>
+    <article class="panel chart">
+        <h2>◷ Tickets por categoría</h2>
+        <div id="category-chart" class="category-chart"></div>
+    </article>
+</section>
+<section class="panel details">
+    <div class="detail-heading">
+        <h2>▤ Detalle de tickets del periodo</h2><label class="table-search">⌕ <input id="table-search"
+                placeholder="Buscar por código, asunto o solicitante..." aria-label="Buscar en el reporte"></label>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Ticket</th>
+                    <th>Asunto</th>
+                    <th>Solicitante</th>
+                    <th>Área</th>
+                    <th>Categoría</th>
+                    <th>Prioridad</th>
+                    <th>Estado</th>
+                    <th>Técnico</th>
+                    <th>Fecha de creación</th>
+                    <th>Fecha de resolución</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="report-tbody">
+                {% for t in tickets %}
+                {% set codigo = t.numero if t.numero else ('TK-' ~ '%04d'|format(t.id)) %}
+                {% set fecha_creacion = t.created_at.strftime('%Y-%m-%d') if t.created_at else '' %}
+                {% set fecha_limite = t.fecha_limite.strftime('%Y-%m-%d') if t.fecha_limite else '' %}
+                {% set fecha_actualizacion = t.updated_at.strftime('%Y-%m-%d %H:%M') if t.updated_at else '' %}
+                <tr data-id="{{ codigo }}" data-subject="{{ t.asunto or '' }}"
+                    data-requester="{{ t.solicitante or 'Sin solicitante' }}" data-area="{{ t.area or 'Sin área' }}"
+                    data-category="{{ t.categoria or 'Sin categoría' }}"
+                    data-priority="{{ t.prioridad or 'Sin prioridad' }}" data-status="{{ t.estado or '' }}"
+                    data-technician="{{ t.tecnico or 'Sin asignar' }}" data-created="{{ fecha_creacion }}"
+                    data-deadline="{{ fecha_limite }}" data-updated="{{ fecha_actualizacion }}">
+                    <td>{{ loop.index }}</td>
+                    <td><b class="code">{{ codigo }}</b></td>
+                    <td>{{ t.asunto or 'Sin asunto' }}</td>
+                    <td>{{ t.solicitante or 'Sin solicitante' }}</td>
+                    <td>{{ t.area or 'Sin área' }}</td>
+                    <td>{{ t.categoria or 'Sin categoría' }}</td>
+                    <td><span class="priority">{{ t.prioridad or 'Sin prioridad' }}</span></td>
+                    <td><span class="status">{{ t.estado or 'Sin estado' }}</span></td>
+                    <td>{{ t.tecnico or 'Sin asignar' }}</td>
+                    <td>{{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at else '—' }}</td>
+                    <td>{{ t.updated_at.strftime('%d/%m/%Y %H:%M') if t.estado == 'Resuelto' and t.updated_at else '—'
+                        }}</td>
+                    <td><button class="view" aria-label="Ver {{ codigo }}">◉</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="empty-state" class="empty-state" hidden><b>No hay resultados para estos filtros</b>
+        <p>Modifica los criterios o limpia los filtros.</p><button class="secondary" id="empty-clear">Limpiar
+            filtros</button>
+    </div>
+    <div class="table-footer"><span id="results-label">Cargando tickets...</span>
+        <div class="pagination"><button id="prev-page">‹</button><button class="page-number active"
+                data-page="1">1</button><button class="page-number" data-page="2">2</button><button class="page-number"
+                data-page="3">3</button><button class="page-number" data-page="4">4</button><button class="page-number"
+                data-page="5">5</button><button id="next-page">›</button></div>
+    </div>
+</section>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Panel
+        administrativo</span></footer>
 
-</html>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="ticket-modal" hidden>
+    <div class="modal-card"><button class="modal-close" id="modal-close">×</button><span class="modal-icon">▤</span>
+        <h2 id="modal-title">Detalle del ticket</h2>
+        <p id="modal-description"></p><button class="primary" id="modal-ok">Entendido</button>
+    </div>
+</div>
+{% endblock %}
