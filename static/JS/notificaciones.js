@@ -1,4 +1,4 @@
-/* Notificaciones: prototipo visual. Las acciones solo modifican el estado en esta página. */
+/* 
 document.addEventListener("DOMContentLoaded", () => {
   const list = document.getElementById("notification-list");
   const rows = [...list.querySelectorAll(".notification-row")];
@@ -226,4 +226,157 @@ document.addEventListener("DOMContentLoaded", () => {
   }));
 
   render();
+}); */
+
+// static/JS/notificaciones.js
+
+// static/JS/notificaciones.js
+
+document.addEventListener("DOMContentLoaded", () => {
+    const btnCampana = document.getElementById("btnCampanaNotif");
+    const dropdown = document.getElementById("dropdownNotificaciones");
+    const wrapper = document.getElementById("notifWrapper");
+    const btnLeerTodas = document.getElementById("btnLeerTodas");
+
+    // 1. Abrir / Cerrar el menú desplegable al hacer clic en la campana
+    if (btnCampana && dropdown) {
+        btnCampana.addEventListener("click", (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle("oculto");
+        });
+
+        // Cerrar el dropdown si el usuario hace clic en cualquier otra parte de la pantalla
+        document.addEventListener("click", (e) => {
+            if (wrapper && !wrapper.contains(e.target)) {
+                dropdown.classList.add("oculto");
+            }
+        });
+    }
+
+    // 2. Botón "Marcar todas como leídas"
+    if (btnLeerTodas) {
+        btnLeerTodas.addEventListener("click", (e) => {
+            e.stopPropagation();
+            marcarTodasComoLeidas();
+        });
+    }
+
+    // 3. Primera carga y actualización automática cada 15 segundos
+    cargarNotificaciones();
+    setInterval(cargarNotificaciones, 15000);
 });
+
+function obtenerHeadersAuth() {
+    const headers = { "Content-Type": "application/json" };
+    const token = localStorage.getItem("token");
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+function formatearTiempo(minutos) {
+    if (minutos < 1) return "Hace un momento";
+    if (minutos < 60) return `Hace ${minutos} min`;
+    const horas = Math.floor(minutos / 60);
+    if (horas < 24) return `Hace ${horas} h`;
+    const dias = Math.floor(horas / 24);
+    return `Hace ${dias} d`;
+}
+
+async function cargarNotificaciones() {
+    try {
+        const res = await fetch("/api/notificaciones", {
+            method: "GET",
+            headers: obtenerHeadersAuth()
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.ok) return;
+
+        // Actualizar el contador rojo (Badge)
+        const badge = document.getElementById("badgeNotificaciones");
+        if (badge) {
+            if (data.no_leidas > 0) {
+                badge.textContent = data.no_leidas > 99 ? "99+" : data.no_leidas;
+                badge.classList.remove("oculto");
+            } else {
+                badge.textContent = "0";
+                badge.classList.add("oculto");
+            }
+        }
+
+        // Renderizar lista en el dropdown de la campana
+        const contenedorDropdown = document.getElementById("listaNotificacionesDropdown");
+        if (contenedorDropdown) {
+            renderizarLista(contenedorDropdown, data.notificaciones);
+        }
+
+        // Renderizar en notificaciones.html si estamos en esa página
+        const contenedorPagina = document.getElementById("contenedorPaginaNotificaciones");
+        if (contenedorPagina) {
+            renderizarLista(contenedorPagina, data.notificaciones);
+        }
+
+    } catch (error) {
+        console.error("Error al obtener notificaciones:", error);
+    }
+}
+
+function renderizarLista(contenedor, notificaciones) {
+    if (!notificaciones || notificaciones.length === 0) {
+        contenedor.innerHTML = `<div class="notif-dropdown__empty">No tienes notificaciones registradas.</div>`;
+        return;
+    }
+
+    contenedor.innerHTML = notificaciones.map(n => {
+        const claseNoLeida = n.leido === 0 ? "notif-item--unread" : "";
+        const tiempo = formatearTiempo(n.hace_minutos);
+
+        return `
+            <div class="notif-item ${claseNoLeida}" onclick="abrirNotificacion(${n.id}, ${n.referencia_ticket}, ${n.leido})">
+                <div class="notif-item__content">
+                    <div class="notif-item__top">
+                        <span class="notif-item__title">${n.titulo}</span>
+                        ${n.leido === 0 ? '<span class="notif-item__dot"></span>' : ''}
+                    </div>
+                    <p class="notif-item__msg">${n.mensaje || ''}</p>
+                    <span class="notif-item__time">${tiempo}</span>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+async function abrirNotificacion(notifId, ticketId, yaLeido) {
+    try {
+        if (yaLeido === 0) {
+            await fetch(`/api/notificaciones/${notifId}/leer`, {
+                method: "POST",
+                headers: obtenerHeadersAuth()
+            });
+        }
+        if (ticketId) {
+            window.location.href = `/detalle_ticket?id=${ticketId}`;
+        } else {
+            cargarNotificaciones();
+        }
+    } catch (error) {
+        console.error("Error al marcar notificación:", error);
+    }
+}
+
+async function marcarTodasComoLeidas() {
+    try {
+        const res = await fetch("/api/notificaciones/leer-todas", {
+            method: "POST",
+            headers: obtenerHeadersAuth()
+        });
+        if (res.ok) {
+            cargarNotificaciones();
+        }
+    } catch (error) {
+        console.error("Error al marcar todas como leídas:", error);
+    }
+}
