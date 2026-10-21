@@ -1,8 +1,4 @@
 {
-<<<<<<< HEAD
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "python.terminal.useEnvFile": true
-=======
-    "python-envs.defaultEnvManager": "ms-python.python:venv"
->>>>>>> ce55750865b9393c7726d7b7ee40512a9194db7e
 }
