@@ -385,96 +385,153 @@ def api_marcar_todas_leidas():
 
 #=====================================================================*
 
-def obtener_datos_dashboard(empresa_id):
 
+def obtener_datos_dashboard(empresa_id):
     conexion = obtener_conexion()
 
     try:
-
         with conexion.cursor() as cursor:
 
+            # 1. Indicadores principales del dashboard
             cursor.execute("""
-
-                SELECT COUNT(*) AS total,
-
+                SELECT
+                    COUNT(*) AS total,
                     COALESCE(SUM(estado = 'Abierto'), 0) AS abiertos,
-
                     COALESCE(SUM(estado = 'Resuelto'), 0) AS resueltos,
-
-                    COALESCE(SUM(estado NOT IN ('Resuelto','Cerrado')
-
-                        AND fecha_limite IS NOT NULL AND fecha_limite < NOW()), 0) AS vencidos
-
-                FROM tickets WHERE empresa_id = %s
-
+                    COALESCE(SUM(
+                        estado NOT IN ('Resuelto', 'Cerrado')
+                        AND fecha_limite IS NOT NULL
+                        AND fecha_limite < NOW()
+                    ), 0) AS vencidos
+                FROM tickets
+                WHERE empresa_id = %s
             """, (empresa_id,))
 
             kpis = cursor.fetchone()
 
-            cursor.execute("SELECT estado, COUNT(*) AS total FROM tickets WHERE empresa_id=%s GROUP BY estado", (empresa_id,))
+            # 2. Tickets agrupados por estado
+            cursor.execute("""
+                SELECT estado, COUNT(*) AS total
+                FROM tickets
+                WHERE empresa_id = %s
+                GROUP BY estado
+            """, (empresa_id,))
 
             estados = cursor.fetchall()
 
+            # 3. Tickets agrupados por prioridad
             cursor.execute("""
-
-                SELECT p.nombre AS prioridad, COUNT(*) AS total
-
-                FROM tickets t JOIN prioridades p ON p.id=t.prioridad_id
-
-                WHERE t.empresa_id=%s GROUP BY p.id,p.nombre,p.nivel ORDER BY p.nivel DESC
-
+                SELECT
+                    p.nombre AS prioridad,
+                    COUNT(*) AS total
+                FROM tickets t
+                JOIN prioridades p ON p.id = t.prioridad_id
+                WHERE t.empresa_id = %s
+                GROUP BY p.id, p.nombre, p.nivel
+                ORDER BY p.nivel DESC
             """, (empresa_id,))
 
             prioridades = cursor.fetchall()
 
+            # 4. Tickets agrupados por técnico
             cursor.execute("""
-
-                SELECT u.nombre AS tecnico, COUNT(t.id) AS total
-
-                FROM tickets t LEFT JOIN users u ON u.id=t.tecnico_id
-
-                WHERE t.empresa_id=%s AND t.tecnico_id IS NOT NULL
-
-                GROUP BY u.id,u.nombre ORDER BY total DESC LIMIT 8
-
+                SELECT
+                    u.nombre AS tecnico,
+                    COUNT(t.id) AS total
+                FROM tickets t
+                LEFT JOIN users u ON u.id = t.tecnico_id
+                WHERE t.empresa_id = %s
+                  AND t.tecnico_id IS NOT NULL
+                GROUP BY u.id, u.nombre
+                ORDER BY total DESC
+                LIMIT 8
             """, (empresa_id,))
 
             tecnicos = cursor.fetchall()
 
+            # 5. Tickets agrupados por categoría
             cursor.execute("""
-
-                SELECT c.nombre AS categoria, COUNT(*) AS total
-
-                FROM tickets t JOIN categorias c ON c.id=t.categoria_id
-
-                WHERE t.empresa_id=%s GROUP BY c.id,c.nombre ORDER BY total DESC
-
+                SELECT
+                    c.nombre AS categoria,
+                    COUNT(*) AS total
+                FROM tickets t
+                JOIN categorias c ON c.id = t.categoria_id
+                WHERE t.empresa_id = %s
+                GROUP BY c.id, c.nombre
+                ORDER BY total DESC
             """, (empresa_id,))
 
             categorias = cursor.fetchall()
 
+            # 6. Los cinco tickets más recientes
             cursor.execute("""
-
-                SELECT t.id,t.asunto,t.estado,t.created_at,p.nombre AS prioridad,u.nombre AS tecnico
-
-                FROM tickets t JOIN prioridades p ON p.id=t.prioridad_id
-
-                LEFT JOIN users u ON u.id=t.tecnico_id
-
-                WHERE t.empresa_id=%s ORDER BY t.created_at DESC LIMIT 5
-
+                SELECT
+                    t.id,
+                    t.asunto,
+                    t.estado,
+                    t.created_at,
+                    p.nombre AS prioridad,
+                    u.nombre AS tecnico
+                FROM tickets t
+                LEFT JOIN prioridades p ON p.id = t.prioridad_id
+                LEFT JOIN users u ON u.id = t.tecnico_id
+                WHERE t.empresa_id = %s
+                ORDER BY t.created_at DESC, t.id DESC
+                LIMIT 5
             """, (empresa_id,))
 
             recientes = cursor.fetchall()
 
-        return {"kpis": kpis, "estados": estados, "prioridades": prioridades,
+            # 7. Todos los tickets para los filtros del dashboard
+            cursor.execute("""
+                SELECT
+                    t.id,
+                    t.asunto,
+                    t.estado,
+                    t.created_at,
+                    t.fecha_limite,
+                    p.nombre AS prioridad,
+                    u.nombre AS tecnico,
+                    a.nombre AS area,
+                    c.nombre AS categoria
+                FROM tickets t
+                LEFT JOIN prioridades p ON p.id = t.prioridad_id
+                LEFT JOIN users u ON u.id = t.tecnico_id
+                LEFT JOIN areas a
+                    ON a.id = t.area_id
+                   AND a.empresa_id = t.empresa_id
+                LEFT JOIN categorias c ON c.id = t.categoria_id
+                WHERE t.empresa_id = %s
+                ORDER BY t.created_at DESC, t.id DESC
+            """, (empresa_id,))
 
-                "tecnicos": tecnicos, "categorias": categorias, "recientes": recientes}
+            todos_tickets = cursor.fetchall()
+
+            # 8. Áreas activas de la empresa autenticada
+            cursor.execute("""
+                SELECT id, nombre
+                FROM areas
+                WHERE empresa_id = %s
+                  AND activo = 1
+                ORDER BY nombre
+            """, (empresa_id,))
+
+            areas = cursor.fetchall()
+
+        # 9. Devolver todos los datos al dashboard
+        return {
+            "kpis": kpis,
+            "estados": estados,
+            "prioridades": prioridades,
+            "tecnicos": tecnicos,
+            "categorias": categorias,
+            "recientes": recientes,
+            "todos_tickets": todos_tickets,
+            "areas": areas
+        }
 
     finally:
-
         conexion.close()
-
 
 
 
