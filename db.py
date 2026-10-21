@@ -12,8 +12,8 @@ def obtener_conexion():
     return pymysql.connect(
         host=os.getenv("DB_HOST", "localhost"),
         port=int(os.getenv("DB_PORT", "3306")),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", "carlosj"),
+        user=os.getenv("DB_USER", "admin"),
+        password=os.getenv("DB_PASSWORD", "admin"),
         database=os.getenv("DB_NAME", "mesa_ayuda_ti"),
         charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor,
