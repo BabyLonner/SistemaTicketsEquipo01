@@ -61,67 +61,89 @@
                     </div>
                 </div>
             </div>
-            <div class="profile">
-                <!-- Extrae las 2 primeras letras del nombre o pone 'US' por defecto -->
-                <span class="avatar" id="perfil-iniciales">
-                    {{ (session.nombre[:2] | upper) if session.nombre else (usuario_nombre[:2] | upper if usuario_nombre
-                    else 'US') }}
-                </span>
+            <!-- Envolver el perfil en este nuevo div relativo -->
+            <div class="profile-wrapper" style="position: relative;">
 
-                <div class="profile-copy">
-                    <!-- Imprime el nombre o un valor por defecto si la sesión falla -->
-                    <strong id="perfil-nombre">
-                        {{ session.nombre if session.nombre else (usuario_nombre | default('Usuario')) }}
-                    </strong>
-                    <!-- Imprime el rol -->
-                    <small id="perfil-rol">
-                        {{ session.rol if session.rol else (usuario_rol | default('Soporte TI')) }}
-                    </small>
+                <!-- Agregamos el id="btn-perfil" y cursor pointer -->
+                <div class="profile" id="btn-perfil" style="cursor: pointer;">
+                    <span class="avatar" id="perfil-iniciales">
+                        {{ (session.nombre[:2] | upper) if session.nombre else (usuario_nombre[:2] | upper if
+                        usuario_nombre else 'US') }}
+                    </span>
+                    <div class="profile-copy">
+                        <strong id="perfil-nombre">
+                            {{ session.nombre if session.nombre else (usuario_nombre | default('Usuario')) }}
+                        </strong>
+                        <small id="perfil-rol">
+                            {{ session.rol if session.rol else (usuario_rol | default('Soporte TI')) }}
+                        </small>
+                    </div>
+                    <span class="chevron">⌄</span>
                 </div>
 
-                <span class="chevron">⌄</span>
+                <!-- El menú desplegable oculto por defecto -->
+                <div class="profile-dropdown oculto" id="dropdown-perfil">
+                    <a href="{{ url_for('cerrar_sesion') }}" class="dropdown-item logout-btn">
+                        <span aria-hidden="true">🚪</span> Cerrar sesión
+                    </a>
+                </div>
+
             </div>
         </div>
     </header>
 
     <aside class="sidebar">
-        <nav aria-label="Menú principal">
-            <!-- Bloque de navegación completo tal como en image_bfa6bc.png -->
-            <a href="/dashboard" class="side-link {% if active_page == 'dashboard' %}active{% endif %}">
-                <span class="side-icon">▤</span> Dashboard
-            </a>
-            <a href="/tickets" class="side-link {% if active_page == 'tickets' %}active{% endif %}">
+        <nav class="sidebar-nav">
+            <!-- 1. ACCESO PARA TODOS (Admin, Técnico y Solicitante) -->
+            <a href="{{ url_for('pantalla', pagina='tickets') }}"
+                class="side-link {% if active_page == 'tickets' %}active{% endif %}">
                 <span class="side-icon">目</span> Tickets
             </a>
-            <a href="/nuevo_ticket" class="side-link {% if active_page == 'nuevo_ticket' %}active{% endif %}">
-                <span class="side-icon">♙</span> Nuevo Ticket
+            <a href="{{ url_for('pantalla', pagina='nuevo_ticket') }}"
+                class="side-link {% if active_page == 'nuevo_ticket' %}active{% endif %}">
+                <span class="side-icon">∆</span> Nuevo Ticket
             </a>
 
-            <a href="/sla" class="side-link {% if active_page == 'sla' %}active{% endif %}">
-                <span class="side-icon">◷</span> SLA
+            <!-- 2. ACCESO SOLO PARA ADMINISTRADORES Y TÉCNICOS -->
+            {% if session.rol in ['Administrador', 'Técnico'] %}
+            <a href="{{ url_for('pantalla', pagina='dashboard') }}"
+                class="side-link {% if active_page == 'dashboard' %}active{% endif %}">
+                <span class="side-icon">▤</span> Dashboard
             </a>
-            <a href="/asignaciones" class="side-link {% if active_page == 'asignaciones' %}active{% endif %}">
-                <span class="side-icon">♧</span> Asignación
-            </a>
-            <a href="/usuarios" class="side-link {% if active_page == 'usuarios' %}active{% endif %}">
-                <span class="side-icon">♙</span> Usuarios
-            </a>
-
-            <a href="/notificaciones" class="side-link {% if active_page == 'notificaciones' %}active{% endif %}">
-                <span class="side-icon">♧</span> Notificaciones
-            </a>
-            <a href="/reportes" class="side-link {% if active_page == 'reportes' %}active{% endif %}">
+            <a href="{{ url_for('pantalla', pagina='reportes') }}"
+                class="side-link {% if active_page == 'reportes' %}active{% endif %}">
                 <span class="side-icon">▥</span> Reportes
             </a>
-            <a href="#api" class="side-link {% if active_page == 'api' %}active{% endif %}">
-                <span class="side-icon">‹/›</span> API
+            {% endif %}
+
+            <!-- 3. ACCESO EXCLUSIVO PARA ADMINISTRADORES -->
+            {% if session.rol == 'Administrador' %}
+            <a href="{{ url_for('pantalla', pagina='sla') }}"
+                class="side-link {% if active_page == 'sla' %}active{% endif %}">
+                <span class="side-icon">◷</span> SLA
             </a>
-            <a href="/configuracion" class="side-link {% if active_page == 'configuracion' %}active{% endif %}">
+            <a href="{{ url_for('pantalla', pagina='asignacion') }}"
+                class="side-link {% if active_page == 'asignacion' %}active{% endif %}">
+                <span class="side-icon">♙</span> Asignación
+            </a>
+            <a href="{{ url_for('pantalla', pagina='usuarios') }}"
+                class="side-link {% if active_page == 'usuarios' %}active{% endif %}">
+                <span class="side-icon">♟</span> Usuarios
+            </a>
+            <a href="{{ url_for('pantalla', pagina='api') }}"
+                class="side-link {% if active_page == 'api' %}active{% endif %}">
+                <span class="side-icon">&lt;/&gt;</span> API
+            </a>
+            <a href="{{ url_for('pantalla', pagina='configuracion') }}"
+                class="side-link {% if active_page == 'configuracion' %}active{% endif %}">
                 <span class="side-icon">⚙</span> Configuración
             </a>
+            {% endif %}
 
-            <a class="side-link" href="{{ url_for('cerrar_sesion') }}">
-                <span class="side-icon">⇥</span> Cerrar sesión
+            <!-- Notificaciones es para todos, lo ponemos al final -->
+            <a href="{{ url_for('pantalla', pagina='notificaciones') }}"
+                class="side-link {% if active_page == 'notificaciones' %}active{% endif %}">
+                <span class="side-icon">♧</span> Notificaciones
             </a>
         </nav>
     </aside>
@@ -130,6 +152,27 @@
         <!-- Aquí se inyecta el contenido de dashboard.html, tickets.html, etc. -->
         {% block content %}{% endblock %}
     </main>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const btnPerfil = document.getElementById("btn-perfil");
+            const dropdownPerfil = document.getElementById("dropdown-perfil");
+
+            if (btnPerfil && dropdownPerfil) {
+                // Mostrar/Ocultar al hacer clic en el perfil
+                btnPerfil.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    dropdownPerfil.classList.toggle("oculto");
+                });
+
+                // Cerrar si se hace clic fuera del menú
+                document.addEventListener("click", (e) => {
+                    if (!btnPerfil.contains(e.target) && !dropdownPerfil.contains(e.target)) {
+                        dropdownPerfil.classList.add("oculto");
+                    }
+                });
+            }
+        });
+    </script>y
 </body>
 
 </html>

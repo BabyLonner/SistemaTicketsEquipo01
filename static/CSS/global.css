@@ -716,3 +716,50 @@ textarea {
     width: 100%;
   }
 }
+
+/**/
+
+/* Menú desplegable del perfil */
+.profile-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 12px;
+  background: white;
+  border: 1px solid #dce9f9;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(16, 43, 80, 0.15);
+  min-width: 190px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.profile-dropdown.oculto {
+  display: none;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  color: #102b50;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.dropdown-item:hover {
+  background: #f6faff;
+}
+
+.dropdown-item.logout-btn {
+  color: #e94d5b;
+}
+
+.dropdown-item.logout-btn:hover {
+  background: #fff5f6;
+}
