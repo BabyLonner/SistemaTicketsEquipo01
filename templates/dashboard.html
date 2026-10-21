@@ -1,18 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dashboard | Soporte TI</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='CSS/dashboard.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='CSS/dashboard.css') }}" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script id="dashboard-data" type="application/json">
-    {{ datos | tojson }}
-  </script>
+      {{ datos | tojson }}
+    </script>
   <script src="{{ url_for('static', filename='JS/dashboard.js') }}" defer></script>
 </head>
 
@@ -23,9 +24,43 @@
       <span><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
     </a>
     <label class="global-search"><span aria-hidden="true">⌕</span><input type="search"
-        placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios"></label>
+        placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios" /></label>
+
     <div class="top-actions">
-      <a class="notification" href="notificaciones.html" aria-label="Notificaciones, 3 sin leer">♧<i>3</i></a>
+      <!-- ========================================================= -->
+      <!-- AQUÍ COLOCAS EL PASO 2 (HTML DE LA CAMPANA)               -->
+      <!-- ========================================================= -->
+      <div class="notif-wrapper" id="notifWrapper">
+        <button type="button" class="notif-bell-btn" id="btnCampanaNotif" aria-label="Notificaciones">
+          <svg class="notif-bell-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="badgeNotificaciones" class="notif-badge oculto">0</span>
+        </button>
+
+        <div class="notif-dropdown oculto" id="dropdownNotificaciones">
+          <div class="notif-dropdown__header">
+            <span class="notif-dropdown__title">Notificaciones</span>
+            <button type="button" id="btnLeerTodas" class="notif-dropdown__mark-all">
+              Marcar todas como leídas
+            </button>
+          </div>
+
+          <div id="listaNotificacionesDropdown" class="notif-dropdown__list">
+            <div class="notif-dropdown__empty">
+              Cargando notificaciones...
+            </div>
+          </div>
+
+          <div class="notif-dropdown__footer">
+            <a href="notificaciones.html" class="notif-dropdown__view-all">Ver todo el historial</a>
+          </div>
+        </div>
+      </div>
+      <!-- ========================================================= -->
+
       <div class="profile">
         <span class="avatar">{{ usuario_nombre[:2] | upper }}</span>
         <span>
@@ -61,8 +96,8 @@
       </div>
       <form class="filters" id="filters-form">
         <label class="date-filter"><span>▦</span><input id="desde" type="date" value="2026-08-01"
-            aria-label="Fecha inicial"><span>–</span><input id="hasta" type="date" value="2026-08-31"
-            aria-label="Fecha final"></label>
+            aria-label="Fecha inicial" /><span>–</span><input id="hasta" type="date" value="2026-08-31"
+            aria-label="Fecha final" /></label>
         <label class="area-filter"><span>▦</span><select id="area" aria-label="Área">
             <option value="todas">Todas las áreas</option>
             <option>Administración</option>
@@ -70,58 +105,75 @@
             <option>Ventas</option>
             <option>Recursos Humanos</option>
           </select></label>
-        <button class="btn-primary" type="submit"><span>▽</span> Aplicar filtros</button>
+        <button class="btn-primary" type="submit">
+          <span>▽</span> Aplicar filtros
+        </button>
       </form>
     </div>
 
     <section class="kpis" aria-label="Resumen de tickets">
-      <article class="kpi kpi-blue"><span class="kpi-icon">▤</span>
-        <div><strong id="total-tickets">{{ datos.kpis.total or 0 }}</strong><span>Total de tickets</span></div><small>↗
-          datos actuales <em>vs. mes
-            anterior</em></small>
+      <article class="kpi kpi-blue">
+        <span class="kpi-icon">▤</span>
+        <div>
+          <strong id="total-tickets">{{ datos.kpis.total or 0 }}</strong><span>Total de tickets</span>
+        </div>
+        <small>↗ datos actuales <em>vs. mes anterior</em></small>
       </article>
-      <article class="kpi kpi-red"><span class="kpi-icon">!</span>
-        <div><strong id="open-tickets">{{ datos.kpis.abiertos or 0 }}</strong><span>Abiertos</span></div><small>↗ datos
-          actuales <em>vs. mes
-            anterior</em></small>
+      <article class="kpi kpi-red">
+        <span class="kpi-icon">!</span>
+        <div>
+          <strong id="open-tickets">{{ datos.kpis.abiertos or 0 }}</strong><span>Abiertos</span>
+        </div>
+        <small>↗ datos actuales <em>vs. mes anterior</em></small>
       </article>
-      <article class="kpi kpi-green"><span class="kpi-icon">✓</span>
-        <div><strong id="resolved-tickets">{{ datos.kpis.resueltos or 0 }}</strong><span>Resueltos</span></div><small>↗
-          datos actuales <em>vs. mes
-            anterior</em></small>
+      <article class="kpi kpi-green">
+        <span class="kpi-icon">✓</span>
+        <div>
+          <strong id="resolved-tickets">{{ datos.kpis.resueltos or 0 }}</strong><span>Resueltos</span>
+        </div>
+        <small>↗ datos actuales <em>vs. mes anterior</em></small>
       </article>
-      <article class="kpi kpi-amber"><span class="kpi-icon">◷</span>
-        <div><strong id="late-tickets">{{ datos.kpis.vencidos or 0 }}</strong><span>Vencidos (SLA)</span></div><small>↗
-          datos actuales<em>vs. mes
-            anterior</em></small>
+      <article class="kpi kpi-amber">
+        <span class="kpi-icon">◷</span>
+        <div>
+          <strong id="late-tickets">{{ datos.kpis.vencidos or 0 }}</strong><span>Vencidos (SLA)</span>
+        </div>
+        <small>↗ datos actuales<em>vs. mes anterior</em></small>
       </article>
     </section>
 
     <section class="charts-grid" aria-label="Gráficos de tickets">
       <article class="panel">
         <h2><span class="panel-icon">◕</span>Tickets por estado</h2>
-        <div class="chart-wrap"><canvas id="statusChart" aria-label="Gráfico de tickets por estado"></canvas></div>
+        <div class="chart-wrap">
+          <canvas id="statusChart" aria-label="Gráfico de tickets por estado"></canvas>
+        </div>
       </article>
       <article class="panel">
         <h2><span class="panel-icon">▥</span>Tickets por prioridad</h2>
-        <div class="chart-wrap"><canvas id="priorityChart" aria-label="Gráfico de tickets por prioridad"></canvas></div>
+        <div class="chart-wrap">
+          <canvas id="priorityChart" aria-label="Gráfico de tickets por prioridad"></canvas>
+        </div>
       </article>
       <article class="panel">
         <h2><span class="panel-icon">♙</span>Tickets por técnico</h2>
-        <div class="chart-wrap"><canvas id="technicianChart" aria-label="Gráfico de tickets por técnico"></canvas></div>
+        <div class="chart-wrap">
+          <canvas id="technicianChart" aria-label="Gráfico de tickets por técnico"></canvas>
+        </div>
       </article>
     </section>
 
     <section class="bottom-grid">
       <article class="panel category-panel">
         <h2><span class="panel-icon">▰</span>Tickets por categoría</h2>
-        <div class="category-chart"><canvas id="categoryChart" aria-label="Gráfico de tickets por categoría"></canvas>
+        <div class="category-chart">
+          <canvas id="categoryChart" aria-label="Gráfico de tickets por categoría"></canvas>
         </div>
       </article>
       <article class="panel recent-panel" id="reportes">
         <div class="panel-heading">
-          <h2><span class="panel-icon">▤</span>Tickets recientes</h2><a href="tickets.html">Ver todos los tickets
-            <span>→</span></a>
+          <h2><span class="panel-icon">▤</span>Tickets recientes</h2>
+          <a href="tickets.html">Ver todos los tickets <span>→</span></a>
         </div>
         <div class="table-scroll">
           <table>
@@ -143,11 +195,16 @@
                 <td><span class="pill">{{ ticket.prioridad }}</span></td>
                 <td><span class="pill">{{ ticket.estado }}</span></td>
                 <td>{{ ticket.tecnico or 'Sin asignar' }}</td>
-                <td>{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') if ticket.created_at else '-' }}</td>
+                <td>
+                  {{ ticket.created_at.strftime('%d/%m/%Y %H:%M') if
+                  ticket.created_at else '-' }}
+                </td>
               </tr>
               {% else %}
               <tr>
-                <td colspan="6">No hay tickets registrados para esta empresa.</td>
+                <td colspan="6">
+                  No hay tickets registrados para esta empresa.
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -155,8 +212,10 @@
         </div>
       </article>
     </section>
-    <footer class="page-footer">© 2026 Soporte TI · Sistema de Gestión de Tickets <span id="filter-feedback">Mostrando
-        datos de ejemplo</span></footer>
+    <footer class="page-footer">
+      © 2026 Soporte TI · Sistema de Gestión de Tickets
+      <span id="filter-feedback">Mostrando datos de ejemplo</span>
+    </footer>
   </main>
 </body>
 
