@@ -1,4 +1,5 @@
 import os
+import unicodedata
 import bcrypt
 from dotenv import load_dotenv
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
@@ -11,6 +12,42 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "clave-local-solo-desarrollo")
 app.register_blueprint(tickets_bp)
+
+
+# Colores distintivos por empresa. Las claves se comparan sin tildes ni mayúsculas.
+COLORES_EMPRESAS = {
+    "epsel": "#1E88D2",
+    "grupo m&m": "#24273D",
+    "robotic air systems": "#2672C7",
+    "angel divino": "#5B1879",
+    "agrofutura": "#4C8B41",
+    "atlantica": "#1336BF",
+}
+
+
+def normalizar_nombre_empresa(nombre):
+    nombre = unicodedata.normalize("NFD", nombre or "")
+    nombre = "".join(caracter for caracter in nombre if unicodedata.category(caracter) != "Mn")
+    return " ".join(nombre.casefold().split())
+
+
+def obtener_identidad_empresa(empresa_id):
+    """
+    Obtiene el nombre de la empresa del usuario conectado y el color distintivo.
+    Asume que la tabla empresas contiene las columnas id y nombre.
+    """
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute("SELECT nombre FROM empresas WHERE id = %s LIMIT 1", (empresa_id,))
+            empresa = cursor.fetchone()
+
+        nombre = empresa["nombre"] if empresa and empresa.get("nombre") else "Empresa"
+        clave = normalizar_nombre_empresa(nombre)
+        color = COLORES_EMPRESAS.get(clave, "#2672C7")
+        return {"nombre": nombre, "color": color}
+    finally:
+        conexion.close()
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -107,9 +144,18 @@ def obtener_datos_dashboard(empresa_id):
 def dashboard():
     if not session.get("usuario_id"):
         return redirect(url_for("inicio"))
+
     datos = obtener_datos_dashboard(session["empresa_id"])
-    return render_template("dashboard.html", usuario_nombre=session["nombre"],
-                           usuario_rol=session["rol"], datos=datos)
+    empresa = obtener_identidad_empresa(session["empresa_id"])
+
+    return render_template(
+        "dashboard.html",
+        usuario_nombre=session["nombre"],
+        usuario_rol=session["rol"],
+        datos=datos,
+        empresa_nombre=empresa["nombre"],
+        empresa_color=empresa["color"],
+    )
 
 
 @app.route("/reportes")
@@ -151,9 +197,11 @@ def reportes():
             tecnicos = [r["nombre"] for r in cursor.fetchall()]
     finally:
         conexion.close()
+    empresa = obtener_identidad_empresa(empresa_id)
     return render_template("reportes.html", tickets=tickets, areas=areas, categorias=categorias,
                            prioridades=prioridades, tecnicos=tecnicos,
-                           usuario_nombre=session.get("nombre", ""), usuario_rol=session.get("rol", ""))
+                           usuario_nombre=session.get("nombre", ""), usuario_rol=session.get("rol", ""),
+                           empresa_nombre=empresa["nombre"], empresa_color=empresa["color"])
 
 
 @app.route("/cerrar-sesion")

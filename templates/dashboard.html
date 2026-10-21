@@ -16,11 +16,12 @@
   <script src="{{ url_for('static', filename='JS/dashboard.js') }}" defer></script>
 </head>
 
-<body>
+<body style="--company-color: {{ empresa_color | default('#2672c7') }};">
   <header class="topbar">
     <a class="brand" href="dashboard.html" aria-label="Soporte TI, inicio">
       <span class="brand-mark">⌁</span>
-      <span><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
+      <span class="brand-copy"><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
+      <span class="company-badge" title="Empresa activa">{{ empresa_nombre | default('Empresa') }}</span>
     </a>
     <label class="global-search"><span aria-hidden="true">⌕</span><input type="search"
         placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios"></label>
