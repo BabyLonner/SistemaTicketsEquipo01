@@ -10,7 +10,7 @@ try:
     print("¡Conexión exitosa!")
     print("Empresas registradas:", resultado["total"])
 
-except Exception as error:
+except Exception as error:  # noqa: BLE001
     print("Error de conexión:", error)
 
 finally:

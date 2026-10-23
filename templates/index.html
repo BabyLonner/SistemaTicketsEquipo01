@@ -10,6 +10,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono&family=Young+Serif&display=swap"
     rel="stylesheet">
+  <link rel="stylesheet" href="../static/CSS/global.css">
   <link rel="stylesheet" href="../static/CSS/estilos.css">
 </head>
 
@@ -94,7 +95,9 @@
         <p class="subtitulo">Usa las credenciales que te asignó el administrador.</p>
 
 
-        <div id="login-alerta" class="alerta-login" role="alert" hidden>
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+        <!-- La alerta evalúa si existen mensajes; si no, imprime el atributo 'hidden' -->
+        <div id="login-alerta" class="alerta-login" role="alert" {% if not mensajes %}hidden{% endif %}>
           <svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
@@ -102,15 +105,14 @@
           </svg>
 
           <span id="login-alerta-texto">
-            {% with mensajes = get_flashed_messages(with_categories=true) %}
-              {% if mensajes %}
-                {% for categoria, mensaje in mensajes %}
-                  {{ mensaje }}
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
+            {% if mensajes %}
+              {% for categoria, mensaje in mensajes %}
+                {{ mensaje }}
+              {% endfor %}
+            {% endif %}
           </span>
         </div>
+        {% endwith %}
 
         <form class="form" id="form-login" method="POST" action="/" novalidate>
           <div class="campo">

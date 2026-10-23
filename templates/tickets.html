@@ -1,179 +1,217 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tickets | Soporte TI</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/CSS/tickets.css">
-  <script src="../static/JS/tickets.js" defer></script>
-</head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="dashboard.html" aria-label="Soporte TI, inicio">
-      <span class="brand-mark" aria-hidden="true">⌁</span>
-      <span class="brand-copy"><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
-    </a>
+{% set active_page = 'tickets' %}
+{% extends "base.html" %}
 
-    <label class="global-search">
-      <span aria-hidden="true">⌕</span>
-      <input id="global-search" type="search" placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios">
-    </label>
+{% block title %}Tickets | Soporte TI{% endblock %}
 
-    <div class="top-actions">
-      <a class="notification" href="notificaciones.html" aria-label="Notificaciones, 3 sin leer">♧<span class="notification-count">3</span></a>
-      <div class="profile">
-        <span class="avatar">AD</span>
-        <span class="profile-copy"><strong>Ana Díaz</strong><small>Administrador</small></span>
-        <span class="chevron" aria-hidden="true">⌄</span>
-      </div>
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/tickets.css') }}">
+<script src="{{ url_for('static', filename='JS/tickets.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div class="heading-copy">
+    <div class="title-line"><span class="title-icon" aria-hidden="true">▤</span>
+      <h1>Tickets</h1>
     </div>
-  </header>
+    <p>Gestiona y da seguimiento a tus solicitudes de soporte</p>
+  </div>
+  <a class="btn-primary" href="{{ url_for('pantalla', pagina='nuevo_ticket') }}"><span aria-hidden="true">＋</span> Nuevo
+    ticket</a>
+</section>
 
-  <aside class="sidebar">
-    <nav class="sidebar-nav" aria-label="Menú principal">
-      <a class="side-link" href="dashboard.html"><span class="side-icon">▦</span>Dashboard</a>
-      <a class="side-link active" href="tickets.html" aria-current="page"><span class="side-icon">▤</span>Tickets</a>
-      <a class="side-link" href="nuevo_ticket.html"><span class="side-icon">⊕</span>Nuevo Ticket</a>
-      <a class="side-link" href="sla.html"><span class="side-icon">◷</span>SLA</a>
-      <a class="side-link" href="asignacion.html"><span class="side-icon">♧</span>Asignación</a>
-      <a class="side-link" href="usuarios.html"><span class="side-icon">♙</span>Usuarios</a>
-      <a class="side-link" href="notificaciones.html"><span class="side-icon">♧</span>Notificaciones</a>
-      <a class="side-link" href="reportes.html"><span class="side-icon">▥</span>Reportes</a>
-      <a class="side-link" href="#api"><span>‹/›</span>API</a>
-      <a class="side-link" href="configuracion.html"><span class="side-icon">⚙</span>Configuración</a>
-      <a class="side-link" href="index.html"><span class="side-icon">⇥</span>Cerrar sesión</a>
-    </nav>
-  </aside>
+<section class="metrics" aria-label="Resumen de tickets">
+  <article class="metric metric-red">
+    <span class="metric-icon">!</span>
+    <div class="metric-data"><strong id="metric-open">18</strong><span>Abiertos</span></div>
+    <small>↗ 12% <em>vs. mes anterior</em></small>
+  </article>
+  <article class="metric metric-blue">
+    <span class="metric-icon">⟳</span>
+    <div class="metric-data"><strong id="metric-progress">14</strong><span>En proceso</span></div>
+    <small>↗ 5% <em>vs. mes anterior</em></small>
+  </article>
+  <article class="metric metric-green">
+    <span class="metric-icon">✓</span>
+    <div class="metric-data"><strong id="metric-resolved">11</strong><span>Resueltos</span></div>
+    <small>↗ 18% <em>vs. mes anterior</em></small>
+  </article>
+  <article class="metric metric-slate">
+    <span class="metric-icon">▣</span>
+    <div class="metric-data"><strong id="metric-closed">4</strong><span>Cerrados</span></div>
+    <small>↗ 2% <em>vs. mes anterior</em></small>
+  </article>
+</section>
 
-  <main class="main">
-    <section class="page-heading">
-      <div class="heading-copy">
-        <div class="title-line"><span class="title-icon" aria-hidden="true">▤</span><h1>Tickets</h1></div>
-        <p>Gestiona y da seguimiento a tus solicitudes de soporte</p>
-      </div>
-      <a class="btn-primary" href="nuevo_ticket.html"><span aria-hidden="true">＋</span> Nuevo ticket</a>
-    </section>
+<div class="sla-alert" id="sla-alert" role="status">
+  <span class="alert-icon" aria-hidden="true">!</span>
+  <strong>1 ticket venció su plazo y 2 están por vencer.</strong>
+  <button type="button" id="show-urgent" class="alert-link">Ver urgentes <span>→</span></button>
+</div>
 
-    <section class="metrics" aria-label="Resumen de tickets">
-      <article class="metric metric-red">
-        <span class="metric-icon">!</span>
-        <div class="metric-data"><strong id="metric-open">18</strong><span>Abiertos</span></div>
-        <small>↗ 12% <em>vs. mes anterior</em></small>
-      </article>
-      <article class="metric metric-blue">
-        <span class="metric-icon">⟳</span>
-        <div class="metric-data"><strong id="metric-progress">14</strong><span>En proceso</span></div>
-        <small>↗ 5% <em>vs. mes anterior</em></small>
-      </article>
-      <article class="metric metric-green">
-        <span class="metric-icon">✓</span>
-        <div class="metric-data"><strong id="metric-resolved">11</strong><span>Resueltos</span></div>
-        <small>↗ 18% <em>vs. mes anterior</em></small>
-      </article>
-      <article class="metric metric-slate">
-        <span class="metric-icon">▣</span>
-        <div class="metric-data"><strong id="metric-closed">4</strong><span>Cerrados</span></div>
-        <small>↗ 2% <em>vs. mes anterior</em></small>
-      </article>
-    </section>
+<form class="filters-panel" id="ticket-filters">
+  <label class="search-filter">
+    <span aria-hidden="true">⌕</span>
+    <input id="ticket-search" type="search" placeholder="Buscar por código o asunto"
+      aria-label="Buscar por código o asunto">
+  </label>
+  <label class="select-filter"><span class="filter-label">Estado</span>
+    <select id="status-filter" aria-label="Filtrar por estado">
+      <option value="">Todos los estados</option>
+      <option>Abierto</option>
+      <option>En proceso</option>
+      <option>Resuelto</option>
+      <option>Cerrado</option>
+    </select>
+  </label>
+  <label class="select-filter"><span class="filter-label">Prioridad</span>
+    <select id="priority-filter" aria-label="Filtrar por prioridad">
+      <option value="">Todas las prioridades</option>
+      <option>Alta</option>
+      <option>Media</option>
+      <option>Baja</option>
+    </select>
+  </label>
+  <label class="select-filter"><span class="filter-label">Técnico</span>
+    <select id="technician-filter" aria-label="Filtrar por técnico">
+      <option value="">Todos los técnicos</option>
+      <option>Luis Ramos</option>
+      <option>Carla Mendoza</option>
+      <option>Pedro Salazar</option>
+      <option>Sin asignar</option>
+    </select>
+  </label>
+  <button class="filter-reset" id="reset-filters" type="button" title="Limpiar filtros"
+    aria-label="Limpiar filtros">↻</button>
+</form>
 
-    <div class="sla-alert" id="sla-alert" role="status">
-      <span class="alert-icon" aria-hidden="true">!</span>
-      <strong>1 ticket venció su plazo y 2 están por vencer.</strong>
-      <button type="button" id="show-urgent" class="alert-link">Ver urgentes <span>→</span></button>
+<section class="table-panel" aria-label="Listado de tickets">
+  <div class="table-scroll">
+    <table class="tickets-table">
+      <thead>
+        <tr>
+          <th class="check-column"><input id="select-all" type="checkbox"
+              aria-label="Seleccionar todos los tickets visibles"></th>
+          <th>Foto</th>
+          <th>Código</th>
+          <th>Asunto</th>
+          <th>Solicitante</th>
+          <th>Técnico</th>
+          <th>Prioridad</th>
+          <th>Estado</th>
+          <th>Tiempo (SLA)</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tickets-body">
+        <tr class="ticket-row urgent" data-code="TK-2291" data-subject="Servidor de facturación caído"
+          data-requester="Rosa Villanueva" data-technician="Luis Ramos" data-priority="Alta" data-status="En proceso"
+          data-sla="Vencido">
+          <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2291"></td>
+          <td><span class="photo-icon">▧</span></td>
+          <td><a class="ticket-code" href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2291</a></td>
+          <td><strong>Servidor de facturación caído</strong><small>Software</small></td>
+          <td>Rosa Villanueva<small>Angel Divino Bus</small></td>
+          <td>Luis Ramos</td>
+          <td><span class="badge priority-high">Alta</span></td>
+          <td><span class="badge status-progress">En proceso</span></td>
+          <td><span class="sla sla-danger"><i></i>Vencido</span></td>
+          <td>
+            <div class="row-actions"><a href="{{ url_for('pantalla', pagina='detalle_ticket') }}"
+                aria-label="Ver TK-2291" title="Ver detalle">◉</a><button type="button" data-action="more"
+                aria-label="Más acciones para TK-2291" title="Más acciones">⋮</button></div>
+          </td>
+        </tr>
+        <tr class="ticket-row" data-code="TK-2290" data-subject="VPN no conecta desde almacén"
+          data-requester="Carlos Méndez" data-technician="Carla Mendoza" data-priority="Alta" data-status="En proceso"
+          data-sla="Por vencer">
+          <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2290"></td>
+          <td><span class="photo-icon">▧</span></td>
+          <td><a class="ticket-code" href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2290</a></td>
+          <td><strong>VPN no conecta desde almacén</strong><small>Red e internet</small></td>
+          <td>Carlos Méndez<small>EPSEL</small></td>
+          <td>Carla Mendoza</td>
+          <td><span class="badge priority-high">Alta</span></td>
+          <td><span class="badge status-progress">En proceso</span></td>
+          <td><span class="sla sla-warning"><i></i>Por vencer (1 h)</span></td>
+          <td>
+            <div class="row-actions"><a href="{{ url_for('pantalla', pagina='detalle_ticket') }}"
+                aria-label="Ver TK-2290" title="Ver detalle">◉</a><button type="button" data-action="more"
+                aria-label="Más acciones para TK-2290" title="Más acciones">⋮</button></div>
+          </td>
+        </tr>
+        <tr class="ticket-row" data-code="TK-2289" data-subject="Laptop no enciende" data-requester="María López"
+          data-technician="Pedro Salazar" data-priority="Media" data-status="En proceso" data-sla="12 h">
+          <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2289"></td>
+          <td><span class="photo-icon">▧</span></td>
+          <td><a class="ticket-code" href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2289</a></td>
+          <td><strong>Laptop no enciende</strong><small>Hardware</small></td>
+          <td>María López<small>Grupo M&amp;M</small></td>
+          <td>Pedro Salazar</td>
+          <td><span class="badge priority-medium">Media</span></td>
+          <td><span class="badge status-progress">En proceso</span></td>
+          <td><span class="sla sla-ok"><i></i>12 h</span></td>
+          <td>
+            <div class="row-actions"><a href="{{ url_for('pantalla', pagina='detalle_ticket') }}"
+                aria-label="Ver TK-2289" title="Ver detalle">◉</a><button type="button" data-action="more"
+                aria-label="Más acciones para TK-2289" title="Más acciones">⋮</button></div>
+          </td>
+        </tr>
+        <tr class="ticket-row" data-code="TK-2288" data-subject="Impresora no imprime" data-requester="Juan Torres"
+          data-technician="Luis Ramos" data-priority="Media" data-status="Resuelto" data-sla="24 h">
+          <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2288"></td>
+          <td><span class="photo-icon">▧</span></td>
+          <td><a class="ticket-code" href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2288</a></td>
+          <td><strong>Impresora no imprime</strong><small>Impresoras</small></td>
+          <td>Juan Torres<small>Agrofutura</small></td>
+          <td>Luis Ramos</td>
+          <td><span class="badge priority-medium">Media</span></td>
+          <td><span class="badge status-resolved">Resuelto</span></td>
+          <td><span class="sla sla-ok"><i></i>24 h</span></td>
+          <td>
+            <div class="row-actions"><a href="{{ url_for('pantalla', pagina='detalle_ticket') }}"
+                aria-label="Ver TK-2288" title="Ver detalle">◉</a><button type="button" data-action="more"
+                aria-label="Más acciones para TK-2288" title="Más acciones">⋮</button></div>
+          </td>
+        </tr>
+        <tr class="ticket-row" data-code="TK-2287" data-subject="Solicita acceso al sistema ERP"
+          data-requester="Ana Torres" data-technician="Carla Mendoza" data-priority="Baja" data-status="Cerrado"
+          data-sla="—">
+          <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2287"></td>
+          <td><span class="photo-icon">▧</span></td>
+          <td><a class="ticket-code" href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2287</a></td>
+          <td><strong>Solicita acceso al sistema ERP</strong><small>Accesos y cuentas</small></td>
+          <td>Ana Torres<small>Robotic Air Systems</small></td>
+          <td>Carla Mendoza</td>
+          <td><span class="badge priority-low">Baja</span></td>
+          <td><span class="badge status-closed">Cerrado</span></td>
+          <td><span class="sla sla-neutral"><i></i>—</span></td>
+          <td>
+            <div class="row-actions"><a href="{{ url_for('pantalla', pagina='detalle_ticket') }}"
+                aria-label="Ver TK-2287" title="Ver detalle">◉</a><button type="button" data-action="more"
+                aria-label="Más acciones para TK-2287" title="Más acciones">⋮</button></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="empty-state" id="empty-state" hidden>No se encontraron tickets con esos filtros.</div>
+  </div>
+  <div class="table-footer">
+    <span id="results-count">Cargando…</span>
+    <div class="pagination" aria-label="Paginación">
+      <button type="button" disabled aria-label="Primera página">«</button><button type="button" disabled
+        aria-label="Página anterior">‹</button>
+      <button type="button" class="page-number current" aria-current="page">1</button><button type="button"
+        class="page-number">2</button><button type="button" class="page-number">3</button><button type="button"
+        class="page-number">4</button><button type="button" class="page-number">5</button>
+      <button type="button" aria-label="Página siguiente">›</button><button type="button"
+        aria-label="Última página">»</button>
     </div>
+  </div>
+</section>
 
-    <form class="filters-panel" id="ticket-filters">
-      <label class="search-filter">
-        <span aria-hidden="true">⌕</span>
-        <input id="ticket-search" type="search" placeholder="Buscar por código o asunto" aria-label="Buscar por código o asunto">
-      </label>
-      <label class="select-filter"><span class="filter-label">Estado</span>
-        <select id="status-filter" aria-label="Filtrar por estado">
-          <option value="">Todos los estados</option><option>Abierto</option><option>En proceso</option><option>Resuelto</option><option>Cerrado</option>
-        </select>
-      </label>
-      <label class="select-filter"><span class="filter-label">Prioridad</span>
-        <select id="priority-filter" aria-label="Filtrar por prioridad">
-          <option value="">Todas las prioridades</option><option>Alta</option><option>Media</option><option>Baja</option>
-        </select>
-      </label>
-      <label class="select-filter"><span class="filter-label">Técnico</span>
-        <select id="technician-filter" aria-label="Filtrar por técnico">
-          <option value="">Todos los técnicos</option><option>Luis Ramos</option><option>Carla Mendoza</option><option>Pedro Salazar</option><option>Sin asignar</option>
-        </select>
-      </label>
-      <button class="filter-reset" id="reset-filters" type="button" title="Limpiar filtros" aria-label="Limpiar filtros">↻</button>
-    </form>
-
-    <section class="table-panel" aria-label="Listado de tickets">
-      <div class="table-scroll">
-        <table class="tickets-table">
-          <thead>
-            <tr>
-              <th class="check-column"><input id="select-all" type="checkbox" aria-label="Seleccionar todos los tickets visibles"></th>
-              <th>Foto</th><th>Código</th><th>Asunto</th><th>Solicitante</th><th>Técnico</th><th>Prioridad</th><th>Estado</th><th>Tiempo (SLA)</th><th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tickets-body">
-            <tr class="ticket-row urgent" data-code="TK-2291" data-subject="Servidor de facturación caído" data-requester="Rosa Villanueva" data-technician="Luis Ramos" data-priority="Alta" data-status="En proceso" data-sla="Vencido">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2291"></td><td><span class="photo-icon">▧</span></td>
-              <td><a class="ticket-code" href="detalle_ticket.html">TK-2291</a></td>
-              <td><strong>Servidor de facturación caído</strong><small>Software</small></td>
-              <td>Rosa Villanueva<small>Angel Divino Bus</small></td><td>Luis Ramos</td>
-              <td><span class="badge priority-high">Alta</span></td><td><span class="badge status-progress">En proceso</span></td>
-              <td><span class="sla sla-danger"><i></i>Vencido</span></td><td><div class="row-actions"><a href="detalle_ticket.html" aria-label="Ver TK-2291" title="Ver detalle">◉</a><button type="button" data-action="more" aria-label="Más acciones para TK-2291" title="Más acciones">⋮</button></div></td>
-            </tr>
-            <tr class="ticket-row" data-code="TK-2290" data-subject="VPN no conecta desde almacén" data-requester="Carlos Méndez" data-technician="Carla Mendoza" data-priority="Alta" data-status="En proceso" data-sla="Por vencer">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2290"></td><td><span class="photo-icon">▧</span></td>
-              <td><a class="ticket-code" href="detalle_ticket.html">TK-2290</a></td>
-              <td><strong>VPN no conecta desde almacén</strong><small>Red e internet</small></td>
-              <td>Carlos Méndez<small>EPSEL</small></td><td>Carla Mendoza</td>
-              <td><span class="badge priority-high">Alta</span></td><td><span class="badge status-progress">En proceso</span></td>
-              <td><span class="sla sla-warning"><i></i>Por vencer (1 h)</span></td><td><div class="row-actions"><a href="detalle_ticket.html" aria-label="Ver TK-2290" title="Ver detalle">◉</a><button type="button" data-action="more" aria-label="Más acciones para TK-2290" title="Más acciones">⋮</button></div></td>
-            </tr>
-            <tr class="ticket-row" data-code="TK-2289" data-subject="Laptop no enciende" data-requester="María López" data-technician="Pedro Salazar" data-priority="Media" data-status="En proceso" data-sla="12 h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2289"></td><td><span class="photo-icon">▧</span></td>
-              <td><a class="ticket-code" href="detalle_ticket.html">TK-2289</a></td>
-              <td><strong>Laptop no enciende</strong><small>Hardware</small></td>
-              <td>María López<small>Grupo M&amp;M</small></td><td>Pedro Salazar</td>
-              <td><span class="badge priority-medium">Media</span></td><td><span class="badge status-progress">En proceso</span></td>
-              <td><span class="sla sla-ok"><i></i>12 h</span></td><td><div class="row-actions"><a href="detalle_ticket.html" aria-label="Ver TK-2289" title="Ver detalle">◉</a><button type="button" data-action="more" aria-label="Más acciones para TK-2289" title="Más acciones">⋮</button></div></td>
-            </tr>
-            <tr class="ticket-row" data-code="TK-2288" data-subject="Impresora no imprime" data-requester="Juan Torres" data-technician="Luis Ramos" data-priority="Media" data-status="Resuelto" data-sla="24 h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2288"></td><td><span class="photo-icon">▧</span></td>
-              <td><a class="ticket-code" href="detalle_ticket.html">TK-2288</a></td>
-              <td><strong>Impresora no imprime</strong><small>Impresoras</small></td>
-              <td>Juan Torres<small>Agrofutura</small></td><td>Luis Ramos</td>
-              <td><span class="badge priority-medium">Media</span></td><td><span class="badge status-resolved">Resuelto</span></td>
-              <td><span class="sla sla-ok"><i></i>24 h</span></td><td><div class="row-actions"><a href="detalle_ticket.html" aria-label="Ver TK-2288" title="Ver detalle">◉</a><button type="button" data-action="more" aria-label="Más acciones para TK-2288" title="Más acciones">⋮</button></div></td>
-            </tr>
-            <tr class="ticket-row" data-code="TK-2287" data-subject="Solicita acceso al sistema ERP" data-requester="Ana Torres" data-technician="Carla Mendoza" data-priority="Baja" data-status="Cerrado" data-sla="—">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2287"></td><td><span class="photo-icon">▧</span></td>
-              <td><a class="ticket-code" href="detalle_ticket.html">TK-2287</a></td>
-              <td><strong>Solicita acceso al sistema ERP</strong><small>Accesos y cuentas</small></td>
-              <td>Ana Torres<small>Robotic Air Systems</small></td><td>Carla Mendoza</td>
-              <td><span class="badge priority-low">Baja</span></td><td><span class="badge status-closed">Cerrado</span></td>
-              <td><span class="sla sla-neutral"><i></i>—</span></td><td><div class="row-actions"><a href="detalle_ticket.html" aria-label="Ver TK-2287" title="Ver detalle">◉</a><button type="button" data-action="more" aria-label="Más acciones para TK-2287" title="Más acciones">⋮</button></div></td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="empty-state" id="empty-state" hidden>No se encontraron tickets con esos filtros.</div>
-      </div>
-      <div class="table-footer">
-        <span id="results-count">Cargando…</span>
-        <div class="pagination" aria-label="Paginación">
-          <button type="button" disabled aria-label="Primera página">«</button><button type="button" disabled aria-label="Página anterior">‹</button>
-          <button type="button" class="page-number current" aria-current="page">1</button><button type="button" class="page-number">2</button><button type="button" class="page-number">3</button><button type="button" class="page-number">4</button><button type="button" class="page-number">5</button>
-          <button type="button" aria-label="Página siguiente">›</button><button type="button" aria-label="Última página">»</button>
-        </div>
-      </div>
-    </section>
-    <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span id="page-message">Cargando tickets…</span></footer>
-  </main>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-</body>
-</html>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span
+    id="page-message">Cargando tickets…</span></footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+{% endblock %}

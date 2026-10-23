@@ -1,173 +1,195 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nuevo Ticket | Soporte TI</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../static/CSS/nuevo_ticket.css">
-  <script src="../static/JS/tickets.js" defer></script>
-  <script src="../static/JS/nuevo_ticket.js" defer></script>
-</head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="dashboard.html" aria-label="Soporte TI, inicio">
-      <span class="brand-mark" aria-hidden="true">⌁</span>
-      <span class="brand-copy"><strong>SOPORTE TI</strong><small>Sistema de Gestión de Tickets</small></span>
-    </a>
-    <label class="global-search"><span aria-hidden="true">⌕</span><input id="global-search" type="search" placeholder="Buscar tickets, usuarios, etc." aria-label="Buscar tickets o usuarios"></label>
-    <div class="top-actions">
-      <a class="notification" href="notificaciones.html" aria-label="Notificaciones">♧</a>
-      <div class="profile"><span class="avatar" id="perfil-iniciales">··</span><span class="profile-copy"><strong id="perfil-nombre">Cargando…</strong><small id="perfil-rol">&nbsp;</small></span><span class="chevron" aria-hidden="true">⌄</span></div>
+{% set active_page = 'nuevo_ticket' %}
+{% extends "base.html" %}
+
+{% block title %}Nuevo Ticket | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/nuevo_ticket.css') }}">
+<script src="{{ url_for('static', filename='JS/tickets.js') }}" defer></script>
+<script src="{{ url_for('static', filename='JS/nuevo_ticket.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <span class="heading-icon" aria-hidden="true">▤<b>＋</b></span>
+  <div>
+    <h1 id="titulo-pagina">Nuevo Ticket</h1>
+    <p id="subtitulo-pagina">Describe tu incidencia y adjunta fotos para que el equipo de TI pueda ayudarte.</p>
+  </div>
+</section>
+
+<div class="m2-alerta" id="alerta-servidor" role="alert" hidden></div>
+
+<div class="new-ticket-layout">
+  <section class="panel form-panel">
+    <h2><span class="section-icon">▤</span>Información de la incidencia</h2>
+
+    <!-- Solicitante automático: lo define el servidor con el usuario de session -->
+    <div class="m2-solicitante" id="solicitante-box">
+      <span class="m2-solicitante__avatar" id="solicitante-iniciales" aria-hidden="true">{{ usuario_nombre[:2] | upper
+        if usuario_nombre else 'US' }}</span>
+      <div><small>Solicitante (automático)</small><strong id="solicitante-nombre">{{ usuario_nombre |
+          default('Verificando sesión…') }}</strong></div>
+      <span class="m2-solicitante__candado" title="Se toma de tu sesión; no se puede cambiar">🔒</span>
     </div>
-  </header>
 
-  <aside class="sidebar">
-    <nav class="sidebar-nav" aria-label="Menú principal">
-      <a class="side-link active" href="nuevo_ticket.html" aria-current="page"><span class="side-icon">⊕</span>Nuevo Ticket</a>
-      <a class="side-link" href="mis_tickets.html"><span class="side-icon">▤</span>Mis Tickets</a>
-      <a class="side-link" href="configuracion.html"><span class="side-icon">⚙</span>Configuración</a>
-      <div class="sidebar-bottom"><a class="side-link" href="index.html"><span class="side-icon">⇥</span>Cerrar sesión</a></div>
-    </nav>
-  </aside>
-
-  <main class="main">
-    <section class="page-heading">
-      <span class="heading-icon" aria-hidden="true">▤<b>＋</b></span>
-      <div><h1 id="titulo-pagina">Nuevo Ticket</h1><p id="subtitulo-pagina">Describe tu incidencia y adjunta fotos para que el equipo de TI pueda ayudarte.</p></div>
-    </section>
-
-    <div class="m2-alerta" id="alerta-servidor" role="alert" hidden></div>
-
-    <div class="new-ticket-layout">
-      <section class="panel form-panel">
-        <h2><span class="section-icon">▤</span>Información de la incidencia</h2>
-
-        <!-- Solicitante automático: lo define el servidor con el usuario del token -->
-        <div class="m2-solicitante" id="solicitante-box">
-          <span class="m2-solicitante__avatar" id="solicitante-iniciales" aria-hidden="true">··</span>
-          <div><small>Solicitante (automático)</small><strong id="solicitante-nombre">Verificando sesión…</strong></div>
-          <span class="m2-solicitante__candado" title="Se toma de tu sesión; no se puede cambiar">🔒</span>
+    <form id="new-ticket-form" novalidate>
+      <div class="form-field">
+        <label for="subject">Asunto <span class="required">*</span></label>
+        <input id="subject" name="asunto" type="text" minlength="5" maxlength="150"
+          placeholder="Ej. La impresora de despachos no imprime" required>
+        <small class="field-error" id="subject-error"></small>
+      </div>
+      <div class="form-field">
+        <div class="label-row"><label for="description">Descripción <span class="required">*</span></label><span
+            class="optional-hint">Qué pasó, desde cuándo y qué intentaste</span></div>
+        <textarea id="description" name="descripcion" minlength="10" maxlength="1000"
+          placeholder="Describe en detalle el problema, cuándo ocurrió y qué estás intentando hacer..."
+          required></textarea>
+        <div class="textarea-footer"><small class="field-error" id="description-error"></small><span
+            id="description-count">0/1000</span></div>
+      </div>
+      <div class="field-grid">
+        <div class="form-field">
+          <label for="category">Categoría <span class="required">*</span></label>
+          <div class="select-wrap"><span class="select-icon">◉</span><select id="category" name="categoria_id" required>
+              <option value="">Cargando categorías…</option>
+            </select></div>
+          <small class="field-error" id="category-error"></small>
         </div>
+        <div class="form-field">
+          <label for="area">Área <span class="required">*</span></label>
+          <div class="select-wrap"><span class="select-icon">▦</span><select id="area" name="area_id" required>
+              <option value="">Cargando áreas…</option>
+            </select></div>
+          <small class="field-error" id="area-error"></small>
+        </div>
+      </div>
 
-        <form id="new-ticket-form" novalidate>
-          <div class="form-field">
-            <label for="subject">Asunto <span class="required">*</span></label>
-            <input id="subject" name="asunto" type="text" minlength="5" maxlength="150" placeholder="Ej. La impresora de despachos no imprime" required>
-            <small class="field-error" id="subject-error"></small>
-          </div>
-          <div class="form-field">
-            <div class="label-row"><label for="description">Descripción <span class="required">*</span></label><span class="optional-hint">Qué pasó, desde cuándo y qué intentaste</span></div>
-            <textarea id="description" name="descripcion" minlength="10" maxlength="1000" placeholder="Describe en detalle el problema, cuándo ocurrió y qué estás intentando hacer..." required></textarea>
-            <div class="textarea-footer"><small class="field-error" id="description-error"></small><span id="description-count">0/1000</span></div>
-          </div>
-          <div class="field-grid">
-            <div class="form-field">
-              <label for="category">Categoría <span class="required">*</span></label>
-              <div class="select-wrap"><span class="select-icon">◉</span><select id="category" name="categoria_id" required><option value="">Cargando categorías…</option></select></div>
-              <small class="field-error" id="category-error"></small>
-            </div>
-            <div class="form-field">
-              <label for="area">Área <span class="required">*</span></label>
-              <div class="select-wrap"><span class="select-icon">▦</span><select id="area" name="area_id" required><option value="">Cargando áreas…</option></select></div>
-              <small class="field-error" id="area-error"></small>
-            </div>
-          </div>
+      <fieldset class="priority-fieldset">
+        <legend>Prioridad <span class="required">*</span></legend>
+        <div class="priority-options">
+          <label class="priority-option priority-option-high">
+            <input type="radio" name="prioridad" value="Alta">
+            <span class="radio-look"></span><span class="priority-symbol">▮</span>
+            <span class="priority-copy"><strong>Alta</strong><small>Impide trabajar o afecta un sistema
+                crítico.</small><em>Atención en 4 h</em></span>
+          </label>
+          <label class="priority-option priority-option-medium selected">
+            <input type="radio" name="prioridad" value="Media" checked>
+            <span class="radio-look"></span><span class="priority-symbol">▮</span>
+            <span class="priority-copy"><strong>Media</strong><small>Afecta parcialmente el trabajo.</small><em>Atención
+                en 24 h</em></span>
+          </label>
+          <label class="priority-option priority-option-low">
+            <input type="radio" name="prioridad" value="Baja">
+            <span class="radio-look"></span><span class="priority-symbol">▮</span>
+            <span class="priority-copy"><strong>Baja</strong><small>Consulta o problema menor.</small><em>Atención en 72
+                h</em></span>
+          </label>
+        </div>
+        <small class="field-error" id="priority-error"></small>
+      </fieldset>
 
-          <fieldset class="priority-fieldset">
-            <legend>Prioridad <span class="required">*</span></legend>
-            <div class="priority-options">
-              <label class="priority-option priority-option-high">
-                <input type="radio" name="prioridad" value="Alta">
-                <span class="radio-look"></span><span class="priority-symbol">▮</span>
-                <span class="priority-copy"><strong>Alta</strong><small>Impide trabajar o afecta un sistema crítico.</small><em>Atención en 4 h</em></span>
-              </label>
-              <label class="priority-option priority-option-medium selected">
-                <input type="radio" name="prioridad" value="Media" checked>
-                <span class="radio-look"></span><span class="priority-symbol">▮</span>
-                <span class="priority-copy"><strong>Media</strong><small>Afecta parcialmente el trabajo.</small><em>Atención en 24 h</em></span>
-              </label>
-              <label class="priority-option priority-option-low">
-                <input type="radio" name="prioridad" value="Baja">
-                <span class="radio-look"></span><span class="priority-symbol">▮</span>
-                <span class="priority-copy"><strong>Baja</strong><small>Consulta o problema menor.</small><em>Atención en 72 h</em></span>
-              </label>
-            </div>
-            <small class="field-error" id="priority-error"></small>
-          </fieldset>
-
-          <section class="attachments-section">
-            <div class="attachment-heading"><h3><span class="section-icon">▧</span>Fotos de evidencia <span>(opcional, hasta 3)</span></h3><small id="attachment-count">0 de 3 fotos</small></div>
-            <label class="dropzone" id="dropzone" for="attachments" tabindex="0">
-              <input id="attachments" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
-              <span class="upload-icon">⇧</span><strong>Arrastra y suelta tus fotos aquí</strong><span>o haz clic para seleccionarlas · también puedes pegar una captura con Ctrl+V</span>
-              <small>Solo imágenes JPG, PNG o WEBP · máx. 5 MB por foto (las más pesadas se optimizan solas)</small>
-            </label>
-            <div class="m2-fotos" id="file-list" aria-live="polite"></div>
-            <small class="field-error" id="attachments-error"></small>
-          </section>
-
-          <div class="m2-progreso m2-progreso--envio" id="progreso-envio" hidden><i></i><span>Subiendo… 0%</span></div>
-
-          <div class="form-actions">
-            <div class="m2-acciones-izq">
-              <button class="btn-secondary" id="cancel-button" type="button">Cancelar</button>
-              <button class="m2-btn-peligro" id="delete-button" type="button" hidden>Eliminar ticket</button>
-            </div>
-            <button class="btn-primary" type="submit" id="submit-button"><span>➤</span><b id="submit-text">Enviar Ticket</b></button>
-          </div>
-        </form>
+      <section class="attachments-section">
+        <div class="attachment-heading">
+          <h3><span class="section-icon">▧</span>Fotos de evidencia <span>(opcional, hasta 3)</span></h3><small
+            id="attachment-count">0 de 3 fotos</small>
+        </div>
+        <label class="dropzone" id="dropzone" for="attachments" tabindex="0">
+          <input id="attachments" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+          <span class="upload-icon">⇧</span><strong>Arrastra y suelta tus fotos aquí</strong><span>o haz clic para
+            seleccionarlas · también puedes pegar una captura con Ctrl+V</span>
+          <small>Solo imágenes JPG, PNG o WEBP · máx. 5 MB por foto (las más pesadas se optimizan solas)</small>
+        </label>
+        <div class="m2-fotos" id="file-list" aria-live="polite"></div>
+        <small class="field-error" id="attachments-error"></small>
       </section>
 
-      <aside class="right-column">
-        <section class="info-card important-card">
-          <div class="info-heading"><span class="info-icon">i</span><h2>Información importante</h2></div>
-          <p>Una buena foto ahorra visitas: toma la pantalla con el mensaje de error completo o el equipo afectado con su etiqueta visible. Evita fotografiar contraseñas o datos personales.</p>
-        </section>
+      <div class="m2-progreso m2-progreso--envio" id="progreso-envio" hidden><i></i><span>Subiendo… 0%</span></div>
 
-        <section class="panel side-panel m2-recientes">
-          <div class="m2-recientes__cabecera"><h2><span class="section-icon">◷</span>Mis tickets recientes</h2><a href="mis_tickets.html">Ver todos</a></div>
-          <ul class="m2-recientes__lista" id="recent-tickets"><li class="m2-recientes__vacio">Cargando…</li></ul>
-        </section>
-
-        <section class="panel side-panel examples-panel">
-          <h2><span class="section-icon">▤</span>Ejemplos de incidencias</h2>
-          <div class="example-list">
-            <button type="button" class="example-item" data-subject="No puedo acceder al correo corporativo" data-description="No puedo iniciar sesión en mi correo corporativo. El sistema muestra un mensaje de error al ingresar mis credenciales." data-category="Correo"><span>No puedo acceder al correo corporativo</span><b>›</b></button>
-            <button type="button" class="example-item" data-subject="Mi computadora está muy lenta" data-description="Mi computadora tarda demasiado en iniciar y las aplicaciones demoran en responder. El problema comenzó hoy." data-category="Hardware"><span>Mi computadora está muy lenta</span><b>›</b></button>
-            <button type="button" class="example-item" data-subject="Error al imprimir documentos" data-description="Al enviar documentos a imprimir, la impresora no responde o muestra un error. Ya revisé que esté encendida." data-category="Impresoras"><span>Error al imprimir documentos</span><b>›</b></button>
-            <button type="button" class="example-item" data-subject="Solicitud de acceso a un sistema" data-description="Necesito acceso a un sistema de trabajo para realizar mis tareas. Indico el motivo y el área a la que pertenezco." data-category="Accesos y cuentas"><span>Solicitud de acceso a un sistema</span><b>›</b></button>
-            <button type="button" class="example-item" data-subject="Problemas con la conexión a internet" data-description="La conexión a internet es intermitente y afecta el acceso a las herramientas de trabajo." data-category="Red e internet"><span>Problemas con la conexión a internet</span><b>›</b></button>
-          </div>
-        </section>
-
-        <section class="panel side-panel levels-panel">
-          <h2><span class="section-icon flag-icon">⚑</span>Niveles de prioridad</h2>
-          <div class="level-row level-high"><span class="level-label"><b>!</b>Alta</span><p>Impide trabajar: sistema crítico caído, sin acceso. Plazo 4 h.</p></div>
-          <div class="level-row level-medium"><span class="level-label"><b>▲</b>Media</span><p>Afecta parcialmente el trabajo. Plazo 24 h.</p></div>
-          <div class="level-row level-low"><span class="level-label"><b>i</b>Baja</span><p>Consultas, solicitudes o problemas menores. Plazo 72 h.</p></div>
-        </section>
-      </aside>
-    </div>
-    <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Registro de tickets con evidencias</span></footer>
-  </main>
-
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-  <!-- Confirmación de ticket registrado -->
-  <div class="modal" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" hidden>
-    <div class="modal-card">
-      <span class="modal-icon">✓</span>
-      <h2 id="confirm-title">Ticket registrado</h2>
-      <p id="confirm-summary"></p>
-      <div class="m2-modal-fotos" id="confirm-photos"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn-secondary" id="new-another">Registrar otro</button>
-        <a class="btn-primary" id="view-detail" href="detalle_ticket.html">Ver detalle</a>
+      <div class="form-actions">
+        <div class="m2-acciones-izq">
+          <button class="btn-secondary" id="cancel-button" type="button">Cancelar</button>
+          <button class="m2-btn-peligro" id="delete-button" type="button" hidden>Eliminar ticket</button>
+        </div>
+        <button class="btn-primary" type="submit" id="submit-button"><span>➤</span><b id="submit-text">Enviar
+            Ticket</b></button>
       </div>
+    </form>
+  </section>
+
+  <aside class="right-column">
+    <section class="info-card important-card">
+      <div class="info-heading"><span class="info-icon">i</span>
+        <h2>Información importante</h2>
+      </div>
+      <p>Una buena foto ahorra visitas: toma la pantalla con el mensaje de error completo o el equipo afectado con su
+        etiqueta visible. Evita fotografiar contraseñas o datos personales.</p>
+    </section>
+
+    <section class="panel side-panel m2-recientes">
+      <div class="m2-recientes__cabecera">
+        <h2><span class="section-icon">◷</span>Mis tickets recientes</h2><a
+          href="{{ url_for('pantalla', pagina='mis_tickets') }}">Ver todos</a>
+      </div>
+      <ul class="m2-recientes__lista" id="recent-tickets">
+        <li class="m2-recientes__vacio">Cargando…</li>
+      </ul>
+    </section>
+
+    <section class="panel side-panel examples-panel">
+      <h2><span class="section-icon">▤</span>Ejemplos de incidencias</h2>
+      <div class="example-list">
+        <button type="button" class="example-item" data-subject="No puedo acceder al correo corporativo"
+          data-description="No puedo iniciar sesión en mi correo corporativo. El sistema muestra un mensaje de error al ingresar mis credenciales."
+          data-category="Correo"><span>No puedo acceder al correo corporativo</span><b>›</b></button>
+        <button type="button" class="example-item" data-subject="Mi computadora está muy lenta"
+          data-description="Mi computadora tarda demasiado en iniciar y las aplicaciones demoran en responder. El problema comenzó hoy."
+          data-category="Hardware"><span>Mi computadora está muy lenta</span><b>›</b></button>
+        <button type="button" class="example-item" data-subject="Error al imprimir documentos"
+          data-description="Al enviar documentos a imprimir, la impresora no responde o muestra un error. Ya revisé que esté encendida."
+          data-category="Impresoras"><span>Error al imprimir documentos</span><b>›</b></button>
+        <button type="button" class="example-item" data-subject="Solicitud de acceso a un sistema"
+          data-description="Necesito acceso a un sistema de trabajo para realizar mis tareas. Indico el motivo y el área a la que pertenezco."
+          data-category="Accesos y cuentas"><span>Solicitud de acceso a un sistema</span><b>›</b></button>
+        <button type="button" class="example-item" data-subject="Problemas con la conexión a internet"
+          data-description="La conexión a internet es intermitente y afecta el acceso a las herramientas de trabajo."
+          data-category="Red e internet"><span>Problemas con la conexión a internet</span><b>›</b></button>
+      </div>
+    </section>
+
+    <section class="panel side-panel levels-panel">
+      <h2><span class="section-icon flag-icon">⚑</span>Niveles de prioridad</h2>
+      <div class="level-row level-high"><span class="level-label"><b>!</b>Alta</span>
+        <p>Impide trabajar: sistema crítico caído, sin acceso. Plazo 4 h.</p>
+      </div>
+      <div class="level-row level-medium"><span class="level-label"><b>▲</b>Media</span>
+        <p>Afecta parcialmente el trabajo. Plazo 24 h.</p>
+      </div>
+      <div class="level-row level-low"><span class="level-label"><b>i</b>Baja</span>
+        <p>Consultas, solicitudes o problemas menores. Plazo 72 h.</p>
+      </div>
+    </section>
+  </aside>
+</div>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Registro de tickets con
+    evidencias</span></footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Confirmación de ticket registrado -->
+<div class="modal" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" hidden>
+  <div class="modal-card">
+    <span class="modal-icon">✓</span>
+    <h2 id="confirm-title">Ticket registrado</h2>
+    <p id="confirm-summary"></p>
+    <div class="m2-modal-fotos" id="confirm-photos"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="new-another">Registrar otro</button>
+      <a class="btn-primary" id="view-detail" href="{{ url_for('pantalla', pagina='detalle_ticket') }}">Ver detalle</a>
     </div>
   </div>
-</body>
-</html>
+</div>
+{% endblock %}
