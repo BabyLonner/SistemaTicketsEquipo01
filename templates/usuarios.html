@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono, rol_chip, error_campo %}
+{% block titulo %}Usuarios{% endblock %}
+{% block contenido %}
+{% set super = usuario.rol == 'Superusuario' %}
+<div class="pagina">
+  <div class="encabezado">
+    <div>
+      <span class="etiqueta-seccion">administración</span>
+      <h1>Usuarios</h1>
+      <p>{% if super %}Usuarios de {{ empresa_activa.nombre if empresa_activa else 'todas las empresas' }}. Cambia de empresa en la cabecera.{% else %}Solo el administrador puede registrar, editar y desactivar cuentas de {{ usuario.empresa }}.{% endif %}</p>
+    </div>
+  </div>
+
+  <div class="rejilla-2">
+    <section class="tarjeta tarjeta--plana">
+      <form class="filtros" method="get" style="padding:18px 18px 0">
+        <label class="buscador"><span class="sr-only">Buscar</span>{{ icono('buscar', 18) }}
+          <input type="search" name="q" value="{{ filtros.q }}" placeholder="Buscar por nombre o correo"></label>
+        <select name="rol" aria-label="Rol" data-autoenviar>
+          <option value="">Todos los roles</option>
+          {% for r in roles %}<option {% if filtros.rol == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+        </select>
+        <select name="estado" aria-label="Estado" data-autoenviar>
+          <option value="">Todos los estados</option>
+          <option value="activo" {% if filtros.estado == 'activo' %}selected{% endif %}>Activos</option>
+          <option value="inactivo" {% if filtros.estado == 'inactivo' %}selected{% endif %}>Inactivos</option>
+        </select>
+      </form>
+      {% if usuarios %}
+      <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>usuario</th><th>rol</th><th>{{ 'empresa' if super else 'área' }}</th><th>estado</th><th>acciones</th></tr></thead>
+        <tbody>
+        {% for u in usuarios %}
+          <tr>
+            <td><div class="celda-usuario"><span class="avatar">{{ u.nombre|iniciales }}</span>
+              <div><strong>{{ u.nombre }}</strong><span class="sub">{{ u.correo }}</span></div></div></td>
+            <td>{{ rol_chip(u.rol) }}</td>
+            <td>{{ u.empresa if super else (u.area or '—') }}{% if super and u.area %}<span class="sub">{{ u.area }}</span>{% endif %}</td>
+            <td><span class="chip chip--{{ 'activo' if u.activo else 'inactivo' }}">{{ 'Activo' if u.activo else 'Inactivo' }}</span></td>
+            <td><div class="acciones" style="flex-wrap:nowrap">
+              <a class="btn-icono" href="{{ url_for('usuarios.editar', usuario_id=u.id) }}" title="Editar a {{ u.nombre }}" aria-label="Editar a {{ u.nombre }}">{{ icono('editar', 18) }}</a>
+              {% if u.id != usuario.id %}
+              <form method="post" action="{{ url_for('usuarios.cambiar_estado', usuario_id=u.id) }}"
+                    data-confirmar="{{ ('¿Desactivar a ' ~ u.nombre ~ '? Ya no podrá iniciar sesión.') if u.activo else '' }}">
+                <button class="btn-icono {{ '' if u.activo else 'btn-icono--off' }}" type="submit"
+                        title="{{ 'Desactivar' if u.activo else 'Activar' }} a {{ u.nombre }}" aria-label="{{ 'Desactivar' if u.activo else 'Activar' }} a {{ u.nombre }}">{{ icono('encender', 18) }}</button>
+              </form>
+              {% endif %}
+            </div></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="vacio"><h3>No hay usuarios con esos filtros</h3><p>Quita los filtros o registra uno nuevo con el formulario.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__titulo"><h2>Registrar usuario</h2></div>
+      <form method="post" novalidate data-form-usuario>
+        <div class="campo {{ 'con-error' if errores.nombre }}">
+          <label for="nombre">Nombre completo</label>
+          <input type="text" id="nombre" name="nombre" value="{{ form.get('nombre', '') }}" required>
+          {{ error_campo(errores, 'nombre') }}
+        </div>
+        {% if super %}
+        <div class="campo {{ 'con-error' if errores.empresa_id }}">
+          <label for="empresa_id">Empresa</label>
+          <select id="empresa_id" name="empresa_id" required data-empresa>
+            <option value="">Elige la empresa</option>
+            {% for e in empresas %}<option value="{{ e.id }}" data-dominio="{{ e.dominio }}"
+              {% if form.get('empresa_id') == e.id|string or (not form and empresa_activa and empresa_activa.id == e.id) %}selected{% endif %}>{{ e.nombre }}</option>{% endfor %}
+          </select>
+          {{ error_campo(errores, 'empresa_id') }}
+        </div>
+        {% else %}
+        <input type="hidden" data-empresa value="{{ usuario.empresa_id }}" data-dominio="{{ empresas[0].dominio if empresas else '' }}">
+        {% endif %}
+        <div class="campo {{ 'con-error' if errores.correo }}">
+          <label for="correo">Correo corporativo</label>
+          <input type="email" id="correo" name="correo" value="{{ form.get('correo', '') }}" placeholder="nombre.apellido@{{ empresas[0].dominio if empresas|length == 1 else 'empresa.com.pe' }}" required data-correo>
+          <span class="campo__ayuda" data-ayuda-dominio>{% if empresas|length == 1 %}Debe terminar en @{{ empresas[0].dominio }}{% endif %}</span>
+          {{ error_campo(errores, 'correo') }}
+        </div>
+        <div class="campo {{ 'con-error' if errores.clave }}">
+          <label for="clave">Contraseña temporal</label>
+          <input type="text" id="clave" name="clave" autocomplete="new-password" required>
+          <span class="campo__ayuda">Mínimo 8 caracteres con letras y números. El usuario puede cambiarla en «Mi cuenta».</span>
+          {{ error_campo(errores, 'clave') }}
+        </div>
+        <div class="fila-campos">
+          <div class="campo {{ 'con-error' if errores.rol }}">
+            <label for="rol">Rol</label>
+            <select id="rol" name="rol">
+              {% for r in roles %}<option {% if (form.get('rol') or 'Solicitante') == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo {{ 'con-error' if errores.area_id }}">
+            <label for="area_id">Área</label>
+            <select id="area_id" name="area_id" data-areas>
+              <option value="">Sin área</option>
+              {% for a in areas %}<option value="{{ a.id }}" data-empresa="{{ a.empresa_id }}" {% if form.get('area_id') == a.id|string %}selected{% endif %}>{{ a.nombre }}</option>{% endfor %}
+            </select>
+            {{ error_campo(errores, 'area_id') }}
+          </div>
+        </div>
+        <label class="casilla" style="margin: 0 0 22px"><input type="checkbox" name="activo" value="1" {% if not form or form.get('activo') %}checked{% endif %}> Cuenta activa</label>
+        <button class="btn btn--bloque" type="submit">Registrar usuario</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Dashboard{% endblock %}
+{% block contenido %}
+{% set rol = usuario.rol %}
+<div class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Dashboard</h1>
+      <p>
+        {% if rol == 'Superusuario' %}Resumen de tickets de {{ empresa_activa.nombre if empresa_activa else 'todas las empresas' }}
+        {% elif rol == 'Administrador' %}Resumen de tickets de {{ usuario.empresa }}
+        {% elif rol == 'Técnico' %}Resumen de los tickets asignados a ti
+        {% else %}Resumen de los tickets que registraste{% endif %}
+      </p>
+    </div>
+    <div class="acciones">
+      <a class="btn btn--borde" href="{{ url_for('dashboard.exportar_excel') }}?{{ query }}">{{ icono('descargar', 18) }} Exportar Excel</a>
+      <a class="btn btn--borde" href="{{ url_for('dashboard.exportar_pdf') }}?{{ query }}">{{ icono('descargar', 18) }} Exportar PDF</a>
+    </div>
+  </div>
+
+  <form class="tarjeta filtros-dashboard" method="get">
+    <div class="campo"><label for="desde">Desde</label><input type="date" id="desde" name="desde" value="{{ filtros.desde.strftime('%Y-%m-%d') }}"></div>
+    <div class="campo"><label for="hasta">Hasta</label><input type="date" id="hasta" name="hasta" value="{{ filtros.hasta.strftime('%Y-%m-%d') }}"></div>
+    <div class="campo"><label for="area">Área</label>
+      <select id="area" name="area"><option value="">Todas las áreas</option>
+        {% for a in areas %}<option {% if filtros.area == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+      </select></div>
+    <div class="campo"><label for="responsable">Responsable</label>
+      <select id="responsable" name="responsable" {% if rol in ('Técnico',) %}disabled{% endif %}>
+        <option value="">Todos</option>
+        <option value="sin" {% if filtros.responsable == 'sin' %}selected{% endif %}>Sin asignar</option>
+        {% for t in tecnicos %}<option value="{{ t.id }}" {% if filtros.responsable == t.id|string %}selected{% endif %}>{{ t.nombre }}</option>{% endfor %}
+      </select></div>
+    <button class="btn" type="submit">Aplicar filtros</button>
+  </form>
+
+  <div class="rejilla-4" style="margin-top:20px">
+    <div class="kpi"><span>Abiertos</span><strong>{{ d.por_estado['Abierto'] }}</strong></div>
+    <div class="kpi kpi--en-proceso"><span>En proceso</span><strong>{{ d.por_estado['En proceso'] }}</strong></div>
+    <div class="kpi"><span>Resueltos</span><strong>{{ d.por_estado['Resuelto'] }}</strong></div>
+    <div class="kpi kpi--cerrado"><span>Cerrados</span><strong>{{ d.por_estado['Cerrado'] }}</strong></div>
+  </div>
+
+  <div class="rejilla-3" style="margin-top:20px">
+    <section class="tarjeta">
+      <div class="tarjeta__titulo"><h2>Por prioridad</h2></div>
+      {% set maximo = (d.por_prioridad | map(attribute='total') | max) if d.por_prioridad else 0 %}
+      {% for p in d.por_prioridad %}
+      <div class="barra-prioridad">
+        <div><span>{{ p.nombre }}</span><span>{{ p.total }}</span></div>
+        <div class="pista"><span class="{{ p.nombre|lower }}" style="width: {{ (100 * p.total / maximo) if maximo else 0 }}%"></span></div>
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__titulo"><h2>Por tipo</h2></div>
+      {% if d.por_tipo %}
+      <div class="grafico"><canvas id="grafico-tipo" aria-label="Tickets por tipo"></canvas></div>
+      {% else %}<p class="campo__ayuda">Sin tickets en este periodo.</p>{% endif %}
+    </section>
+
+    <section class="tarjeta cumplimiento">
+      <div class="tarjeta__titulo"><h2>Cumplimiento del plazo</h2></div>
+      <strong>{{ d.cumplimiento }}%</strong><small>dentro del plazo</small>
+      <div class="barra-sla" role="img" aria-label="Verde {{ d.sla.verde }}, amarillo {{ d.sla.amarillo }}, rojo {{ d.sla.rojo }}">
+        {% if d.total %}
+        <span style="flex: {{ d.sla.verde }}"></span><span style="flex: {{ d.sla.amarillo }}"></span><span style="flex: {{ d.sla.rojo }}"></span>
+        {% endif %}
+      </div>
+      <ul class="limpia leyenda">
+        <li><span style="--c:#7DB894">Verde · a tiempo</span>{{ d.sla.verde }}</li>
+        <li><span style="--c:#E2C552">Amarillo · por vencer</span>{{ d.sla.amarillo }}</li>
+        <li><span style="--c:#D9776C">Rojo · vencido</span>{{ d.sla.rojo }}</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="tarjeta tarjeta--plana" style="margin-top:20px">
+    <div style="padding:22px 22px 14px"><h2>Por responsable</h2></div>
+    {% if d.responsables %}
+    <div class="tabla-scroll">
+    <table class="tabla">
+      <thead><tr><th>técnico</th><th>asignados</th><th>en proceso</th><th>resueltos</th><th>a tiempo</th></tr></thead>
+      <tbody>
+      {% for r in d.responsables %}
+        <tr><td><strong>{{ r.tecnico }}</strong></td><td class="mono">{{ r.asignados }}</td>
+          <td class="mono">{{ r.en_proceso if r.tecnico_id else '—' }}</td>
+          <td class="mono">{{ r.resueltos if r.tecnico_id else '—' }}</td>
+          <td class="mono">{{ (r.porcentaje ~ '%') if r.porcentaje is not none else '—' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="vacio"><h3>No hay tickets en este periodo</h3><p>Cambia las fechas o los filtros para ver resultados.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if d.por_tipo %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  (function () {
+    const lienzo = document.getElementById('grafico-tipo');
+    if (!lienzo || !window.Chart) return;
+    const primario = getComputedStyle(document.documentElement).getPropertyValue('--primario').trim() || '#3D4A8A';
+    new Chart(lienzo, {
+      type: 'bar',
+      data: {
+        labels: {{ d.por_tipo | map(attribute='nombre') | list | tojson }},
+        datasets: [{ data: {{ d.por_tipo | map(attribute='total') | list | tojson }},
+                     backgroundColor: primario + 'B3', borderRadius: 6, maxBarThickness: 34 }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#EEE9DF' } },
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

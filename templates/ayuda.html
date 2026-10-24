@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Manual de usuario{% endblock %}
+{% block contenido %}
+<div class="pagina pagina--estrecha doc">
+  <h1>Manual de usuario</h1>
+  <p style="margin-top:10px">Cada persona ve solo la información de su empresa. La empresa se reconoce por el correo con el que inicias sesión.</p>
+
+  <h2>Perfiles</h2>
+  <ul>
+    <li><strong>Superusuario:</strong> crea, edita, desactiva y elimina empresas. Al crear una empresa registra a su administrador. Puede ver los datos de todas las empresas con el selector «Empresa» de la cabecera.</li>
+    <li><strong>Administrador:</strong> control total de su empresa. Registra, edita y desactiva usuarios, restablece contraseñas, asigna tickets a los técnicos, cambia estados y exporta reportes.</li>
+    <li><strong>Técnico:</strong> atiende los tickets que le asignan. Cambia su estado con un comentario obligatorio.</li>
+    <li><strong>Solicitante:</strong> registra tickets con hasta 3 fotos y sigue su avance. Cuando un ticket queda «Resuelto» puede cerrarlo o reabrirlo.</li>
+  </ul>
+
+  <h2>Ciclo de un ticket</h2>
+  <ol>
+    <li><strong>Abierto:</strong> lo registra el solicitante. El administrador recibe una notificación.</li>
+    <li>El administrador lo <strong>asigna</strong> a un técnico de la empresa.</li>
+    <li><strong>En proceso:</strong> el técnico empieza a trabajar (requiere técnico asignado).</li>
+    <li><strong>Resuelto:</strong> el técnico explica la solución.</li>
+    <li><strong>Cerrado:</strong> el solicitante confirma, o el administrador lo cierra.</li>
+  </ol>
+  <p>Cada cambio de estado pide un comentario y queda en la línea de tiempo del ticket.</p>
+
+  <h2>Plazos (semáforo)</h2>
+  <p>Alta: 4 h · Media: 24 h · Baja: 72 h. El semáforo está en verde hasta el 75 % del plazo, amarillo hasta que vence y rojo cuando ya venció. El listado muestra primero los más urgentes.</p>
+
+  <h2>Notificaciones</h2>
+  <p>La campana muestra cuántas tienes sin leer y se actualiza sola cada 30 segundos. Al abrir una notificación se marca como leída.</p>
+</div>
+{% endblock %}

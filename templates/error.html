@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Error {{ codigo }}{% endblock %}
+{% block contenido %}
+<div class="pagina pagina--estrecha">
+  <section class="tarjeta vacio">
+    <span class="etiqueta-seccion">error {{ codigo }}</span>
+    <h1 style="margin-bottom:10px">{{ {404: 'No encontramos lo que buscas', 403: 'No tienes permiso', 413: 'Archivo demasiado grande'}.get(codigo, 'Algo salió mal') }}</h1>
+    <p>{{ mensaje }}</p>
+    <a class="btn" href="{{ url_for('dashboard.dashboard') if usuario else url_for('auth.login') }}">Ir al inicio</a>
+  </section>
+</div>
+{% endblock %}

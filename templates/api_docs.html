@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titulo %}Documentación API{% endblock %}
+{% block contenido %}
+<div class="pagina pagina--estrecha doc">
+  <h1>Documentación de la API</h1>
+  <p style="margin-top:10px">Todas las rutas responden JSON y piden un token JWT, salvo <code>/api/login</code>.</p>
+
+  <h2>1. Obtener el token</h2>
+<pre>POST {{ request.host_url }}api/login
+Content-Type: application/json
+
+{"correo": "victor.melgarejo@grupomm.com.pe", "password": "Clave123"}</pre>
+  <p>La respuesta trae <code>data.token</code>. En Postman ponlo en <em>Authorization → Bearer Token</em> o como header:</p>
+<pre>Authorization: Bearer eyJhbGciOiJIUzI1NiIs...</pre>
+  <p><code>POST /api/logout</code> invalida el token (se guarda en <code>tokens_revocados</code>).</p>
+
+  <h2>2. Rutas REST</h2>
+  <ul>
+    <li><span class="metodo">GET</span> <code>/api/yo</code> — usuario del token</li>
+    <li><span class="metodo">GET</span> <code>/api/tickets</code> — listado por urgencia (filtros: q, estado, prioridad, tecnico, urgentes=1)</li>
+    <li><span class="metodo">POST</span> <code>/api/tickets</code> — crear (form-data: asunto, descripcion, categoria_id, prioridad, fotos×3)</li>
+    <li><span class="metodo">GET</span> <code>/api/tickets/&lt;id&gt;</code> — detalle con evidencias e historial</li>
+    <li><span class="metodo">POST</span> <code>/api/tickets/&lt;id&gt;/asignar</code> — {"tecnico_id": 3, "comentario": "..."}</li>
+    <li><span class="metodo">POST</span> <code>/api/tickets/&lt;id&gt;/estado</code> — {"estado": "En proceso", "comentario": "..."}</li>
+    <li><span class="metodo">POST</span> <code>/api/tickets/&lt;id&gt;/comentarios</code> — {"comentario": "..."}</li>
+    <li><span class="metodo">GET</span> <code>/api/tickets/&lt;id&gt;/historial</code></li>
+    <li><span class="metodo">DELETE</span> <code>/api/tickets/&lt;id&gt;</code></li>
+    <li><span class="metodo">GET</span> <code>/api/notificaciones</code>, <code>/api/notificaciones/contador</code></li>
+    <li><span class="metodo">POST</span> <code>/api/notificaciones/&lt;id&gt;/leer</code>, <code>/api/notificaciones/leer-todas</code></li>
+    <li><span class="metodo">GET</span> <code>/api/dashboard</code> — resumen (desde, hasta, area, responsable)</li>
+    <li><span class="metodo">GET</span> <code>/api/usuarios</code> (administrador) · <code>/api/empresas</code> (superusuario)</li>
+  </ul>
+
+  <h2>3. Rutas de la colección de Postman</h2>
+  <p>Siguen con las mismas URL (<code>/api_insertar_*</code>, <code>/api_obtener_*</code>) y responden <code>{status, data, message}</code>. Ahora también piden el token y respetan la empresa del usuario.</p>
+
+  <h2>Códigos HTTP</h2>
+  <ul>
+    <li><code>200/201</code> correcto · <code>400</code> datos inválidos · <code>401</code> sin token o vencido · <code>403</code> el rol no tiene permiso · <code>404</code> no existe o es de otra empresa · <code>413</code> archivo muy grande</li>
+  </ul>
+</div>
+{% endblock %}

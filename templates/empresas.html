@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono, error_campo %}
+{% block titulo %}Empresas{% endblock %}
+{% block contenido %}
+<div class="pagina">
+  <div class="encabezado">
+    <div>
+      <span class="etiqueta-seccion">superusuario</span>
+      <h1>Empresas</h1>
+      <p>Agrega o elimina empresas. Cada empresa nueva nace con su administrador, que luego registra a sus técnicos y solicitantes.</p>
+    </div>
+  </div>
+  <div class="rejilla-2">
+    <section class="tarjeta tarjeta--plana">
+      {% if empresas %}
+      <div class="tabla-scroll">
+      <table class="tabla">
+        <thead><tr><th>empresa</th><th>dominio</th><th>administrador</th><th>usuarios</th><th>tickets</th><th>estado</th><th>acciones</th></tr></thead>
+        <tbody>
+        {% for e in empresas %}
+        <tr>
+          <td><div class="celda-usuario"><span class="muestra-color"><i style="background:{{ e.color_primario }}"></i><i style="background:{{ e.color_secundario }}"></i></span>
+            <div><strong>{{ e.nombre }}</strong><span class="sub mono">{{ e.prefijo_ticket }} · {{ e.codigo }}</span></div></div></td>
+          <td class="mono">@{{ e.dominio or '—' }}</td>
+          <td>{{ e.administrador or '—' }}</td>
+          <td class="mono">{{ e.total_usuarios }}</td>
+          <td class="mono">{{ e.total_tickets }}</td>
+          <td><span class="chip chip--{{ 'activo' if e.activo else 'inactivo' }}">{{ 'Activa' if e.activo else 'Inactiva' }}</span></td>
+          <td><div class="acciones" style="flex-wrap:nowrap">
+            <a class="btn-icono" href="{{ url_for('empresas.editar', empresa_id=e.id) }}" title="Editar o eliminar {{ e.nombre }}" aria-label="Editar {{ e.nombre }}">{{ icono('editar', 18) }}</a>
+            <form method="post" action="{{ url_for('empresas.cambiar_estado', empresa_id=e.id) }}" data-confirmar="{{ ('¿Desactivar ' ~ e.nombre ~ '? Sus usuarios no podrán ingresar.') if e.activo else '' }}">
+              <button class="btn-icono {{ '' if e.activo else 'btn-icono--off' }}" title="{{ 'Desactivar' if e.activo else 'Activar' }}" aria-label="{{ 'Desactivar' if e.activo else 'Activar' }} {{ e.nombre }}">{{ icono('encender', 18) }}</button>
+            </form>
+          </div></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="vacio"><h3>No hay empresas</h3><p>Crea la primera con el formulario.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="tarjeta">
+      <div class="tarjeta__titulo"><h2>Nueva empresa</h2></div>
+      <form method="post" novalidate>
+        {% include "_form_empresa.html" %}
+        <div class="campo">
+          <label for="areas">Áreas</label>
+          <textarea id="areas" name="areas" rows="2" style="min-height:64px">{{ form.get('areas') or areas_defecto }}</textarea>
+          <span class="campo__ayuda">Separadas por comas.</span>
+        </div>
+        <h3 style="margin:8px 0 14px">Administrador de la empresa</h3>
+        <div class="campo {{ 'con-error' if errores.admin_nombre }}">
+          <label for="admin_nombre">Nombre completo</label>
+          <input type="text" id="admin_nombre" name="admin_nombre" value="{{ form.get('admin_nombre', '') }}" required>
+          {{ error_campo(errores, 'admin_nombre') }}
+        </div>
+        <div class="campo {{ 'con-error' if errores.admin_correo }}">
+          <label for="admin_correo">Correo</label>
+          <input type="email" id="admin_correo" name="admin_correo" value="{{ form.get('admin_correo', '') }}" placeholder="nombre.apellido@dominio.com.pe" required>
+          {{ error_campo(errores, 'admin_correo') }}
+        </div>
+        <div class="campo {{ 'con-error' if errores.admin_clave }}">
+          <label for="admin_clave">Contraseña temporal</label>
+          <input type="text" id="admin_clave" name="admin_clave" autocomplete="new-password" required>
+          {{ error_campo(errores, 'admin_clave') }}
+        </div>
+        <button class="btn btn--bloque" type="submit">{{ icono('empresa', 18) }} Crear empresa y administrador</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}{{ e.nombre }}{% endblock %}
+{% block contenido %}
+<div class="pagina pagina--estrecha">
+  <div class="miga"><a href="{{ url_for('empresas.listado') }}">Empresas</a> / {{ e.nombre }}</div>
+  <div class="encabezado"><div><h1>{{ e.nombre }}</h1><p>{{ e.total_usuarios }} usuarios · {{ e.total_tickets }} tickets · código <span class="mono">{{ e.codigo }}</span></p></div></div>
+
+  <form class="tarjeta" method="post" novalidate>
+    {% include "_form_empresa.html" %}
+    <p class="campo__ayuda">Si cambias el dominio, el correo de todos sus usuarios se actualiza (nombre.apellido@nuevo-dominio).</p>
+    <div class="pie-form">
+      <a class="btn btn--borde" href="{{ url_for('empresas.listado') }}">Cancelar</a>
+      <button class="btn" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+
+  <section class="tarjeta">
+    <div class="tarjeta__titulo"><h2>Áreas</h2></div>
+    <div class="acciones" style="margin-bottom:16px">
+      {% for a in areas %}<span class="chip chip--suave">{{ a.nombre }}</span>{% else %}<span class="campo__ayuda">Sin áreas.</span>{% endfor %}
+    </div>
+    <form class="acciones" method="post" action="{{ url_for('empresas.agregar_area', empresa_id=e.id) }}">
+      <label class="sr-only" for="nueva-area">Nueva área</label>
+      <input type="text" id="nueva-area" name="nombre" maxlength="60" placeholder="Nombre del área" required style="flex:1;min-width:200px">
+      <button class="btn btn--borde" type="submit">Agregar área</button>
+    </form>
+  </section>
+
+  <section class="tarjeta zona-peligro" id="zona-peligro">
+    <div class="tarjeta__titulo"><h2>Eliminar empresa</h2></div>
+    <p style="margin-bottom:16px">Se borran para siempre sus {{ e.total_usuarios }} usuarios, sus {{ e.total_tickets }} tickets con fotos e historial y sus notificaciones. Si solo quieres bloquear el acceso, desactívala desde el listado.</p>
+    <form method="post" action="{{ url_for('empresas.eliminar', empresa_id=e.id) }}" data-confirmar="¿Eliminar {{ e.nombre }} con todos sus datos? No se puede deshacer.">
+      <div class="campo">
+        <label for="confirmacion">Escribe <span class="mono">{{ e.codigo }}</span> para confirmar</label>
+        <input type="text" id="confirmacion" name="confirmacion" autocomplete="off" required>
+      </div>
+      <button class="btn btn--peligro" type="submit">Eliminar empresa</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

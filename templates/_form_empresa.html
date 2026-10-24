@@ -1,0 +1,50 @@
+{# Campos compartidos por "crear empresa" y "editar empresa" #}
+{% from "_macros.html" import error_campo %}
+<div class="fila-campos">
+  <div class="campo {{ 'con-error' if errores.nombre }}">
+    <label for="nombre">Nombre comercial</label>
+    <input type="text" id="nombre" name="nombre" value="{{ form.get('nombre', '') }}" required placeholder="Ej. EPSEL" data-vista-nombre>
+    {{ error_campo(errores, 'nombre') }}
+  </div>
+  <div class="campo {{ 'con-error' if errores.ruc }}">
+    <label for="ruc">RUC <span class="campo__ayuda">(opcional)</span></label>
+    <input type="text" id="ruc" name="ruc" value="{{ form.get('ruc') or '' }}" inputmode="numeric" maxlength="11">
+    {{ error_campo(errores, 'ruc') }}
+  </div>
+</div>
+<div class="campo">
+  <label for="razon_social">Razón social <span class="campo__ayuda">(opcional)</span></label>
+  <input type="text" id="razon_social" name="razon_social" value="{{ form.get('razon_social') or '' }}" maxlength="255">
+</div>
+<div class="fila-campos">
+  <div class="campo {{ 'con-error' if errores.dominio }}">
+    <label for="dominio">Dominio de correo</label>
+    <input type="text" id="dominio" name="dominio" value="{{ form.get('dominio') or '' }}" placeholder="epsel.com.pe" required data-dominio-empresa>
+    <span class="campo__ayuda">Los usuarios se identifican por lo que va después de @.</span>
+    {{ error_campo(errores, 'dominio') }}
+  </div>
+  <div class="campo {{ 'con-error' if errores.prefijo_ticket }}">
+    <label for="prefijo_ticket">Prefijo de tickets</label>
+    <input type="text" id="prefijo_ticket" name="prefijo_ticket" value="{{ form.get('prefijo_ticket') or '' }}" maxlength="5" placeholder="EPS" required style="text-transform:uppercase">
+    <span class="campo__ayuda">Los tickets se numeran EPS-0001, EPS-0002…</span>
+    {{ error_campo(errores, 'prefijo_ticket') }}
+  </div>
+</div>
+<div class="campo">
+  <label for="titulo_sistema">Título que verá la empresa</label>
+  <input type="text" id="titulo_sistema" name="titulo_sistema" value="{{ form.get('titulo_sistema') or '' }}" maxlength="80" placeholder="Soporte TI EPSEL" data-vista-titulo>
+</div>
+<div class="campo {{ 'con-error' if errores.color_primario }}">
+  <span class="campo__etiqueta">Colores de la empresa</span>
+  <div class="acciones" style="align-items:center">
+    <label class="casilla"><input type="color" name="color_primario" value="{{ form.get('color_primario') or '#3D4A8A' }}" data-vista-color1> Principal</label>
+    <label class="casilla"><input type="color" name="color_secundario" value="{{ form.get('color_secundario') or '#DCE0F5' }}" data-vista-color2> Cabecera</label>
+  </div>
+  {{ error_campo(errores, 'color_primario') }}
+</div>
+<div class="vista-previa" aria-hidden="true">
+  <div class="vista-previa__barra" data-vista-barra style="background:{{ form.get('color_secundario') or '#DCE0F5' }};color:{{ form.get('color_primario') or '#3D4A8A' }}">
+    <i data-vista-icono style="background:{{ form.get('color_primario') or '#3D4A8A' }}"></i><span data-vista-texto>{{ form.get('titulo_sistema') or 'Vista previa' }}</span>
+  </div>
+  <div class="vista-previa__cuerpo"><span data-vista-boton style="background:{{ form.get('color_primario') or '#3D4A8A' }}">Botón principal</span></div>
+</div>

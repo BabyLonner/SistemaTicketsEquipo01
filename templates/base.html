@@ -1,0 +1,100 @@
+{% from "_macros.html" import icono %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}{{ tema.titulo }}{% endblock %} · {{ tema.titulo }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&family=Young+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v={{ version }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+  <style>:root { --primario: {{ tema.color_primario }}; --secundario: {{ tema.color_secundario }}; }</style>
+  {% block cabeza %}{% endblock %}
+</head>
+<body>
+{% if usuario %}
+  {% set rol = usuario.rol %}
+  {% set actual = request.endpoint %}
+  <header class="topbar">
+    <a class="marca" href="{{ url_for('dashboard.dashboard') }}">
+      <span class="marca__icono">{{ icono('ticket', 22) }}</span>
+      <span class="marca__texto">{{ tema.titulo }}</span>
+    </a>
+    <nav class="nav" aria-label="Menú principal">
+      <a href="{{ url_for('dashboard.dashboard') }}" {% if actual == 'dashboard.dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
+      <a href="{{ url_for('tickets.listado') }}" {% if actual in ('tickets.listado', 'tickets.detalle') %}aria-current="page"{% endif %}>{{ 'Mis tickets' if rol == 'Solicitante' else 'Tickets' }}</a>
+      {% if rol != 'Superusuario' %}
+      <a href="{{ url_for('tickets.nuevo') }}" {% if actual == 'tickets.nuevo' %}aria-current="page"{% endif %}>Nuevo ticket</a>
+      {% endif %}
+      {% if rol in ('Administrador', 'Superusuario') %}
+      <a href="{{ url_for('usuarios.listado') }}" {% if actual and actual.startswith('usuarios.') %}aria-current="page"{% endif %}>Usuarios</a>
+      {% endif %}
+      {% if rol == 'Superusuario' %}
+      <a href="{{ url_for('empresas.listado') }}" {% if actual and actual.startswith('empresas.') %}aria-current="page"{% endif %}>Empresas</a>
+      {% endif %}
+    </nav>
+    <div class="topbar__derecha">
+      {% if rol == 'Superusuario' %}
+      <form class="selector-empresa" method="post" action="{{ url_for('auth.cambiar_empresa_activa') }}">
+        <span>Empresa</span>
+        <label class="sr-only" for="empresa-activa">Empresa que estás viendo</label>
+        <select id="empresa-activa" name="empresa_id" data-autoenviar>
+          <option value="">Todas las empresas</option>
+          {% for e in empresas_menu %}
+          <option value="{{ e.id }}" {% if empresa_activa and empresa_activa.id == e.id %}selected{% endif %}>{{ e.nombre }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button class="btn btn--chico">Ver</button></noscript>
+      </form>
+      {% else %}
+      <span class="chip chip--suave" title="Tu empresa">{{ usuario.empresa }}</span>
+      {% endif %}
+      <a class="campana" href="{{ url_for('notificaciones.pagina') }}" aria-label="Notificaciones, {{ no_leidas }} sin leer"
+         data-contador-url="{{ url_for('notificaciones.api_contador') }}">
+        {{ icono('campana', 20) }}
+        <span class="campana__globo" id="globo-notificaciones" {% if not no_leidas %}hidden{% endif %}>{{ no_leidas if no_leidas < 100 else '99+' }}</span>
+      </a>
+      <a class="perfil" href="{{ url_for('auth.cuenta') }}" title="Mi cuenta">
+        <span class="avatar avatar--primario">{{ usuario.nombre|iniciales }}</span>
+        <span class="perfil__datos"><strong>{{ usuario.nombre|nombre_corto }}</strong><small>{{ rol }}</small></span>
+      </a>
+      <a class="salir" href="{{ url_for('auth.logout') }}" title="Cerrar sesión" aria-label="Cerrar sesión">{{ icono('salir', 22) }}</a>
+    </div>
+  </header>
+{% else %}
+  <header class="topbar topbar--simple">
+    <a class="marca" href="{{ url_for('auth.login') }}">
+      <span class="marca__icono">{{ icono('ticket', 22) }}</span>
+      <span class="marca__texto">Mesa de Ayuda TI</span>
+    </a>
+    <div class="topbar__derecha">Soporte técnico para las 6 empresas del grupo</div>
+  </header>
+{% endif %}
+
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+  {% if mensajes %}
+  <div class="flashes" role="status">
+    {% for categoria, mensaje in mensajes %}
+    <div class="aviso aviso--{{ 'ok' if categoria == 'ok' else 'error' }}">{{ icono('ok' if categoria == 'ok' else 'alerta') }}<span>{{ mensaje }}</span></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<main>{% block contenido %}{% endblock %}</main>
+
+<footer class="pie">
+  <span>© 2026 Mesa de Ayuda TI · Sistema integrado para las 6 empresas del grupo</span>
+  <nav aria-label="Enlaces de ayuda">
+    {% if usuario %}<a href="{{ url_for('ayuda') }}">Manual de usuario</a>{% endif %}
+    <a href="{{ url_for('api_docs') }}">Documentación API</a>
+    <a href="mailto:{{ correo_soporte }}">Soporte: {{ correo_soporte }}</a>
+    <span class="version">v{{ version }}</span>
+  </nav>
+</footer>
+<script src="{{ url_for('static', filename='js/app.js') }}?v={{ version }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

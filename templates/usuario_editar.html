@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_macros.html" import error_campo %}
+{% block titulo %}Editar usuario{% endblock %}
+{% block contenido %}
+{% set propio = u.id == usuario.id %}
+<div class="pagina pagina--estrecha">
+  <div class="miga"><a href="{{ url_for('usuarios.listado') }}">Usuarios</a> / Editar</div>
+  <div class="encabezado"><div><h1>{{ u.nombre }}</h1><p>{{ u.empresa }} · último acceso: {{ u.ultimo_acceso.strftime('%d/%m/%Y %H:%M') if u.ultimo_acceso else 'nunca' }}</p></div></div>
+  <form class="tarjeta" method="post" novalidate>
+    <div class="campo {{ 'con-error' if errores.nombre }}">
+      <label for="nombre">Nombre completo</label>
+      <input type="text" id="nombre" name="nombre" value="{{ form.get('nombre', '') }}" required>
+      {{ error_campo(errores, 'nombre') }}
+    </div>
+    <div class="campo {{ 'con-error' if errores.correo }}">
+      <label for="correo">Correo corporativo</label>
+      <input type="email" id="correo" name="correo" value="{{ form.get('correo', '') }}" required>
+      <span class="campo__ayuda">Debe terminar en @{{ dominio }}</span>
+      {{ error_campo(errores, 'correo') }}
+    </div>
+    <div class="fila-campos">
+      <div class="campo {{ 'con-error' if errores.rol }}">
+        <label for="rol">Rol</label>
+        <select id="rol" name="rol" {% if propio %}disabled{% endif %}>
+          {% for r in roles %}<option {% if form.get('rol') == r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+        </select>
+        {% if propio %}<span class="campo__ayuda">No puedes cambiar tu propio rol.</span>{% endif %}
+        {{ error_campo(errores, 'rol') }}
+      </div>
+      <div class="campo {{ 'con-error' if errores.area_id }}">
+        <label for="area_id">Área</label>
+        <select id="area_id" name="area_id">
+          <option value="">Sin área</option>
+          {% for a in areas %}<option value="{{ a.id }}" {% if form.get('area_id')|string == a.id|string %}selected{% endif %}>{{ a.nombre }}</option>{% endfor %}
+        </select>
+        {{ error_campo(errores, 'area_id') }}
+      </div>
+    </div>
+    <div class="campo {{ 'con-error' if errores.clave }}">
+      <label for="clave">Restablecer contraseña <span class="campo__ayuda">(déjalo vacío para no cambiarla)</span></label>
+      <input type="text" id="clave" name="clave" autocomplete="new-password" placeholder="Nueva contraseña temporal">
+      {{ error_campo(errores, 'clave') }}
+    </div>
+    {% if not propio %}
+    <label class="casilla" style="margin-bottom:22px"><input type="checkbox" name="activo" value="1" {% if form.get('activo') %}checked{% endif %}> Cuenta activa</label>
+    {% else %}<input type="hidden" name="activo" value="1">{% endif %}
+    <div class="pie-form">
+      <a class="btn btn--borde" href="{{ url_for('usuarios.listado') }}">Cancelar</a>
+      <button class="btn" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

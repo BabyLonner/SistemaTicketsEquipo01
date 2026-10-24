@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono, error_campo %}
+{% block titulo %}Nuevo ticket{% endblock %}
+{% block contenido %}
+{% set prioridad_elegida = form.get('prioridad') or 'Media' %}
+<div class="pagina">
+  <div class="miga"><a href="{{ url_for('tickets.listado') }}">Tickets</a> / Nuevo ticket</div>
+  <div class="encabezado"><div><h1>Nuevo ticket</h1><p>Describe el incidente y adjunta fotos para que el técnico lo entienda más rápido.</p></div></div>
+
+  <div class="rejilla-2">
+    <form class="tarjeta" method="post" enctype="multipart/form-data" novalidate id="form-ticket">
+      <div class="campo {{ 'con-error' if errores.asunto }}">
+        <label for="asunto">Asunto</label>
+        <input type="text" id="asunto" name="asunto" maxlength="150" value="{{ form.get('asunto', '') }}" placeholder="Ej. La impresora de despacho no imprime" required>
+        {{ error_campo(errores, 'asunto') }}
+      </div>
+      <div class="campo {{ 'con-error' if errores.descripcion }}">
+        <label for="descripcion">Descripción</label>
+        <textarea id="descripcion" name="descripcion" maxlength="2000" rows="5" placeholder="¿Qué pasó, desde cuándo y a quiénes afecta?" required>{{ form.get('descripcion', '') }}</textarea>
+        {{ error_campo(errores, 'descripcion') }}
+      </div>
+      <div class="campo {{ 'con-error' if errores.categoria_id }}">
+        <label for="categoria_id">Categoría</label>
+        <select id="categoria_id" name="categoria_id" required>
+          <option value="">Selecciona una categoría</option>
+          {% for c in categorias %}<option value="{{ c.id }}" {% if form.get('categoria_id') == c.id|string %}selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+        </select>
+        {{ error_campo(errores, 'categoria_id') }}
+      </div>
+      <fieldset class="campo" style="border:0;padding:0;margin:0 0 18px">
+        <legend class="campo__etiqueta" style="margin-bottom:7px">Prioridad</legend>
+        <div class="opciones-prioridad">
+          {% for p in prioridades %}
+          {% set n = {'Alta': 3, 'Media': 2, 'Baja': 1}[p.nombre] | default(1) %}
+          <label class="opcion-prioridad">
+            <input type="radio" name="prioridad" value="{{ p.nombre }}" {% if prioridad_elegida == p.nombre %}checked{% endif %}>
+            <span><strong><span class="barras">{% for i in range(3) %}<i class="{{ 'on' if i < n }}"></i>{% endfor %}</span>{{ p.nombre }}</strong>
+            <small>Se resuelve en máximo {{ p.sla_horas }} h</small></span>
+          </label>
+          {% endfor %}
+        </div>
+        {{ error_campo(errores, 'prioridad') }}
+      </fieldset>
+
+      <div class="campo {{ 'con-error' if errores.fotos }}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+          <span class="campo__etiqueta">Fotos de evidencia</span>
+          <span class="contador-fotos" id="contador-fotos">0 de 3 · solo imágenes JPG, PNG o WEBP</span>
+        </div>
+        <div class="ranuras" data-ranuras data-max-mb="{{ max_mb }}">
+          {% for i in range(3) %}
+          <label class="ranura">
+            <input type="file" name="fotos" accept="image/jpeg,image/png,image/webp">
+            <span>{{ icono('subir', 22) }}<br>Agregar foto</span>
+          </label>
+          {% endfor %}
+        </div>
+        <span class="campo__ayuda">Opcional. Hasta 3 fotos de {{ max_mb }} MB como máximo cada una.</span>
+        {{ error_campo(errores, 'fotos') }}
+      </div>
+
+      <div class="pie-form">
+        <a class="btn btn--borde" href="{{ url_for('tickets.listado') }}">Cancelar</a>
+        <button class="btn" type="submit">Crear ticket</button>
+      </div>
+    </form>
+
+    <aside class="columna">
+      <section class="tarjeta">
+        <div class="tarjeta__titulo"><h2>Solicitante</h2><span class="chip chip--auto">Automático</span></div>
+        <div class="celda-usuario">
+          <span class="avatar avatar--grande">{{ usuario.nombre|iniciales }}</span>
+          <div><strong>{{ usuario.nombre }}</strong><span class="campo__ayuda">{{ usuario.empresa }}{% if usuario.area %} · {{ usuario.area }}{% endif %}</span></div>
+        </div>
+        <div class="dato-fila"><span>Fecha de registro</span><span class="mono">{{ ahora.strftime('%d/%m/%Y · %H:%M') }}</span></div>
+      </section>
+      <section class="tarjeta">
+        <div class="tarjeta__titulo"><h2>Cómo se mide el tiempo</h2></div>
+        <p class="campo__ayuda" style="margin-bottom:14px">El semáforo del ticket cambia según el tiempo transcurrido frente al máximo de su prioridad.</p>
+        <ul class="limpia leyenda-semaforo">
+          <li class="sla--verde">Verde · dentro del plazo</li>
+          <li class="sla--amarillo">Amarillo · por vencer (75 % del plazo)</li>
+          <li class="sla--rojo">Rojo · plazo vencido</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}

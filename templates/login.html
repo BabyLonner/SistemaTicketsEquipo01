@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono %}
+{% block titulo %}Iniciar sesión{% endblock %}
+{% block contenido %}
+<section class="login">
+  <div>
+    <span class="etiqueta-seccion">acceso al sistema</span>
+    <h1 class="login__titular">Reporta, sigue y resuelve incidencias en un solo lugar</h1>
+    <p class="login__intro">Plataforma de soporte de TI compartida por las seis empresas del grupo.</p>
+    <div class="perfiles">
+      <strong>Perfiles del sistema</strong>
+      <div class="acciones">
+        <span class="chip chip--rol-administrador">Administrador</span>
+        <span class="chip chip--rol-tecnico">Técnico</span>
+        <span class="chip chip--rol-solicitante">Solicitante</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h1>Iniciar sesión</h1>
+    <p>Usa las credenciales que te asignó el administrador.</p>
+    <div class="identidad-empresa" id="identidad-empresa" aria-live="polite"><i></i><span></span></div>
+    <form method="post" novalidate>
+      <div class="campo">
+        <label for="correo">Correo corporativo</label>
+        <input type="email" id="correo" name="correo" value="{{ correo }}" placeholder="nombre.apellido@empresa.com.pe"
+               autocomplete="username" required autofocus data-empresa-url="{{ url_for('auth.api_empresa_por_correo') }}">
+      </div>
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <input type="password" id="clave" name="clave" autocomplete="current-password" required>
+      </div>
+      <label class="casilla" style="margin: 4px 0 24px"><input type="checkbox" name="recordar" value="1"> Mantener la sesión iniciada</label>
+      <button class="btn btn--bloque" type="submit">Ingresar</button>
+    </form>
+    <div class="nota">{{ icono('candado', 18) }}<span>Las cuentas las crea el administrador de tu empresa. Si olvidaste tu contraseña, pídele que la restablezca.</span></div>
+  </div>
+</section>
+{% endblock %}

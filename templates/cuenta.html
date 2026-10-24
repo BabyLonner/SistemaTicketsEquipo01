@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import rol_chip %}
+{% block titulo %}Mi cuenta{% endblock %}
+{% block contenido %}
+<div class="pagina pagina--estrecha">
+  <div class="encabezado"><div><h1>Mi cuenta</h1><p>{{ usuario.correo }}</p></div></div>
+  <div class="rejilla-2">
+    <form class="tarjeta" method="post" novalidate>
+      <div class="tarjeta__titulo"><h2>Cambiar contraseña</h2></div>
+      <div class="campo"><label for="actual">Contraseña actual</label><input type="password" id="actual" name="actual" autocomplete="current-password" required></div>
+      <div class="campo"><label for="nueva">Nueva contraseña</label><input type="password" id="nueva" name="nueva" autocomplete="new-password" required>
+        <span class="campo__ayuda">Mínimo 8 caracteres con letras y números.</span></div>
+      <div class="campo"><label for="repetir">Repite la nueva contraseña</label><input type="password" id="repetir" name="repetir" autocomplete="new-password" required></div>
+      <button class="btn" type="submit">Actualizar contraseña</button>
+    </form>
+    <section class="tarjeta">
+      <div class="celda-usuario" style="margin-bottom:16px"><span class="avatar avatar--grande avatar--primario">{{ usuario.nombre|iniciales }}</span>
+        <div><strong>{{ usuario.nombre }}</strong>{{ rol_chip(usuario.rol) }}</div></div>
+      <div class="dato-fila"><span>Empresa</span><span>{{ usuario.empresa or 'Todas (superusuario)' }}</span></div>
+      <div class="dato-fila"><span>Área</span><span>{{ usuario.area or '—' }}</span></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

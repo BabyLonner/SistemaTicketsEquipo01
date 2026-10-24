@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono, estado_chip %}
+{% block titulo %}{{ t.codigo }}{% endblock %}
+{% block contenido %}
+<div class="pagina">
+  <div class="miga"><a href="{{ url_for('tickets.listado') }}">Tickets</a> / {{ t.codigo }}</div>
+  <div class="encabezado">
+    <div>
+      <span class="etiqueta-seccion">{{ t.codigo }}</span>
+      <h1>{{ t.asunto }}</h1>
+      <div class="acciones" style="margin-top:12px">
+        <span class="chip chip--suave"><span class="barras">{% set n = {'Alta': 3, 'Media': 2, 'Baja': 1}[t.prioridad] %}{% for i in range(3) %}<i class="{{ 'on' if i < n }}"></i>{% endfor %}</span> Prioridad {{ t.prioridad|lower }}</span>
+        {{ estado_chip(t.estado) }}
+        <span class="chip chip--suave">{{ t.categoria }}</span>
+      </div>
+    </div>
+    <div class="acciones">
+      {% if permisos.eliminar %}
+      <form method="post" action="{{ url_for('tickets.eliminar', ticket_id=t.id) }}" data-confirmar="¿Eliminar el ticket {{ t.codigo }}? Se borrarán sus fotos e historial.">
+        <button class="btn btn--borde" type="submit">{{ icono('basura', 18) }} Eliminar</button>
+      </form>
+      {% endif %}
+      <a class="btn btn--borde" href="{{ url_for('tickets.listado') }}">Volver al listado</a>
+    </div>
+  </div>
+
+  {% if t.semaforo == 'rojo' %}
+  <div class="aviso aviso--error">{{ icono('alerta') }}<span>{{ t.sla_texto }} · el máximo para prioridad {{ t.prioridad|lower }} es {{ t.sla_horas }} h</span></div>
+  {% elif t.semaforo == 'amarillo' %}
+  <div class="aviso" style="background:var(--amarillo-fondo);color:var(--amarillo)">{{ icono('alerta') }}<span>Por vencer: {{ t.sla_texto|lower }} de las {{ t.sla_horas }} h permitidas</span></div>
+  {% endif %}
+
+  <div class="rejilla-2">
+    <div class="columna">
+      <section class="tarjeta">
+        <div class="tarjeta__titulo"><h2>Descripción</h2></div>
+        <p style="white-space:pre-line">{{ t.descripcion }}</p>
+        <div class="metadatos">
+          <div><span>Solicitante</span><strong>{{ t.solicitante }}</strong></div>
+          <div><span>Empresa</span><strong>{{ t.empresa }}</strong></div>
+          <div><span>Área</span><strong>{{ t.area or '—' }}</strong></div>
+          <div><span>Creado</span><strong class="mono">{{ t.created_at.strftime('%d/%m · %H:%M') }}</strong></div>
+        </div>
+      </section>
+
+      <section class="tarjeta">
+        <div class="tarjeta__titulo"><h2>Evidencias</h2><span class="contador-fotos">{{ evidencias|length }} foto{{ '' if evidencias|length == 1 else 's' }}</span></div>
+        {% if evidencias %}
+        <div class="visor" id="visor">
+          <a href="{{ url_for('tickets.ver_evidencia', evidencia_id=evidencias[0].id, tipo='imagen') }}" target="_blank" rel="noopener" id="visor-enlace" style="display:contents">
+            <img id="visor-imagen" src="{{ url_for('tickets.ver_evidencia', evidencia_id=evidencias[0].id, tipo='imagen') }}" alt="{{ evidencias[0].nombre_original }}">
+          </a>
+        </div>
+        <div class="tiras" role="group" aria-label="Fotos del ticket">
+          {% for ev in evidencias %}
+          <button type="button" class="tira" aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                  data-imagen="{{ url_for('tickets.ver_evidencia', evidencia_id=ev.id, tipo='imagen') }}" data-nombre="{{ ev.nombre_original }}"
+                  title="{{ ev.nombre_original }} · subida por {{ ev.subido_por_nombre }}">
+            <img src="{{ url_for('tickets.ver_evidencia', evidencia_id=ev.id, tipo='miniatura') }}" alt="Foto {{ loop.index }}">
+          </button>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="visor">{{ icono('imagen', 32) }}</div>
+        <p class="campo__ayuda" style="margin-top:10px">Este ticket no tiene fotos.</p>
+        {% endif %}
+        {% if permisos.adjuntar %}
+        <form method="post" action="{{ url_for('tickets.agregar_evidencias', ticket_id=t.id) }}" enctype="multipart/form-data" class="acciones" style="margin-top:16px;align-items:center">
+          <input type="file" name="fotos" accept="image/jpeg,image/png,image/webp" multiple required aria-label="Agregar fotos" style="flex:1;min-width:200px">
+          <button class="btn btn--borde btn--chico" type="submit">{{ icono('subir', 16) }} Agregar fotos ({{ max_evidencias - evidencias|length }} disponibles)</button>
+        </form>
+        {% endif %}
+      </section>
+
+      <section class="tarjeta" id="linea-tiempo">
+        <div class="tarjeta__titulo"><h2>Línea de tiempo</h2></div>
+        {% if permisos.comentar %}
+        <form method="post" action="{{ url_for('tickets.comentar_web', ticket_id=t.id) }}" style="margin-bottom:22px">
+          <label class="sr-only" for="comentario-nuevo">Nuevo comentario</label>
+          <textarea id="comentario-nuevo" name="comentario" rows="2" placeholder="Escribe un comentario para el equipo" required minlength="3" style="min-height:70px"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn--borde btn--chico">{{ icono('comentario', 16) }} Comentar</button></div>
+        </form>
+        {% endif %}
+        <ol class="linea-tiempo">
+          {% for h in historial %}
+          <li>
+            <strong>{{ h.titulo }}</strong>
+            <span class="cuando" title="{{ h.created_at.strftime('%d/%m/%Y %H:%M') }}">{{ h.hace }} · {{ h.usuario }} ({{ h.usuario_rol }})</span>
+            {% if h.comentario and not (h.tipo == 'ASIGNACION' and h.comentario.startswith('Asignado a ')) %}<div class="texto">{{ h.comentario }}</div>{% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </section>
+    </div>
+
+    <aside class="columna">
+      <section class="tarjeta reloj reloj--{{ t.semaforo }}">
+        <span>Tiempo transcurrido</span>
+        <strong>{{ t.transcurrido_texto }}</strong>
+        <span>de {{ t.sla_horas }} h permitidas · vence {{ t.fecha_limite.strftime('%d/%m %H:%M') }}</span>
+        <div class="progreso"><span style="width: {{ t.porcentaje_sla }}%"></span></div>
+        <div class="semaforo-puntos">
+          <i style="background:#7DB894" class="{{ 'on' if t.semaforo in ('verde', 'cumplido') }}"></i>
+          <i style="background:#E2C552" class="{{ 'on' if t.semaforo == 'amarillo' }}"></i>
+          <i style="background:#D9776C" class="{{ 'on' if t.semaforo in ('rojo', 'incumplido') }}"></i>
+          <span class="sla sla--{{ t.semaforo }}" style="margin-left:6px">{{ {'verde': 'Verde · en plazo', 'amarillo': 'Amarillo · por vencer', 'rojo': 'Rojo · vencido', 'cumplido': 'Resuelto a tiempo', 'incumplido': 'Resuelto fuera de plazo'}[t.semaforo] }}</span>
+        </div>
+      </section>
+
+      <section class="tarjeta">
+        <div class="tarjeta__titulo"><h2>Asignación</h2></div>
+        {% if permisos.asignar %}
+        <form method="post" action="{{ url_for('tickets.asignar', ticket_id=t.id) }}">
+          <div class="campo">
+            <label for="tecnico_id">Técnico responsable</label>
+            <select id="tecnico_id" name="tecnico_id" required>
+              <option value="">Elige un técnico</option>
+              {% for tec in tecnicos %}<option value="{{ tec.id }}" {% if tec.id == t.tecnico_id %}selected{% endif %}>{{ tec.nombre }}</option>{% endfor %}
+            </select>
+            {% if not tecnicos %}<span class="campo__error">Esta empresa no tiene técnicos activos. Regístralos en Usuarios.</span>{% endif %}
+          </div>
+          <div class="campo">
+            <label for="comentario-asignacion">Nota para el técnico <span class="campo__ayuda">(opcional)</span></label>
+            <input type="text" id="comentario-asignacion" name="comentario" maxlength="300" placeholder="Ej. Revisar primero el cableado">
+          </div>
+          <button class="btn btn--borde btn--bloque" type="submit">{{ 'Reasignar' if t.tecnico_id else 'Asignar' }}</button>
+        </form>
+        {% else %}
+        <div class="celda-usuario">
+          <span class="avatar">{{ (t.tecnico or '?')|iniciales }}</span>
+          <div><strong>{{ t.tecnico or 'Sin asignar' }}</strong><span class="campo__ayuda">{{ 'Técnico responsable' if t.tecnico else 'El administrador asignará un técnico.' }}</span></div>
+        </div>
+        {% endif %}
+      </section>
+
+      {% if permisos.estados %}
+      <section class="tarjeta">
+        <div class="tarjeta__titulo"><h2>Cambiar estado</h2></div>
+        <form method="post" action="{{ url_for('tickets.estado', ticket_id=t.id) }}" data-requiere-comentario>
+          <div class="campo">
+            <label for="estado">Nuevo estado</label>
+            <select id="estado" name="estado" required>
+              {% for e in permisos.estados %}<option>{{ e }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="comentario-estado">Comentario (obligatorio)</label>
+            <textarea id="comentario-estado" name="comentario" rows="4" placeholder="Explica qué hiciste o por qué cambia el estado" required minlength="3"></textarea>
+            <span class="campo__error" data-mensaje hidden>Escribe un comentario para poder guardar el cambio.</span>
+          </div>
+          <button class="btn btn--bloque" type="submit">Guardar cambio</button>
+        </form>
+      </section>
+      {% elif t.estado != 'Cerrado' and usuario.rol == 'Técnico' and not t.tecnico_id %}
+      <section class="tarjeta"><p class="campo__ayuda">Este ticket aún no tiene técnico asignado.</p></section>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

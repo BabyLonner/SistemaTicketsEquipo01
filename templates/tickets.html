@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icono, estado_chip, prioridad, sla_chip %}
+{% block titulo %}Tickets{% endblock %}
+{% block contenido %}
+{% set rol = usuario.rol %}
+{% macro url_pagina(n) -%}
+{{ url_for('tickets.listado', pagina=n, q=filtros.q or None, estado=filtros.estado or None, prioridad=filtros.prioridad or None, tecnico=filtros.tecnico or None, urgentes=1 if filtros.urgentes else None) }}
+{%- endmacro %}
+<div class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>{{ 'Mis tickets' if rol == 'Solicitante' else ('Tickets asignados a ti' if rol == 'Técnico' else 'Tickets') }}</h1>
+      <p>{{ total }} ticket{{ '' if total == 1 else 's' }}{% if filtros.urgentes %} urgentes{% endif %} · ordenados por urgencia</p>
+    </div>
+    {% if rol != 'Superusuario' %}<a class="btn" href="{{ url_for('tickets.nuevo') }}">+ Nuevo ticket</a>{% endif %}
+  </div>
+
+  {% if vencidos or por_vencer %}
+  <div class="aviso aviso--error">
+    {{ icono('alerta') }}
+    <span>
+      {% if vencidos %}{{ vencidos }} ticket{{ '' if vencidos == 1 else 's' }} venci{{ 'ó' if vencidos == 1 else 'eron' }} su plazo{% endif %}{% if vencidos and por_vencer %} y {% endif %}{% if por_vencer %}{{ por_vencer }} está{{ '' if por_vencer == 1 else 'n' }} por vencer{% endif %}.
+    </span>
+    {% if filtros.urgentes %}<a href="{{ url_for('tickets.listado') }}">Ver todos</a>{% else %}<a href="{{ url_for('tickets.listado', urgentes=1) }}">Ver urgentes</a>{% endif %}
+  </div>
+  {% endif %}
+
+  <form class="filtros" method="get">
+    {% if filtros.urgentes %}<input type="hidden" name="urgentes" value="1">{% endif %}
+    <label class="buscador"><span class="sr-only">Buscar</span>{{ icono('buscar', 18) }}
+      <input type="search" name="q" value="{{ filtros.q }}" placeholder="Buscar por código o asunto"></label>
+    <select name="estado" aria-label="Estado" data-autoenviar>
+      <option value="">Todos los estados</option>
+      {% for e in estados %}<option {% if filtros.estado == e %}selected{% endif %}>{{ e }}</option>{% endfor %}
+    </select>
+    <select name="prioridad" aria-label="Prioridad" data-autoenviar>
+      <option value="">Todas las prioridades</option>
+      {% for p in prioridades %}<option {% if filtros.prioridad == p.nombre %}selected{% endif %}>{{ p.nombre }}</option>{% endfor %}
+    </select>
+    {% if tecnicos %}
+    <select name="tecnico" aria-label="Técnico" data-autoenviar>
+      <option value="">Todos los técnicos</option>
+      <option value="sin" {% if filtros.tecnico == 'sin' %}selected{% endif %}>Sin asignar</option>
+      {% for t in tecnicos %}<option value="{{ t.id }}" {% if filtros.tecnico == t.id|string %}selected{% endif %}>{{ t.nombre }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    <noscript><button class="btn">Filtrar</button></noscript>
+  </form>
+
+  <section class="tarjeta tarjeta--plana">
+    {% if tickets %}
+    <div class="tabla-scroll">
+    <table class="tabla">
+      <thead><tr>
+        <th>foto</th><th>código</th><th>asunto</th>
+        {% if rol == 'Superusuario' %}<th>empresa</th>{% endif %}
+        <th>solicitante</th><th>técnico</th><th>prioridad</th><th>estado</th><th>tiempo (SLA)</th>
+      </tr></thead>
+      <tbody>
+      {% for t in tickets %}
+        <tr class="{% if t.semaforo == 'rojo' %}fila--rojo{% elif t.semaforo == 'amarillo' %}fila--amarillo{% endif %}">
+          <td>
+            {% if t.primera_evidencia_id %}
+            <a class="miniatura" href="{{ url_for('tickets.detalle', ticket_id=t.id) }}"><img src="{{ url_for('tickets.ver_evidencia', evidencia_id=t.primera_evidencia_id, tipo='miniatura') }}" alt="Foto de {{ t.codigo }}" loading="lazy"></a>
+            {% else %}<span class="miniatura miniatura--vacia" title="Sin fotos">—</span>{% endif %}
+          </td>
+          <td><a class="codigo" href="{{ url_for('tickets.detalle', ticket_id=t.id) }}">{{ t.codigo }}</a></td>
+          <td><a class="asunto" href="{{ url_for('tickets.detalle', ticket_id=t.id) }}">{{ t.asunto }}</a><span class="sub">{{ t.categoria }}</span></td>
+          {% if rol == 'Superusuario' %}<td>{{ t.empresa }}</td>{% endif %}
+          <td>{{ t.solicitante }}<span class="sub">{{ t.area or t.empresa }}</span></td>
+          <td>{{ t.tecnico or 'Sin asignar' }}</td>
+          <td>{{ prioridad(t.prioridad) }}</td>
+          <td>{{ estado_chip(t.estado) }}</td>
+          <td>{{ sla_chip(t) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <div class="pie-tabla">
+      <span>Mostrando {{ desde }}–{{ hasta }} de {{ total }}</span>
+      <div class="acciones">
+        {% if pagina > 1 %}<a class="btn btn--borde btn--chico" href="{{ url_pagina(pagina - 1) }}">Anterior</a>{% else %}<span class="btn btn--borde btn--chico" aria-disabled="true">Anterior</span>{% endif %}
+        {% if pagina < paginas %}<a class="btn btn--borde btn--chico" href="{{ url_pagina(pagina + 1) }}">Siguiente</a>{% else %}<span class="btn btn--borde btn--chico" aria-disabled="true">Siguiente</span>{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="vacio">
+      {% if filtros.q or filtros.estado or filtros.prioridad or filtros.tecnico or filtros.urgentes %}
+        <h3>Ningún ticket coincide con los filtros</h3><p>Prueba con otra búsqueda o quita los filtros.</p>
+        <a class="btn btn--borde" href="{{ url_for('tickets.listado') }}">Quitar filtros</a>
+      {% elif rol == 'Técnico' %}
+        <h3>No tienes tickets asignados</h3><p>Cuando el administrador te asigne uno, aparecerá aquí y te llegará una notificación.</p>
+      {% elif rol == 'Superusuario' %}
+        <h3>Todavía no hay tickets</h3><p>Los tickets que registren las empresas aparecerán aquí.</p>
+      {% else %}
+        <h3>Todavía no hay tickets</h3><p>Registra el primero y adjunta fotos para que el técnico lo entienda más rápido.</p>
+        <a class="btn" href="{{ url_for('tickets.nuevo') }}">+ Nuevo ticket</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
