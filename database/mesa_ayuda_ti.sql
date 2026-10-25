@@ -1,4 +1,14 @@
 -- =====================================================================
+--  MESA DE AYUDA TI — VERSIÓN SIN TRIGGERS NI PROCEDIMIENTOS
+--  (para servidores donde no se permite CREATE TRIGGER / PROCEDURE,
+--   como PythonAnywhere). Las reglas que hacían los triggers ahora
+--   las hace tickets.py: empresa, correlativo, área, fecha límite,
+--   historial y notificaciones del ticket nuevo.
+--  Se puede pegar en la consola MySQL o importar desde Bash:
+--    mysql -u USUARIO -h USUARIO.mysql.pythonanywhere-services.com -p 'USUARIO$base' < mesa_ayuda_ti_sin_triggers.sql
+--  ⚠ Borra y vuelve a crear todas las tablas (datos incluidos).
+-- =====================================================================
+
 --  MESA DE AYUDA TI — Base de datos del sistema de gestión de tickets
 --  Un solo sistema para las 6 empresas del grupo (multiempresa)
 --  Motor: MySQL 8.0 / MariaDB 10.4+ (XAMPP) — InnoDB, utf8mb4
@@ -30,9 +40,14 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP VIEW IF EXISTS v_dashboard_responsables, v_dashboard_resumen, v_notificaciones_pendientes,
                     v_ticket_timeline, v_tickets, v_usuarios_sesion;
-DROP PROCEDURE IF EXISTS sp_asignar_ticket;
-DROP PROCEDURE IF EXISTS sp_cambiar_estado;
-DROP PROCEDURE IF EXISTS sp_agregar_comentario;
+DROP TRIGGER IF EXISTS trg_users_antes_insertar;
+DROP TRIGGER IF EXISTS trg_users_antes_actualizar;
+DROP TRIGGER IF EXISTS trg_tickets_antes_insertar;
+DROP TRIGGER IF EXISTS trg_tickets_despues_insertar;
+DROP TRIGGER IF EXISTS trg_tickets_antes_actualizar;
+DROP TRIGGER IF EXISTS trg_evidencias_antes_insertar;
+DROP TRIGGER IF EXISTS trg_historial_antes_insertar;
+DROP TRIGGER IF EXISTS trg_historial_notificar;
 DROP TABLE IF EXISTS notificaciones, ticket_historial, ticket_evidencias, tickets,
                      tokens_revocados, users, areas, categorias, prioridades,
                      empresa_dominios, empresas;
@@ -264,389 +279,6 @@ CREATE TABLE notificaciones (
   INDEX idx_notif_usuario_leido (usuario_id, leido, created_at)  -- contador de la campana
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =====================================================================
---  TRIGGERS — reglas que mantienen separada la información de cada empresa
--- =====================================================================
-DELIMITER $$
-
--- Usuarios: la empresa se valida (o se asigna) según el dominio del correo
-CREATE TRIGGER trg_users_antes_insertar
-BEFORE INSERT ON users
-FOR EACH ROW
-BEGIN
-  DECLARE v_empresa INT UNSIGNED;
-
-  SET NEW.correo = LOWER(TRIM(NEW.correo));
-  SELECT empresa_id INTO v_empresa FROM empresa_dominios
-   WHERE dominio = SUBSTRING_INDEX(NEW.correo, '@', -1);
-
-  IF v_empresa IS NULL THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El dominio del correo no pertenece a ninguna empresa registrada.';
-  END IF;
-  IF NEW.empresa_id IS NULL OR NEW.empresa_id = 0 THEN
-    SET NEW.empresa_id = v_empresa;
-  ELSEIF NEW.empresa_id <> v_empresa THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El correo no corresponde al dominio de la empresa.';
-  END IF;
-END$$
-
-CREATE TRIGGER trg_users_antes_actualizar
-BEFORE UPDATE ON users
-FOR EACH ROW
-BEGIN
-  DECLARE v_empresa INT UNSIGNED;
-
-  SET NEW.correo = LOWER(TRIM(NEW.correo));
-  IF NEW.correo <> OLD.correo OR NEW.empresa_id <> OLD.empresa_id THEN
-    SELECT empresa_id INTO v_empresa FROM empresa_dominios
-     WHERE dominio = SUBSTRING_INDEX(NEW.correo, '@', -1);
-    IF v_empresa IS NULL OR v_empresa <> NEW.empresa_id THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El correo no corresponde al dominio de la empresa.';
-    END IF;
-  END IF;
-END$$
-
--- Tickets nuevos: empresa del solicitante, correlativo por empresa,
--- técnico de la misma empresa y fecha límite del SLA
-CREATE TRIGGER trg_tickets_antes_insertar
-BEFORE INSERT ON tickets
-FOR EACH ROW
-BEGIN
-  DECLARE v_empresa INT UNSIGNED;
-  DECLARE v_area    INT UNSIGNED;
-  DECLARE v_activo  TINYINT;
-  DECLARE v_horas   SMALLINT UNSIGNED;
-  DECLARE v_numero  INT UNSIGNED;
-  DECLARE v_valido  INT DEFAULT 0;
-
-  SELECT empresa_id, area_id, activo INTO v_empresa, v_area, v_activo
-    FROM users WHERE id = NEW.solicitante_id;
-
-  IF v_empresa IS NULL THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El solicitante no existe.';
-  END IF;
-  IF v_activo = 0 THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El solicitante está inactivo.';
-  END IF;
-
-  SET NEW.empresa_id = v_empresa;
-  SET NEW.area_id    = COALESCE(NEW.area_id, v_area);
-
-  IF NEW.tecnico_id IS NOT NULL THEN
-    SELECT COUNT(*) INTO v_valido FROM users
-     WHERE id = NEW.tecnico_id AND rol = 'Técnico' AND activo = 1 AND empresa_id = v_empresa;
-    IF v_valido = 0 THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Solo se puede asignar a un técnico activo de la misma empresa.';
-    END IF;
-  END IF;
-
-  -- Correlativo propio de la empresa (EPS-0001, EPS-0002, ...)
-  SELECT ultimo_ticket + 1 INTO v_numero FROM empresas WHERE id = v_empresa FOR UPDATE;
-  UPDATE empresas SET ultimo_ticket = v_numero WHERE id = v_empresa;
-  SET NEW.numero = v_numero;
-
-  -- Módulo 4: fecha límite = fecha de registro + horas de la prioridad
-  SET NEW.created_at = COALESCE(NEW.created_at, NOW());
-  SELECT sla_horas INTO v_horas FROM prioridades WHERE id = NEW.prioridad_id;
-  IF v_horas IS NULL THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La prioridad no existe.';
-  END IF;
-  SET NEW.fecha_limite = NEW.created_at + INTERVAL v_horas HOUR;
-END$$
-
--- Todo ticket nuevo deja su primer registro en el historial
-CREATE TRIGGER trg_tickets_despues_insertar
-AFTER INSERT ON tickets
-FOR EACH ROW
-BEGIN
-  INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_nuevo, comentario, created_at)
-  VALUES (NEW.id, NEW.solicitante_id, 'CREACION', 'Abierto', 'Ticket registrado.', NEW.created_at);
-END$$
-
--- UPDATE validado: flujo de estados, técnico de la misma empresa, ticket cerrado bloqueado
-CREATE TRIGGER trg_tickets_antes_actualizar
-BEFORE UPDATE ON tickets
-FOR EACH ROW
-BEGIN
-  DECLARE v_mensaje VARCHAR(128);
-  DECLARE v_horas SMALLINT UNSIGNED;
-  DECLARE v_valido INT DEFAULT 0;
-
-  IF OLD.estado = 'Cerrado' THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Un ticket cerrado no se puede modificar.';
-  END IF;
-
-  -- Datos que no cambian después de crear el ticket
-  SET NEW.solicitante_id = OLD.solicitante_id;
-  SET NEW.empresa_id     = OLD.empresa_id;
-  SET NEW.numero         = OLD.numero;
-  SET NEW.created_at     = OLD.created_at;
-
-  -- Flujo permitido:
-  --   Abierto -> En proceso -> Resuelto -> Cerrado
-  --   Resuelto -> En proceso (reabrir si la solución no funcionó)
-  IF NEW.estado <> OLD.estado THEN
-    IF NOT (   (OLD.estado = 'Abierto'    AND NEW.estado = 'En proceso')
-            OR (OLD.estado = 'En proceso' AND NEW.estado = 'Resuelto')
-            OR (OLD.estado = 'Resuelto'   AND NEW.estado IN ('Cerrado', 'En proceso'))) THEN
-      SET v_mensaje = CONCAT('Cambio de estado no permitido: ', OLD.estado, ' -> ', NEW.estado, '.');
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_mensaje;
-    END IF;
-
-    IF NEW.estado = 'En proceso' AND NEW.tecnico_id IS NULL THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Asigna un técnico antes de pasar el ticket a En proceso.';
-    END IF;
-
-    IF NEW.estado = 'Resuelto' THEN SET NEW.fecha_resolucion = NOW(); END IF;
-    IF NEW.estado = 'Cerrado'  THEN SET NEW.fecha_cierre     = NOW(); END IF;
-    IF OLD.estado = 'Resuelto' AND NEW.estado = 'En proceso' THEN SET NEW.fecha_resolucion = NULL; END IF;
-  END IF;
-
-  IF NEW.tecnico_id IS NOT NULL AND NOT (NEW.tecnico_id <=> OLD.tecnico_id) THEN
-    SELECT COUNT(*) INTO v_valido FROM users
-     WHERE id = NEW.tecnico_id AND rol = 'Técnico' AND activo = 1 AND empresa_id = OLD.empresa_id;
-    IF v_valido = 0 THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Solo se puede asignar a un técnico activo de la misma empresa.';
-    END IF;
-  END IF;
-
-  -- Si cambia la prioridad, se recalcula el plazo
-  IF NEW.prioridad_id <> OLD.prioridad_id THEN
-    SELECT sla_horas INTO v_horas FROM prioridades WHERE id = NEW.prioridad_id;
-    SET NEW.fecha_limite = NEW.created_at + INTERVAL v_horas HOUR;
-  END IF;
-END$$
-
--- Evidencias: solo las sube alguien de la misma empresa del ticket
-CREATE TRIGGER trg_evidencias_antes_insertar
-BEFORE INSERT ON ticket_evidencias
-FOR EACH ROW
-BEGIN
-  DECLARE v_valido INT DEFAULT 0;
-  SELECT COUNT(*) INTO v_valido
-    FROM tickets t JOIN users u ON u.empresa_id = t.empresa_id
-   WHERE t.id = NEW.ticket_id AND u.id = NEW.subido_por;
-  IF v_valido = 0 THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El usuario no pertenece a la empresa del ticket.';
-  END IF;
-END$$
-
--- Historial: quien registra el evento y el técnico nuevo deben ser de la empresa del ticket
-CREATE TRIGGER trg_historial_antes_insertar
-BEFORE INSERT ON ticket_historial
-FOR EACH ROW
-BEGIN
-  DECLARE v_empresa_ticket INT UNSIGNED;
-  DECLARE v_valido INT DEFAULT 0;
-
-  SELECT empresa_id INTO v_empresa_ticket FROM tickets WHERE id = NEW.ticket_id;
-
-  SELECT COUNT(*) INTO v_valido FROM users WHERE id = NEW.usuario_id AND empresa_id = v_empresa_ticket;
-  IF v_valido = 0 THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El usuario no pertenece a la empresa del ticket.';
-  END IF;
-
-  IF NEW.tecnico_nuevo_id IS NOT NULL THEN
-    SELECT COUNT(*) INTO v_valido FROM users WHERE id = NEW.tecnico_nuevo_id AND empresa_id = v_empresa_ticket;
-    IF v_valido = 0 THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El técnico no pertenece a la empresa del ticket.';
-    END IF;
-  END IF;
-END$$
-
--- Módulo 5: cada evento del historial genera las notificaciones (solo dentro de la empresa)
-CREATE TRIGGER trg_historial_notificar
-AFTER INSERT ON ticket_historial
-FOR EACH ROW
-BEGIN
-  DECLARE v_empresa     INT UNSIGNED;
-  DECLARE v_solicitante INT UNSIGNED;
-  DECLARE v_tecnico     INT UNSIGNED;
-  DECLARE v_asunto      VARCHAR(150);
-  DECLARE v_codigo      VARCHAR(20);
-  DECLARE v_actor       VARCHAR(100);
-  DECLARE v_tecnico_nombre VARCHAR(100);
-
-  SELECT t.empresa_id, t.solicitante_id, t.tecnico_id, t.asunto,
-         CONCAT(e.prefijo_ticket, '-', LPAD(t.numero, 4, '0'))
-    INTO v_empresa, v_solicitante, v_tecnico, v_asunto, v_codigo
-    FROM tickets t JOIN empresas e ON e.id = t.empresa_id
-   WHERE t.id = NEW.ticket_id;
-  SELECT nombre INTO v_actor FROM users WHERE id = NEW.usuario_id;
-
-  CASE NEW.tipo
-    WHEN 'CREACION' THEN
-      -- Solo a los administradores de ESA empresa, para que asignen el ticket
-      INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
-      SELECT id, 'NUEVO_TICKET', NEW.ticket_id, CONCAT('Nuevo ticket ', v_codigo),
-             CONCAT(v_asunto, ' · registrado por ', v_actor), NEW.created_at
-        FROM users
-       WHERE empresa_id = v_empresa AND rol = 'Administrador' AND activo = 1 AND id <> NEW.usuario_id;
-
-    WHEN 'ASIGNACION' THEN
-      SELECT nombre INTO v_tecnico_nombre FROM users WHERE id = NEW.tecnico_nuevo_id;
-      INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
-      SELECT id, 'ASIGNACION', NEW.ticket_id, CONCAT('Se te asignó el ticket ', v_codigo), v_asunto, NEW.created_at
-        FROM users WHERE id = NEW.tecnico_nuevo_id AND id <> NEW.usuario_id AND activo = 1;
-      INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
-      SELECT id, 'ASIGNACION', NEW.ticket_id, CONCAT(v_codigo, ' fue asignado a ', v_tecnico_nombre), v_asunto, NEW.created_at
-        FROM users WHERE id = v_solicitante AND id <> NEW.usuario_id AND activo = 1;
-
-    WHEN 'CAMBIO_ESTADO' THEN
-      INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
-      SELECT id, 'CAMBIO_ESTADO', NEW.ticket_id, CONCAT(v_codigo, ' cambió a ', NEW.estado_nuevo),
-             CONCAT(v_asunto, ' · por ', v_actor), NEW.created_at
-        FROM users WHERE id IN (v_solicitante, v_tecnico) AND id <> NEW.usuario_id AND activo = 1;
-
-    WHEN 'COMENTARIO' THEN
-      INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
-      SELECT id, 'COMENTARIO', NEW.ticket_id, CONCAT('Nuevo comentario en ', v_codigo),
-             CONCAT(v_asunto, ' · ', v_actor), NEW.created_at
-        FROM users WHERE id IN (v_solicitante, v_tecnico) AND id <> NEW.usuario_id AND activo = 1;
-  END CASE;
-END$$
-
-
--- =====================================================================
---  PROCEDIMIENTOS (Módulo 3) — validan, actualizan y registran el
---  historial dentro de una misma transacción
--- =====================================================================
-
--- Asignar (o reasignar) un ticket. Solo el Administrador de la empresa del ticket.
-CREATE PROCEDURE sp_asignar_ticket(
-  IN p_ticket_id  INT UNSIGNED,
-  IN p_tecnico_id INT UNSIGNED,
-  IN p_actor_id   INT UNSIGNED,
-  IN p_comentario TEXT
-)
-BEGIN
-  DECLARE v_rol VARCHAR(20);
-  DECLARE v_empresa_actor INT UNSIGNED;
-  DECLARE v_empresa_ticket INT UNSIGNED;
-  DECLARE v_tecnico_anterior INT UNSIGNED;
-  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
-
-  IF p_comentario IS NULL OR CHAR_LENGTH(TRIM(p_comentario)) = 0 THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El comentario es obligatorio.';
-  END IF;
-
-  SELECT rol, empresa_id INTO v_rol, v_empresa_actor FROM users WHERE id = p_actor_id AND activo = 1;
-  IF v_rol IS NULL OR v_rol <> 'Administrador' THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Solo un administrador puede asignar tickets.';
-  END IF;
-
-  START TRANSACTION;
-    SELECT empresa_id, tecnico_id INTO v_empresa_ticket, v_tecnico_anterior
-      FROM tickets WHERE id = p_ticket_id FOR UPDATE;
-    IF v_empresa_ticket IS NULL THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El ticket no existe.';
-    END IF;
-    IF v_empresa_ticket <> v_empresa_actor THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El ticket pertenece a otra empresa.';
-    END IF;
-    IF v_tecnico_anterior <=> p_tecnico_id THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El ticket ya está asignado a ese técnico.';
-    END IF;
-
-    UPDATE tickets SET tecnico_id = p_tecnico_id WHERE id = p_ticket_id;   -- el trigger valida al técnico
-
-    INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, tecnico_anterior_id, tecnico_nuevo_id, comentario)
-    VALUES (p_ticket_id, p_actor_id, 'ASIGNACION', v_tecnico_anterior, p_tecnico_id, TRIM(p_comentario));
-  COMMIT;
-END$$
-
--- Cambiar el estado con comentario obligatorio.
---   Administrador: tickets de su empresa.  Técnico: solo los asignados a él.
---   Solicitante: solo cerrar o reabrir sus tickets ya resueltos.
-CREATE PROCEDURE sp_cambiar_estado(
-  IN p_ticket_id    INT UNSIGNED,
-  IN p_nuevo_estado VARCHAR(20),
-  IN p_actor_id     INT UNSIGNED,
-  IN p_comentario   TEXT
-)
-BEGIN
-  DECLARE v_rol VARCHAR(20);
-  DECLARE v_empresa_actor INT UNSIGNED;
-  DECLARE v_empresa_ticket INT UNSIGNED;
-  DECLARE v_estado VARCHAR(20);
-  DECLARE v_tecnico INT UNSIGNED;
-  DECLARE v_solicitante INT UNSIGNED;
-  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK; RESIGNAL; END;
-
-  IF p_comentario IS NULL OR CHAR_LENGTH(TRIM(p_comentario)) = 0 THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Escribe un comentario para poder guardar el cambio.';
-  END IF;
-
-  SELECT rol, empresa_id INTO v_rol, v_empresa_actor FROM users WHERE id = p_actor_id AND activo = 1;
-  IF v_rol IS NULL THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Usuario no válido.';
-  END IF;
-
-  START TRANSACTION;
-    SELECT empresa_id, estado, tecnico_id, solicitante_id
-      INTO v_empresa_ticket, v_estado, v_tecnico, v_solicitante
-      FROM tickets WHERE id = p_ticket_id FOR UPDATE;
-    IF v_estado IS NULL THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El ticket no existe.';
-    END IF;
-    IF v_empresa_ticket <> v_empresa_actor THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El ticket pertenece a otra empresa.';
-    END IF;
-    IF v_rol = 'Técnico' AND NOT (v_tecnico <=> p_actor_id) THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Solo el técnico asignado puede cambiar el estado.';
-    END IF;
-    IF v_rol = 'Solicitante' AND (v_solicitante <> p_actor_id OR v_estado <> 'Resuelto') THEN
-      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Solo puedes cerrar o reabrir tus tickets resueltos.';
-    END IF;
-
-    UPDATE tickets SET estado = p_nuevo_estado WHERE id = p_ticket_id;      -- el trigger valida el flujo
-
-    INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_anterior, estado_nuevo, comentario)
-    VALUES (p_ticket_id, p_actor_id, 'CAMBIO_ESTADO', v_estado, p_nuevo_estado, TRIM(p_comentario));
-  COMMIT;
-END$$
-
--- Agregar un comentario (genera notificación para la otra parte)
-CREATE PROCEDURE sp_agregar_comentario(
-  IN p_ticket_id  INT UNSIGNED,
-  IN p_actor_id   INT UNSIGNED,
-  IN p_comentario TEXT
-)
-BEGIN
-  DECLARE v_rol VARCHAR(20);
-  DECLARE v_empresa_actor INT UNSIGNED;
-  DECLARE v_empresa_ticket INT UNSIGNED;
-  DECLARE v_estado VARCHAR(20);
-  DECLARE v_tecnico INT UNSIGNED;
-  DECLARE v_solicitante INT UNSIGNED;
-
-  IF p_comentario IS NULL OR CHAR_LENGTH(TRIM(p_comentario)) = 0 THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El comentario no puede estar vacío.';
-  END IF;
-
-  SELECT rol, empresa_id INTO v_rol, v_empresa_actor FROM users WHERE id = p_actor_id AND activo = 1;
-  SELECT empresa_id, estado, tecnico_id, solicitante_id
-    INTO v_empresa_ticket, v_estado, v_tecnico, v_solicitante
-    FROM tickets WHERE id = p_ticket_id;
-
-  IF v_estado IS NULL THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El ticket no existe.';
-  END IF;
-  IF v_rol IS NULL OR v_empresa_ticket <> v_empresa_actor THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'El ticket pertenece a otra empresa.';
-  END IF;
-  IF v_estado = 'Cerrado' THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No se puede comentar un ticket cerrado.';
-  END IF;
-  IF v_rol <> 'Administrador' AND NOT (v_tecnico <=> p_actor_id) AND v_solicitante <> p_actor_id THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No participas en este ticket.';
-  END IF;
-
-  INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, comentario)
-  VALUES (p_ticket_id, p_actor_id, 'COMENTARIO', TRIM(p_comentario));
-END$$
-
-DELIMITER ;
 
 
 -- =====================================================================
@@ -898,34 +530,32 @@ INSERT INTO users (id, empresa_id, area_id, nombre, correo, password_hash, rol, 
   (22, 6, 41, 'Lucía Campos', 'lucia.campos@atlantica.com.pe', '$2b$12$Yr1IiIXp.4FEnmCoHAE2Fu2kty/.So1kd.Qkz2qhXnUZCw3eowkXC', 'Solicitante', 1),
   (23, 6, 39, 'Ana Torres', 'ana.torres@atlantica.com.pe', '$2b$12$Yr1IiIXp.4FEnmCoHAE2Fu2kty/.So1kd.Qkz2qhXnUZCw3eowkXC', 'Solicitante', 1);
 
--- Tickets de ejemplo. El trigger asigna empresa, área, correlativo por empresa y fecha límite;
--- además crea el primer registro del historial. Se insertan del más antiguo al más reciente.
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (1, 15, 14, 4, 3, 'Cambio de contraseña de correo', 'Necesito restablecer la contraseña de mi correo corporativo, ya no recuerdo la actual.', 'Cerrado', NOW() - INTERVAL 4320 MINUTE, NOW() - INTERVAL 4020 MINUTE, NOW() - INTERVAL 3000 MINUTE);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (2, 4, 2, 1, 2, 'Proyector de sala de reuniones no detecta laptop', 'El proyector de la sala principal no detecta ninguna laptop por HDMI.', 'Resuelto', NOW() - INTERVAL 3000 MINUTE, NOW() - INTERVAL 2500 MINUTE, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (3, 19, 18, 1, 2, 'Monitor con líneas en pantalla', 'El monitor de la caja 2 muestra líneas verticales de colores desde esta mañana.', 'Resuelto', NOW() - INTERVAL 2880 MINUTE, NOW() - INTERVAL 2280 MINUTE, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (4, 12, 11, 6, 3, 'Correo no sincroniza en el celular', 'El correo del celular dejó de sincronizar desde ayer, en la laptop sí funciona.', 'En proceso', NOW() - INTERVAL 1440 MINUTE, NULL, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (5, 22, 21, 1, 2, 'Laptop no enciende', 'La laptop del área de ventas no enciende, el indicador de carga parpadea en naranja.', 'Abierto', NOW() - INTERVAL 1260 MINUTE, NULL, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (6, 22, 21, 4, 3, 'Alta de usuario en ERP', 'Se incorporó una nueva asistente de ventas y necesita usuario en el ERP con perfil de consulta.', 'Abierto', NOW() - INTERVAL 830 MINUTE, NULL, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (7, 8, 7, 2, 2, 'Sistema comercial muy lento', 'Desde el lunes el sistema comercial tarda más de un minuto en abrir cada recibo.', 'En proceso', NOW() - INTERVAL 600 MINUTE, NULL, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (8, 4, 3, 2, 2, 'Licencia de Office vencida', 'Al abrir Excel aparece el mensaje de producto sin licencia y no deja guardar.', 'En proceso', NOW() - INTERVAL 400 MINUTE, NULL, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (9, 16, NULL, 5, 2, 'Impresora de despacho sin tóner', 'La impresora del área de despacho indica tóner agotado y no imprime las guías.', 'Abierto', NOW() - INTERVAL 300 MINUTE, NULL, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (10, 15, 14, 2, 1, 'Servidor de facturación caído', 'Desde las 8:00 a. m. no se pueden emitir boletas ni facturas en las tres oficinas. El sistema muestra "No se puede conectar con el servidor".', 'En proceso', NOW() - INTERVAL 280 MINUTE, NULL, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (11, 19, 18, 3, 1, 'VPN no conecta desde almacén', 'Desde la computadora del almacén la VPN muestra error de certificado y no conecta.', 'En proceso', NOW() - INTERVAL 190 MINUTE, NULL, NULL);
-INSERT INTO tickets (id, solicitante_id, tecnico_id, categoria_id, prioridad_id, asunto, descripcion, estado, created_at, fecha_resolucion, fecha_cierre) VALUES
-  (12, 9, NULL, 4, 3, 'Acceso a carpeta compartida', 'Necesito permiso de lectura a la carpeta compartida de Contabilidad.', 'Abierto', NOW() - INTERVAL 120 MINUTE, NULL, NULL);
+-- Tickets de ejemplo. Sin triggers, se insertan con TODOS los datos ya calculados:
+--   empresa_id y area_id = los del solicitante, numero = correlativo por empresa,
+--   fecha_limite = created_at + horas SLA de la prioridad (Alta 4, Media 24, Baja 72).
+INSERT INTO tickets (id, empresa_id, numero, area_id, solicitante_id, tecnico_id, categoria_id, prioridad_id,
+                     asunto, descripcion, estado, created_at, fecha_limite, fecha_resolucion, fecha_cierre) VALUES
+  (1, 4, 1, 23, 15, 14, 4, 3, 'Cambio de contraseña de correo', 'Necesito restablecer la contraseña de mi correo corporativo, ya no recuerdo la actual.', 'Cerrado', NOW() - INTERVAL 4320 MINUTE, NOW() - INTERVAL 4320 MINUTE + INTERVAL 72 HOUR, NOW() - INTERVAL 4020 MINUTE, NOW() - INTERVAL 3000 MINUTE),
+  (2, 1, 1, 2, 4, 2, 1, 2, 'Proyector de sala de reuniones no detecta laptop', 'El proyector de la sala principal no detecta ninguna laptop por HDMI.', 'Resuelto', NOW() - INTERVAL 3000 MINUTE, NOW() - INTERVAL 3000 MINUTE + INTERVAL 24 HOUR, NOW() - INTERVAL 2500 MINUTE, NULL),
+  (3, 5, 1, 35, 19, 18, 1, 2, 'Monitor con líneas en pantalla', 'El monitor de la caja 2 muestra líneas verticales de colores desde esta mañana.', 'Resuelto', NOW() - INTERVAL 2880 MINUTE, NOW() - INTERVAL 2880 MINUTE + INTERVAL 24 HOUR, NOW() - INTERVAL 2280 MINUTE, NULL),
+  (4, 3, 1, 19, 12, 11, 6, 3, 'Correo no sincroniza en el celular', 'El correo del celular dejó de sincronizar desde ayer, en la laptop sí funciona.', 'En proceso', NOW() - INTERVAL 1440 MINUTE, NOW() - INTERVAL 1440 MINUTE + INTERVAL 72 HOUR, NULL, NULL),
+  (5, 6, 1, 41, 22, 21, 1, 2, 'Laptop no enciende', 'La laptop del área de ventas no enciende, el indicador de carga parpadea en naranja.', 'Abierto', NOW() - INTERVAL 1260 MINUTE, NOW() - INTERVAL 1260 MINUTE + INTERVAL 24 HOUR, NULL, NULL),
+  (6, 6, 2, 41, 22, 21, 4, 3, 'Alta de usuario en ERP', 'Se incorporó una nueva asistente de ventas y necesita usuario en el ERP con perfil de consulta.', 'Abierto', NOW() - INTERVAL 830 MINUTE, NOW() - INTERVAL 830 MINUTE + INTERVAL 72 HOUR, NULL, NULL),
+  (7, 2, 1, 10, 8, 7, 2, 2, 'Sistema comercial muy lento', 'Desde el lunes el sistema comercial tarda más de un minuto en abrir cada recibo.', 'En proceso', NOW() - INTERVAL 600 MINUTE, NOW() - INTERVAL 600 MINUTE + INTERVAL 24 HOUR, NULL, NULL),
+  (8, 1, 2, 2, 4, 3, 2, 2, 'Licencia de Office vencida', 'Al abrir Excel aparece el mensaje de producto sin licencia y no deja guardar.', 'En proceso', NOW() - INTERVAL 400 MINUTE, NOW() - INTERVAL 400 MINUTE + INTERVAL 24 HOUR, NULL, NULL),
+  (9, 4, 2, 27, 16, NULL, 5, 2, 'Impresora de despacho sin tóner', 'La impresora del área de despacho indica tóner agotado y no imprime las guías.', 'Abierto', NOW() - INTERVAL 300 MINUTE, NOW() - INTERVAL 300 MINUTE + INTERVAL 24 HOUR, NULL, NULL),
+  (10, 4, 3, 23, 15, 14, 2, 1, 'Servidor de facturación caído', 'Desde las 8:00 a. m. no se pueden emitir boletas ni facturas en las tres oficinas. El sistema muestra "No se puede conectar con el servidor".', 'En proceso', NOW() - INTERVAL 280 MINUTE, NOW() - INTERVAL 280 MINUTE + INTERVAL 4 HOUR, NULL, NULL),
+  (11, 5, 2, 35, 19, 18, 3, 1, 'VPN no conecta desde almacén', 'Desde la computadora del almacén la VPN muestra error de certificado y no conecta.', 'En proceso', NOW() - INTERVAL 190 MINUTE, NOW() - INTERVAL 190 MINUTE + INTERVAL 4 HOUR, NULL, NULL),
+  (12, 2, 2, 9, 9, NULL, 4, 3, 'Acceso a carpeta compartida', 'Necesito permiso de lectura a la carpeta compartida de Contabilidad.', 'Abierto', NOW() - INTERVAL 120 MINUTE, NOW() - INTERVAL 120 MINUTE + INTERVAL 72 HOUR, NULL, NULL);
 
--- Historial de ejemplo (el trigger del historial genera las notificaciones)
+-- Correlativo de cada empresa = último número usado
+UPDATE empresas e SET e.ultimo_ticket = (SELECT COALESCE(MAX(t.numero), 0) FROM tickets t WHERE t.empresa_id = e.id);
+
+-- Primer registro del historial de cada ticket (antes lo hacía trg_tickets_despues_insertar)
+INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_nuevo, comentario, created_at)
+SELECT id, solicitante_id, 'CREACION', 'Abierto', 'Ticket registrado.', created_at FROM tickets ORDER BY id;
+
+-- Historial de ejemplo
 INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_anterior, estado_nuevo, tecnico_anterior_id, tecnico_nuevo_id, comentario, created_at) VALUES
   (1, 13, 'ASIGNACION', NULL, NULL, NULL, 14, 'Gestión de accesos de correo.', NOW() - INTERVAL 4295 MINUTE),
   (1, 14, 'CAMBIO_ESTADO', 'Abierto', 'En proceso', NULL, NULL, 'Validando la identidad con su jefe.', NOW() - INTERVAL 4260 MINUTE),
@@ -950,6 +580,43 @@ INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_anterior, esta
   (10, 14, 'CAMBIO_ESTADO', 'Abierto', 'En proceso', NULL, NULL, 'Revisando los registros del servidor. El servicio se detuvo después de la actualización de anoche.', NOW() - INTERVAL 220 MINUTE),
   (11, 17, 'ASIGNACION', NULL, NULL, NULL, 18, 'Asignado al área de redes.', NOW() - INTERVAL 165 MINUTE),
   (11, 18, 'CAMBIO_ESTADO', 'Abierto', 'En proceso', NULL, NULL, 'Verificando certificados del cliente VPN en el equipo del almacén.', NOW() - INTERVAL 130 MINUTE);
+
+
+-- Notificaciones de ejemplo (antes las generaba trg_historial_notificar)
+-- CREACION -> administradores de la empresa del ticket
+INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
+SELECT u.id, 'NUEVO_TICKET', h.ticket_id, CONCAT('Nuevo ticket ', v.codigo),
+       CONCAT(t.asunto, ' · registrado por ', a.nombre), h.created_at
+  FROM ticket_historial h JOIN tickets t ON t.id = h.ticket_id JOIN v_tickets v ON v.id = t.id
+  JOIN users a ON a.id = h.usuario_id
+  JOIN users u ON u.empresa_id = t.empresa_id AND u.rol = 'Administrador' AND u.activo = 1 AND u.id <> h.usuario_id
+ WHERE h.tipo = 'CREACION' ORDER BY h.id;
+
+-- ASIGNACION -> técnico asignado
+INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
+SELECT u.id, 'ASIGNACION', h.ticket_id, CONCAT('Se te asignó el ticket ', v.codigo), t.asunto, h.created_at
+  FROM ticket_historial h JOIN tickets t ON t.id = h.ticket_id JOIN v_tickets v ON v.id = t.id
+  JOIN users u ON u.id = h.tecnico_nuevo_id AND u.id <> h.usuario_id AND u.activo = 1
+ WHERE h.tipo = 'ASIGNACION' ORDER BY h.id;
+
+-- ASIGNACION -> solicitante
+INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
+SELECT u.id, 'ASIGNACION', h.ticket_id, CONCAT(v.codigo, ' fue asignado a ', tn.nombre), t.asunto, h.created_at
+  FROM ticket_historial h JOIN tickets t ON t.id = h.ticket_id JOIN v_tickets v ON v.id = t.id
+  JOIN users tn ON tn.id = h.tecnico_nuevo_id
+  JOIN users u ON u.id = t.solicitante_id AND u.id <> h.usuario_id AND u.activo = 1
+ WHERE h.tipo = 'ASIGNACION' ORDER BY h.id;
+
+-- CAMBIO_ESTADO y COMENTARIO -> solicitante y técnico (menos quien hizo el cambio)
+INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje, created_at)
+SELECT u.id, h.tipo, h.ticket_id,
+       IF(h.tipo = 'CAMBIO_ESTADO', CONCAT(v.codigo, ' cambió a ', h.estado_nuevo), CONCAT('Nuevo comentario en ', v.codigo)),
+       IF(h.tipo = 'CAMBIO_ESTADO', CONCAT(t.asunto, ' · por ', a.nombre), CONCAT(t.asunto, ' · ', a.nombre)),
+       h.created_at
+  FROM ticket_historial h JOIN tickets t ON t.id = h.ticket_id JOIN v_tickets v ON v.id = t.id
+  JOIN users a ON a.id = h.usuario_id
+  JOIN users u ON u.id IN (t.solicitante_id, t.tecnico_id) AND u.id <> h.usuario_id AND u.activo = 1
+ WHERE h.tipo IN ('CAMBIO_ESTADO', 'COMENTARIO') ORDER BY h.id;
 
 -- Las notificaciones de más de 1 día ya aparecen como leídas
 UPDATE notificaciones SET leido = 1, leido_at = created_at + INTERVAL 1 HOUR WHERE created_at < NOW() - INTERVAL 1 DAY;
