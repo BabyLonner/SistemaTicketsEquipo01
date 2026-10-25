@@ -4,13 +4,13 @@
 {% block title %}Dashboard | Soporte TI{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='CSS/global.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='CSS/dashboard.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script id="dashboard-data" type="application/json">
     {{ datos | tojson }}
   </script>
-<script src="{{ url_for('static', filename='JS/dashboard.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -42,62 +42,12 @@
     <div>
       <strong id="total-tickets">{{ datos.kpis.total or 0 }}</strong><span>Total de tickets</span>
     </div>
-  </header>
-
-  <aside class="sidebar">
-    <nav aria-label="Menú principal">
-      <a class="side-link active" href="{{ url_for('dashboard') }}"><span>▦</span>Dashboard</a>
-      <a class="side-link" href="{{ url_for('pantalla', pagina='tickets') }}"><span>▤</span>Tickets</a>
-      <a class="side-link" href="{{ url_for('pantalla', pagina='nuevo_ticket') }}"><span>♙</span>Nuevo Ticket</a>
-      <a class="side-link" href="{{ url_for('pantalla', pagina='sla') }}"><span>◷</span>SLA</a>
-      <a class="side-link" href="{{ url_for('pantalla', pagina='asignaciones') }}"><span
-          class="side-icon">♧</span>Asignación</a>
-      <a class="side-link" href="{{ url_for('pantalla', pagina='usuarios') }}"><span>♙</span>Usuarios</a>
-      <a class="side-link" href="{{ url_for('pantalla', pagina='notificaciones') }}"><span>♧</span>Notificaciones</a>
-      <a class="side-link" href="{{ url_for('reportes') }}"><span>▥</span>Reportes</a>
-      <a class="side-link" href="#api"><span>‹/›</span>API</a>
-      <a class="side-link" href="#"><span>⚙</span>Configuración</a>
-      <a class="side-link" href="{{ url_for('cerrar_sesion') }}"><span class="side-icon">⇥</span>Cerrar sesión</a>
-    </nav>
-  </aside>
-
-  <main class="main">
-    <div class="page-heading">
-      <div>
-        <h1>Dashboard de Soporte TI</h1>
-        <p>Resumen general de tickets y métricas clave</p>
-      </div>
-
-      <form class="filters" id="filters-form">
-        <label class="date-filter">
-          <span>▦</span>
-
-          <input id="desde" type="date" aria-label="Fecha inicial" />
-
-          <span>–</span>
-
-          <input id="hasta" type="date" aria-label="Fecha final" />
-        </label>
-
-        <label class="area-filter">
-          <span>▦</span>
-
-          <select id="area" aria-label="Área">
-            <option value="todas">Todas las áreas</option>
-
-            {% for area in datos.areas %}
-            <option value="{{ area.nombre }}">
-              {{ area.nombre }}
-            </option>
-            {% endfor %}
-          </select>
-        </label>
-
-        <button class="btn-primary" type="submit">
-          <span>▽</span> Aplicar filtros
-        </button>
-      </form>
-
+    <small>↗ datos actuales <em>vs. mes anterior</em></small>
+  </article>
+  <article class="kpi kpi-red">
+    <span class="kpi-icon">!</span>
+    <div>
+      <strong id="open-tickets">{{ datos.kpis.abiertos or 0 }}</strong><span>Abiertos</span>
     </div>
     <small>↗ datos actuales <em>vs. mes anterior</em></small>
   </article>

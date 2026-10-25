@@ -1,3 +1,4 @@
+import uuid
 import os
 import unicodedata
 from functools import wraps
@@ -338,140 +339,104 @@ def api_marcar_todas_leidas():
 # =====================================================================*
 
 
-
 def obtener_datos_dashboard(empresa_id):
+
     conexion = obtener_conexion()
 
     try:
         with conexion.cursor() as cursor:
+            cursor.execute(
+                """
 
-            # 1. Indicadores principales del dashboard
-            cursor.execute("""
-                SELECT
-                    COUNT(*) AS total,
+                SELECT COUNT(*) AS total,
+
                     COALESCE(SUM(estado = 'Abierto'), 0) AS abiertos,
+
                     COALESCE(SUM(estado = 'Resuelto'), 0) AS resueltos,
-                    COALESCE(SUM(
-                        estado NOT IN ('Resuelto', 'Cerrado')
-                        AND fecha_limite IS NOT NULL
-                        AND fecha_limite < NOW()
-                    ), 0) AS vencidos
-                FROM tickets
-                WHERE empresa_id = %s
-            """, (empresa_id,))
+
+                    COALESCE(SUM(estado NOT IN ('Resuelto','Cerrado')
+
+                        AND fecha_limite IS NOT NULL AND fecha_limite < NOW()), 0) AS vencidos
+
+                FROM tickets WHERE empresa_id = %s
+
+            """,
+                (empresa_id,),
+            )
 
             kpis = cursor.fetchone()
 
-            # 2. Tickets agrupados por estado
-            cursor.execute("""
-                SELECT estado, COUNT(*) AS total
-                FROM tickets
-                WHERE empresa_id = %s
-                GROUP BY estado
-            """, (empresa_id,))
+            cursor.execute(
+                "SELECT estado, COUNT(*) AS total FROM tickets WHERE empresa_id=%s GROUP BY estado",
+                (empresa_id,),
+            )
 
             estados = cursor.fetchall()
 
-            # 3. Tickets agrupados por prioridad
-            cursor.execute("""
-                SELECT
-                    p.nombre AS prioridad,
-                    COUNT(*) AS total
-                FROM tickets t
-                JOIN prioridades p ON p.id = t.prioridad_id
-                WHERE t.empresa_id = %s
-                GROUP BY p.id, p.nombre, p.nivel
-                ORDER BY p.nivel DESC
-            """, (empresa_id,))
+            cursor.execute(
+                """
+
+                SELECT p.nombre AS prioridad, COUNT(*) AS total
+
+                FROM tickets t JOIN prioridades p ON p.id=t.prioridad_id
+
+                WHERE t.empresa_id=%s GROUP BY p.id,p.nombre,p.nivel ORDER BY p.nivel DESC
+
+            """,
+                (empresa_id,),
+            )
 
             prioridades = cursor.fetchall()
 
-            # 4. Tickets agrupados por técnico
-            cursor.execute("""
-                SELECT
-                    u.nombre AS tecnico,
-                    COUNT(t.id) AS total
-                FROM tickets t
-                LEFT JOIN users u ON u.id = t.tecnico_id
-                WHERE t.empresa_id = %s
-                  AND t.tecnico_id IS NOT NULL
-                GROUP BY u.id, u.nombre
-                ORDER BY total DESC
-                LIMIT 8
-            """, (empresa_id,))
+            cursor.execute(
+                """
+
+                SELECT u.nombre AS tecnico, COUNT(t.id) AS total
+
+                FROM tickets t LEFT JOIN users u ON u.id=t.tecnico_id
+
+                WHERE t.empresa_id=%s AND t.tecnico_id IS NOT NULL
+
+                GROUP BY u.id,u.nombre ORDER BY total DESC LIMIT 8
+
+            """,
+                (empresa_id,),
+            )
 
             tecnicos = cursor.fetchall()
 
-            # 5. Tickets agrupados por categoría
-            cursor.execute("""
-                SELECT
-                    c.nombre AS categoria,
-                    COUNT(*) AS total
-                FROM tickets t
-                JOIN categorias c ON c.id = t.categoria_id
-                WHERE t.empresa_id = %s
-                GROUP BY c.id, c.nombre
-                ORDER BY total DESC
-            """, (empresa_id,))
+            cursor.execute(
+                """
+
+                SELECT c.nombre AS categoria, COUNT(*) AS total
+
+                FROM tickets t JOIN categorias c ON c.id=t.categoria_id
+
+                WHERE t.empresa_id=%s GROUP BY c.id,c.nombre ORDER BY total DESC
+
+            """,
+                (empresa_id,),
+            )
 
             categorias = cursor.fetchall()
 
-            # 6. Los cinco tickets más recientes
-            cursor.execute("""
-                SELECT
-                    t.id,
-                    t.asunto,
-                    t.estado,
-                    t.created_at,
-                    p.nombre AS prioridad,
-                    u.nombre AS tecnico
-                FROM tickets t
-                LEFT JOIN prioridades p ON p.id = t.prioridad_id
-                LEFT JOIN users u ON u.id = t.tecnico_id
-                WHERE t.empresa_id = %s
-                ORDER BY t.created_at DESC, t.id DESC
-                LIMIT 5
-            """, (empresa_id,))
+            cursor.execute(
+                """
+
+                SELECT t.id,t.asunto,t.estado,t.created_at,p.nombre AS prioridad,u.nombre AS tecnico
+
+                FROM tickets t JOIN prioridades p ON p.id=t.prioridad_id
+
+                LEFT JOIN users u ON u.id=t.tecnico_id
+
+                WHERE t.empresa_id=%s ORDER BY t.created_at DESC LIMIT 5
+
+            """,
+                (empresa_id,),
+            )
 
             recientes = cursor.fetchall()
 
-            # 7. Todos los tickets para los filtros del dashboard
-            cursor.execute("""
-                SELECT
-                    t.id,
-                    t.asunto,
-                    t.estado,
-                    t.created_at,
-                    t.fecha_limite,
-                    p.nombre AS prioridad,
-                    u.nombre AS tecnico,
-                    a.nombre AS area,
-                    c.nombre AS categoria
-                FROM tickets t
-                LEFT JOIN prioridades p ON p.id = t.prioridad_id
-                LEFT JOIN users u ON u.id = t.tecnico_id
-                LEFT JOIN areas a
-                    ON a.id = t.area_id
-                   AND a.empresa_id = t.empresa_id
-                LEFT JOIN categorias c ON c.id = t.categoria_id
-                WHERE t.empresa_id = %s
-                ORDER BY t.created_at DESC, t.id DESC
-            """, (empresa_id,))
-
-            todos_tickets = cursor.fetchall()
-
-            # 8. Áreas activas de la empresa autenticada
-            cursor.execute("""
-                SELECT id, nombre
-                FROM areas
-                WHERE empresa_id = %s
-                  AND activo = 1
-                ORDER BY nombre
-            """, (empresa_id,))
-
-            areas = cursor.fetchall()
-
-        # 9. Devolver todos los datos al dashboard
         return {
             "kpis": kpis,
             "estados": estados,
@@ -479,14 +444,10 @@ def obtener_datos_dashboard(empresa_id):
             "tecnicos": tecnicos,
             "categorias": categorias,
             "recientes": recientes,
-            "todos_tickets": todos_tickets,
-            "areas": areas
         }
 
     finally:
         conexion.close()
-
-
 
 
 @app.route("/dashboard")
@@ -611,7 +572,7 @@ def reportes():
 
 
 # Múltiples decoradores permiten que Flask acepte la ruta con o sin .html
-@app.route("/<pagina>") 
+@app.route("/<pagina>")
 @app.route("/<pagina>.html")
 def pantalla(pagina):
     if pagina == "index":
@@ -629,6 +590,740 @@ def pantalla(pagina):
     except TemplateNotFound:
         abort(404)
 
+
+# --Tablas--
+# empresas
+@app.route('/api_insertar_empresa', methods=['POST'])
+def api_insertar_empresa():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_codigo = request.json['codigo']
+        v_nombre = request.json['nombre']
+        v_razon_social = request.json.get('razon_social')
+        v_ruc = request.json.get('ruc')
+        v_prefijo_ticket = request.json['prefijo_ticket']
+        v_titulo_sistema = request.json['titulo_sistema']
+        v_color_primario = request.json['color_primario']
+        v_color_secundario = request.json['color_secundario']
+        v_logo_url = request.json.get('logo_url')
+        v_activo = request.json.get('activo', 1)
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = """INSERT INTO `empresas`
+                     (`codigo`, `nombre`, `razon_social`, `ruc`, `prefijo_ticket`,
+                      `titulo_sistema`, `color_primario`, `color_secundario`, `logo_url`, `activo`)
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+            cursor.execute(sql, (v_codigo, v_nombre, v_razon_social, v_ruc, v_prefijo_ticket,
+                                 v_titulo_sistema, v_color_primario, v_color_secundario,
+                                 v_logo_url, v_activo))
+            nuevo_id = cursor.lastrowid
+        objConexion.commit()
+        rpta["status"] = 1
+        rpta["data"] = {"id": nuevo_id}
+        rpta["message"] = "Empresa insertada correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+
+@app.route('/api_obtener_empresas')
+def api_obtener_empresas():
+    rpta = dict()
+    objConexion = None
+    try:
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = """SELECT `id`, `codigo`, `nombre`, `razon_social`, `ruc`, `prefijo_ticket`,
+                            `titulo_sistema`, `color_primario`, `color_secundario`, `logo_url`,
+                            `ultimo_ticket`, `activo`,
+                            DATE_FORMAT(`created_at`, '%Y-%m-%d %H:%i:%s') AS created_at
+                     FROM `empresas`"""
+            cursor.execute(sql)
+            resultado = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = resultado
+        rpta["message"] = "Empresas obtenidas correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = []
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+# empresa_dominios
+@app.route('/api_insertar_empresa_dominio', methods=['POST'])
+def api_insertar_empresa_dominio():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_empresa_id = request.json['empresa_id']
+        v_dominio = request.json['dominio'].strip().lower()
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = "INSERT INTO `empresa_dominios` (`empresa_id`, `dominio`) VALUES (%s, %s)"
+            cursor.execute(sql, (v_empresa_id, v_dominio))
+            nuevo_id = cursor.lastrowid
+        objConexion.commit()
+        rpta["status"] = 1
+        rpta["data"] = {"id": nuevo_id}
+        rpta["message"] = "Dominio insertado correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+
+@app.route('/api_obtener_empresa_dominios')
+def api_obtener_empresa_dominios():
+    rpta = dict()
+    objConexion = None
+    try:
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = "SELECT `id`, `empresa_id`, `dominio` FROM `empresa_dominios`"
+            cursor.execute(sql)
+            resultado = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = resultado
+        rpta["message"] = "Dominios obtenidos correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = []
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+# areas
+@app.route('/api_insertar_area', methods=['POST'])
+def api_insertar_area():
+    rpta = dict()
+    objConexion = None
+
+    try:
+        datos = request.get_json()
+
+        v_empresa_id = datos['empresa_id']
+        v_nombre = datos['nombre']
+        v_activo = datos.get('activo', 1)
+
+        objConexion = obtener_conexion()
+
+        with objConexion.cursor() as cursor:
+            sql = """
+                INSERT INTO areas (empresa_id, nombre, activo)
+                VALUES (%s, %s, %s)
+            """
+
+            cursor.execute(
+                sql,
+                (v_empresa_id, v_nombre, v_activo)
+            )
+
+            nuevo_id = cursor.lastrowid
+
+        objConexion.commit()
+
+        rpta['status'] = 1
+        rpta['data'] = {
+            'id': nuevo_id,
+            'empresa_id': v_empresa_id,
+            'nombre': v_nombre,
+            'activo': v_activo
+        }
+        rpta['message'] = 'Area insertada correctamente'
+
+    except Exception as e:
+        if objConexion:
+            objConexion.rollback()
+
+        rpta['status'] = -1
+        rpta['data'] = {}
+        rpta['message'] = 'Error: ' + repr(e)
+
+    finally:
+        if objConexion:
+            objConexion.close()
+
+    return jsonify(rpta)
+
+
+@app.route('/api_obtener_areas', methods=['GET'])
+def api_obtener_areas():
+    rpta = dict()
+    objConexion = None
+
+    try:
+        objConexion = obtener_conexion()
+
+        with objConexion.cursor() as cursor:
+            sql = """
+                SELECT id, empresa_id, nombre, activo
+                FROM areas
+                ORDER BY id
+            """
+
+            cursor.execute(sql)
+            resultado = cursor.fetchall()
+
+        rpta['status'] = 1
+        rpta['data'] = resultado
+        rpta['message'] = 'Areas obtenidas correctamente'
+
+    except Exception as e:
+        rpta['status'] = -1
+        rpta['data'] = []
+        rpta['message'] = 'Error: ' + repr(e)
+
+    finally:
+        if objConexion:
+            objConexion.close()
+
+    return jsonify(rpta)
+
+# users
+@app.route('/api_insertar_user', methods=['POST'])
+def api_insertar_user():
+    rpta = dict()
+    objConexion = None
+
+    try:
+        datos = request.get_json()
+
+        v_empresa_id = datos['empresa_id']
+        v_area_id = datos.get('area_id')
+        v_nombre = datos['nombre']
+        v_correo = datos['correo']
+        v_password_hash = datos['password_hash']
+        v_rol = datos.get('rol', 'Solicitante')
+        v_activo = datos.get('activo', 1)
+
+        objConexion = obtener_conexion()
+
+        with objConexion.cursor() as cursor:
+            sql = """
+                INSERT INTO users (
+                    empresa_id, area_id, nombre, correo,
+                    password_hash, rol, activo
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+
+            cursor.execute(
+                sql,
+                (
+                    v_empresa_id,
+                    v_area_id,
+                    v_nombre,
+                    v_correo,
+                    v_password_hash,
+                    v_rol,
+                    v_activo
+                )
+            )
+
+            nuevo_id = cursor.lastrowid
+
+        objConexion.commit()
+
+        rpta['status'] = 1
+        rpta['data'] = {
+            'id': nuevo_id,
+            'empresa_id': v_empresa_id,
+            'area_id': v_area_id,
+            'nombre': v_nombre,
+            'correo': v_correo,
+            'rol': v_rol,
+            'activo': v_activo
+        }
+        rpta['message'] = 'Usuario insertado correctamente'
+
+    except Exception as e:
+        if objConexion:
+            objConexion.rollback()
+
+        rpta['status'] = -1
+        rpta['data'] = {}
+        rpta['message'] = 'Error: ' + repr(e)
+
+    finally:
+        if objConexion:
+            objConexion.close()
+
+    return jsonify(rpta)
+
+
+@app.route('/api_obtener_users', methods=['GET'])
+def api_obtener_users():
+    rpta = dict()
+    objConexion = None
+
+    try:
+        objConexion = obtener_conexion()
+
+        with objConexion.cursor() as cursor:
+            sql = """
+                SELECT
+                    id, empresa_id, area_id, nombre,
+                    correo, rol, activo, ultimo_acceso,
+                    created_at, updated_at
+                FROM users
+                ORDER BY id
+            """
+
+            cursor.execute(sql)
+            resultado = cursor.fetchall()
+
+        rpta['status'] = 1
+        rpta['data'] = resultado
+        rpta['message'] = 'Usuarios obtenidos correctamente'
+
+    except Exception as e:
+        rpta['status'] = -1
+        rpta['data'] = []
+        rpta['message'] = 'Error: ' + repr(e)
+
+    finally:
+        if objConexion:
+            objConexion.close()
+
+    return jsonify(rpta)
+
+# tokens_revocados
+@app.route('/api_insertar_token_revocado', methods=['POST'])
+def api_insertar_token_revocado():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_jti = request.json.get('jti') or str(uuid.uuid4())
+        v_usuario_id = request.json.get('usuario_id')
+        v_expira_en = request.json.get('expira_en')
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = "INSERT INTO `tokens_revocados` (`jti`, `usuario_id`, `expira_en`) VALUES (%s, %s, %s)"
+            cursor.execute(sql, (v_jti, v_usuario_id, v_expira_en))
+            nuevo_id = cursor.lastrowid
+        objConexion.commit()
+        rpta["status"] = 1
+        rpta["data"] = {"id": nuevo_id, "jti": v_jti}
+        rpta["message"] = "Token revocado insertado correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+@app.route('/api_obtener_tokens_revocados')
+def api_obtener_tokens_revocados():
+    rpta = dict()
+    objConexion = None
+    try:
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = """SELECT `id`, `jti`, `usuario_id`,
+                            DATE_FORMAT(`expira_en`, '%Y-%m-%d %H:%i:%s') AS expira_en,
+                            DATE_FORMAT(`created_at`, '%Y-%m-%d %H:%i:%s') AS created_at
+                     FROM `tokens_revocados`"""
+            cursor.execute(sql)
+            resultado = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = resultado
+        rpta["message"] = "Tokens revocados obtenidos correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = []
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+# categorias
+@app.route('/api_insertar_categoria', methods=['POST'])
+def api_insertar_categoria():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_nombre = request.json['nombre']
+        v_descripcion = request.json.get('descripcion')
+        v_activo = request.json.get('activo', 1)
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = "INSERT INTO `categorias` (`nombre`, `descripcion`, `activo`) VALUES (%s, %s, %s)"
+            cursor.execute(sql, (v_nombre, v_descripcion, v_activo))
+            nuevo_id = cursor.lastrowid
+        objConexion.commit()
+        rpta["status"] = 1
+        rpta["data"] = {"id": nuevo_id}
+        rpta["message"] = "Categoría insertada correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+@app.route('/api_obtener_categorias')
+def api_obtener_categorias():
+    rpta = dict()
+    objConexion = None
+    try:
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = "SELECT `id`, `nombre`, `descripcion`, `activo` FROM `categorias`"
+            cursor.execute(sql)
+            resultado = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = resultado
+        rpta["message"] = "Categorías obtenidas correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = []
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+# prioridades
+@app.route('/api_insertar_prioridad', methods=['POST'])
+def api_insertar_prioridad():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_id = request.json['id']
+        v_nombre = request.json['nombre']
+        v_sla_horas = request.json['sla_horas']
+        v_nivel = request.json['nivel']
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = "INSERT INTO prioridades (id, nombre, sla_horas, nivel) VALUES (%s, %s, %s, %s)"
+            cursor.execute(sql, (v_id, v_nombre, v_sla_horas, v_nivel))
+        objConexion.commit()
+        rpta["status"] = 1
+        rpta["data"] = {"id": v_id}
+        rpta["message"] = "Prioridad insertada correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+
+@app.route('/api_obtener_prioridades')
+def api_obtener_prioridades():
+    rpta = dict()
+    objConexion = None
+    try:
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = "SELECT id, nombre, sla_horas, nivel FROM prioridades ORDER BY nivel DESC"
+            cursor.execute(sql)
+            resultado = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = resultado
+        rpta["message"] = "Prioridades obtenidas correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = []
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+# ticlkets
+@app.route('/api_insertar_ticket', methods=['POST'])
+def api_insertar_ticket():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_solicitante = request.json['solicitante_id']
+        v_categoria = request.json['categoria_id']
+        v_prioridad = request.json['prioridad_id']
+        v_asunto = request.json['asunto']
+        v_descripcion = request.json['descripcion']
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            cursor.execute("SELECT empresa_id, area_id FROM users WHERE id = %s AND activo = 1",
+                           (v_solicitante,))
+            usuario = cursor.fetchone()
+            if not usuario:
+                raise ValueError("Solicitante no existe o está inactivo")
+            empresa_id = usuario['empresa_id']
+            area_id = usuario['area_id']
+
+            cursor.execute("SELECT sla_horas FROM prioridades WHERE id = %s", (v_prioridad,))
+            prio = cursor.fetchone()
+            if not prio:
+                raise ValueError("Prioridad no válida")
+            sla_horas = prio['sla_horas']
+
+            cursor.execute("UPDATE empresas SET ultimo_ticket = LAST_INSERT_ID(ultimo_ticket + 1) "
+                           "WHERE id = %s", (empresa_id,))
+            cursor.execute("SELECT LAST_INSERT_ID() AS numero")
+            numero = cursor.fetchone()['numero']
+
+            sql = ("INSERT INTO tickets (empresa_id, numero, area_id, solicitante_id, categoria_id, "
+                   "prioridad_id, asunto, descripcion, fecha_limite) "
+                   "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW() + INTERVAL %s HOUR)")
+            cursor.execute(sql, (empresa_id, numero, area_id, v_solicitante, v_categoria,
+                                 v_prioridad, v_asunto, v_descripcion, sla_horas))
+            nuevo_id = cursor.lastrowid
+
+            cursor.execute("INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_nuevo, comentario) "
+                           "VALUES (%s, %s, 'CREACION', 'Abierto', 'Ticket registrado.')",
+                           (nuevo_id, v_solicitante))
+
+            cursor.execute("SELECT CONCAT(prefijo_ticket, '-', LPAD(%s, 4, '0')) AS codigo "
+                           "FROM empresas WHERE id = %s", (numero, empresa_id))
+            codigo = cursor.fetchone()['codigo']
+            cursor.execute("INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje) "
+                           "SELECT id, 'NUEVO_TICKET', %s, %s, %s FROM users "
+                           "WHERE empresa_id = %s AND rol = 'Administrador' AND activo = 1 AND id <> %s",
+                           (nuevo_id, "Nuevo ticket " + codigo, v_asunto, empresa_id, v_solicitante))
+        objConexion.commit()
+        rpta["status"] = 1
+        rpta["data"] = {"id": nuevo_id, "codigo": codigo}
+        rpta["message"] = "Ticket insertado correctamente"
+    except Exception as e:
+        if objConexion:
+            objConexion.rollback()
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+
+@app.route('/api_obtener_tickets')
+def api_obtener_tickets():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_empresa = request.args.get('empresa_id')
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = ("SELECT id, codigo, asunto, estado, area, categoria, prioridad, solicitante, "
+                   "tecnico, created_at, fecha_limite, semaforo, minutos_restantes "
+                   "FROM v_tickets WHERE empresa_id = %s ORDER BY urgencia DESC, minutos_restantes")
+            cursor.execute(sql, (v_empresa,))
+            resultado = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = resultado
+        rpta["message"] = "Tickets obtenidos correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = []
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+#ticket_evidencias
+@app.route('/api_insertar_evidencia', methods=['POST'])
+def api_insertar_evidencia():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_ticket_id = request.json['ticket_id']
+        v_orden = request.json['orden']
+        v_nombre_original = request.json['nombre_original']
+        v_nombre_archivo = request.json['nombre_archivo']
+        v_ruta = request.json['ruta']
+        v_mime_type = request.json['mime_type']
+        v_tamano_bytes = request.json['tamano_bytes']
+        v_subido_por = request.json['subido_por']
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = ("INSERT INTO ticket_evidencias (ticket_id, orden, nombre_original, nombre_archivo, "
+                   "ruta, mime_type, tamano_bytes, subido_por) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
+            cursor.execute(sql, (v_ticket_id, v_orden, v_nombre_original, v_nombre_archivo,
+                                 v_ruta, v_mime_type, v_tamano_bytes, v_subido_por))
+            nuevo_id = cursor.lastrowid
+        objConexion.commit()
+        rpta["status"] = 1
+        rpta["data"] = {"id": nuevo_id}
+        rpta["message"] = "Evidencia insertada correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+
+@app.route('/api_obtener_evidencias')
+def api_obtener_evidencias():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_ticket_id = request.args.get('ticket_id')
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = ("SELECT id, ticket_id, orden, nombre_original, nombre_archivo, ruta, mime_type, "
+                   "tamano_bytes, subido_por FROM ticket_evidencias WHERE ticket_id = %s ORDER BY orden")
+            cursor.execute(sql, (v_ticket_id,))
+            resultado = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = resultado
+        rpta["message"] = "Evidencias obtenidas correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = []
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+#ticket_historial
+@app.route('/api_insertar_historial', methods=['POST'])
+def api_insertar_historial():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_ticket_id = request.json['ticket_id']
+        v_usuario_id = request.json['usuario_id']
+        v_tipo = request.json['tipo']
+        v_estado_anterior = request.json.get('estado_anterior')
+        v_estado_nuevo = request.json.get('estado_nuevo')
+        v_tecnico_anterior = request.json.get('tecnico_anterior_id')
+        v_tecnico_nuevo = request.json.get('tecnico_nuevo_id')
+        v_comentario = request.json['comentario']
+
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            sql = ("INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_anterior, estado_nuevo, "
+                   "tecnico_anterior_id, tecnico_nuevo_id, comentario) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
+            cursor.execute(sql, (v_ticket_id, v_usuario_id, v_tipo, v_estado_anterior, v_estado_nuevo,
+                                 v_tecnico_anterior, v_tecnico_nuevo, v_comentario))
+            nuevo_id = cursor.lastrowid
+        objConexion.commit()
+        rpta["status"] = 1
+        rpta["data"] = {"id": nuevo_id}
+        rpta["message"] = "Historial registrado correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+
+@app.route('/api_obtener_historial', methods=['GET'])
+def api_obtener_historial():
+    rpta = dict()
+    objConexion = None
+    try:
+        v_ticket_id = request.args.get('ticket_id')
+        objConexion = obtener_conexion()
+        with objConexion.cursor() as cursor:
+            if v_ticket_id:
+                cursor.execute("SELECT * FROM ticket_historial WHERE ticket_id = %s", (v_ticket_id,))
+            else:
+                cursor.execute("SELECT * FROM ticket_historial")
+            resultado = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = resultado
+        rpta["message"] = "Historial listado correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = []
+        rpta["message"] = "Error: " + repr(e)
+    finally:
+        if objConexion:
+            objConexion.close()
+    return jsonify(rpta)
+
+#notificaciones
+@app.route('/api_insertar_notificacion', methods=['POST'])
+def api_insertar_notificacion():
+    rpta = dict()
+    try:
+        objConexion = obtener_conexion()
+
+        v_userid = request.json["usuario_id"]
+        v_tipo = request.json["tipo"]
+        v_titulo = request.json["titulo"]
+        v_referencia_ticket = request.json.get("referencia_ticket")
+        v_mensaje = request.json.get("mensaje")
+
+        with objConexion:
+            with objConexion.cursor() as cursor:
+                sql = """
+                    INSERT INTO `notificaciones`
+                    (`usuario_id`, `tipo`, `referencia_ticket`, `titulo`, `mensaje`)
+                    VALUES (%s, %s, %s, %s, %s)
+                """
+                cursor.execute(sql, (v_userid, v_tipo, v_referencia_ticket, v_titulo, v_mensaje))
+            objConexion.commit()
+
+        rpta["status"] = 1
+        rpta["data"] = {}
+        rpta["message"] = "Notificación insertada correctamente"
+
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+
+    return jsonify(rpta)
+
+@app.route('/api_obtenernotificaciones')
+def api_obtenernotificaciones():
+    rpta = dict()
+    try:
+        objConexion = obtener_conexion()
+        with objConexion:
+            with objConexion.cursor() as cursor:
+                sql = "SELECT `id`, `usuario_id`, `tipo`, `referencia_ticket`, `titulo`, `mensaje`, `leido`, `leido_at` FROM notificaciones"
+                cursor.execute(sql)
+                result = cursor.fetchall()
+        rpta["status"] = 1
+        rpta["data"] = result
+        rpta["message"] = "Notificacion listado correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    return jsonify(rpta)
 
 if __name__ == "__main__":
     app.run(debug=True)

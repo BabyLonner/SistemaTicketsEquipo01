@@ -3,8 +3,10 @@ Tickets — registro de tickets con evidencias fotográficas (Flask + MySQL).
 
 Trabaja sobre la base mesa_ayuda_ti (database/mesa_ayuda_ti.sql):
     tickets, ticket_evidencias, categorias, prioridades, areas y la vista v_tickets.
-Los triggers de la base ponen la empresa, el correlativo (EPS-0001...), la
-fecha límite del SLA y el primer registro del historial.
+SIN TRIGGERS: este archivo calcula la empresa, el área, el correlativo
+(EPS-0001...), la fecha límite del SLA, el primer registro del historial y la
+notificación a los administradores (antes lo hacían los triggers de la base).
+Funciona con database/mesa_ayuda_ti_sin_triggers.sql (p. ej. en PythonAnywhere).
 
 Contenido (patrón MVC):
     1. Conexión a MySQL (usa db.py del proyecto)
@@ -91,6 +93,11 @@ class Catalogo:
             return cur.fetchall()
 
 
+class ErrorRegla(Exception):
+    """Regla de negocio no cumplida (reemplaza a los SIGNAL de los triggers).
+    El mensaje se muestra tal cual al usuario con código 400."""
+
+
 class Ticket:
     ESTADOS = ("Abierto", "En proceso", "Resuelto", "Cerrado")
 
@@ -144,27 +151,113 @@ class Ticket:
         return limpios, errores
 
     @staticmethod
+    def _horas_sla(cur, prioridad_id):
+        cur.execute("SELECT sla_horas FROM prioridades WHERE id = %s", (prioridad_id,))
+        fila = cur.fetchone()
+        if fila is None:
+            raise ErrorRegla("La prioridad no existe.")
+        return fila["sla_horas"]
+
+    @staticmethod
     def crear(cur, datos, solicitante_id, empresa_id):
+        """Registra el ticket haciendo lo que antes hacían los triggers
+        trg_tickets_antes_insertar, trg_tickets_despues_insertar y
+        trg_historial_notificar (CREACION). Todo dentro de la misma transacción.
+        """
+        # 1) Empresa y área salen del solicitante (nunca del formulario)
         cur.execute(
-            """INSERT INTO tickets (solicitante_id, area_id, categoria_id, prioridad_id, asunto, descripcion)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
+            "SELECT empresa_id, area_id, activo, nombre FROM users WHERE id = %s",
+            (solicitante_id,),
+        )
+        solicitante = cur.fetchone()
+        if solicitante is None:
+            raise ErrorRegla("El solicitante no existe.")
+        if not solicitante["activo"]:
+            raise ErrorRegla("El solicitante está inactivo.")
+        empresa_id = solicitante["empresa_id"]
+        area_id = datos["area_id"] or solicitante["area_id"]
+
+        # 2) Correlativo propio de la empresa (EPS-0001, EPS-0002...).
+        #    FOR UPDATE bloquea la fila de la empresa hasta el commit, así dos
+        #    tickets registrados a la vez nunca reciben el mismo número.
+        cur.execute(
+            "SELECT ultimo_ticket, prefijo_ticket FROM empresas WHERE id = %s FOR UPDATE",
+            (empresa_id,),
+        )
+        empresa = cur.fetchone()
+        numero = empresa["ultimo_ticket"] + 1
+        cur.execute(
+            "UPDATE empresas SET ultimo_ticket = %s WHERE id = %s", (numero, empresa_id)
+        )
+
+        # 3) Fecha límite = ahora + horas SLA de la prioridad (Módulo 4)
+        horas = Ticket._horas_sla(cur, datos["prioridad_id"])
+
+        # 4) INSERT con todas las columnas ya calculadas
+        cur.execute(
+            """INSERT INTO tickets
+                 (empresa_id, numero, area_id, solicitante_id, categoria_id, prioridad_id,
+                  asunto, descripcion, estado, created_at, fecha_limite)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Abierto', NOW(), NOW() + INTERVAL %s HOUR)""",
             (
+                empresa_id,
+                numero,
+                area_id,
                 solicitante_id,
-                datos["area_id"],
                 datos["categoria_id"],
                 datos["prioridad_id"],
                 datos["asunto"],
                 datos["descripcion"],
+                horas,
             ),
         )
-        return cur.lastrowid
+        ticket_id = cur.lastrowid
+
+        # 5) Primer registro del historial
+        cur.execute(
+            """INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_nuevo, comentario, created_at)
+               SELECT id, solicitante_id, 'CREACION', 'Abierto', 'Ticket registrado.', created_at
+                 FROM tickets WHERE id = %s""",
+            (ticket_id,),
+        )
+
+        # 6) Notificación a los administradores de ESA empresa para que lo asignen
+        codigo = f"{empresa['prefijo_ticket']}-{numero:04d}"
+        cur.execute(
+            """INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje)
+               SELECT id, 'NUEVO_TICKET', %s, %s, %s
+                 FROM users
+                WHERE empresa_id = %s AND rol = 'Administrador' AND activo = 1 AND id <> %s""",
+            (
+                ticket_id,
+                f"Nuevo ticket {codigo}",
+                f"{datos['asunto']} · registrado por {solicitante['nombre']}"[:255],
+                empresa_id,
+                solicitante_id,
+            ),
+        )
+        return ticket_id
 
     @staticmethod
     def actualizar(cur, ticket_id, datos, empresa_id):
+        """Edita asunto, descripción, categoría, prioridad y área.
+        Reglas de trg_tickets_antes_actualizar: un ticket cerrado no se modifica
+        y, si cambia la prioridad, se recalcula la fecha límite.
+        """
+        cur.execute(
+            "SELECT estado, prioridad_id FROM tickets WHERE id = %s AND empresa_id = %s FOR UPDATE",
+            (ticket_id, empresa_id),
+        )
+        actual = cur.fetchone()
+        if actual is None:
+            raise ErrorRegla("El ticket no existe.")
+        if actual["estado"] == "Cerrado":
+            raise ErrorRegla("Un ticket cerrado no se puede modificar.")
+
         cur.execute(
             """UPDATE tickets
                   SET asunto = %s, descripcion = %s, categoria_id = %s, prioridad_id = %s, area_id = %s
-                WHERE id = %s""",
+                WHERE id = %s AND empresa_id = %s""",
             (
                 datos["asunto"],
                 datos["descripcion"],
@@ -172,8 +265,15 @@ class Ticket:
                 datos["prioridad_id"],
                 datos["area_id"],
                 ticket_id,
+                empresa_id,
             ),
         )
+        if datos["prioridad_id"] != actual["prioridad_id"]:
+            horas = Ticket._horas_sla(cur, datos["prioridad_id"])
+            cur.execute(
+                "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR WHERE id = %s",
+                (horas, ticket_id),
+            )
 
     @staticmethod
     def eliminar(cur, ticket_id):
@@ -596,6 +696,12 @@ def _demasiado_grande(error):
     return error
 
 
+@tickets_bp.errorhandler(ErrorRegla)
+def _error_regla(error):
+    """Reglas de negocio (antes eran SIGNAL de los triggers)."""
+    return jsonify(error=str(error)), 400
+
+
 @tickets_bp.errorhandler(pymysql.MySQLError)
 def _error_mysql(error):
     """Los triggers usan SIGNAL (código 1644) con un mensaje para el usuario."""
@@ -813,19 +919,19 @@ def editar_ticket(ticket_id):
             error="Solo puedes editar tus tickets mientras estén «Abierto»."
         ), 403
     datos, errores = Ticket.validar(
-        request.get_json(silent=True) or request.form, g.usuario["empresa_id"]
-    )
-
-    datos, errores = Ticket.validar(
         request.get_json(silent=True) or request.form, g.usuario
     )
     if errores:
         return jsonify(error="Revisa los campos marcados.", errores=errores), 400
 
     con = conexion()
-    with con.cursor() as cur:
-        Ticket.actualizar(cur, ticket_id, datos)
-    con.commit()
+    try:
+        with con.cursor() as cur:
+            Ticket.actualizar(cur, ticket_id, datos, g.usuario["empresa_id"])
+        con.commit()
+    except Exception:
+        con.rollback()
+        raise
     return jsonify(
         mensaje="Ticket actualizado.",
         ticket=_ticket_detalle(
@@ -928,6 +1034,32 @@ def eliminar_evidencia(ticket_id, evidencia_id):
         ),
     )
 
+@tickets_bp.get("/api/tickets/<int:ticket_id>/historial")
+@login_requerido
+def obtener_historial_ticket(ticket_id):
+    ticket, error = _ticket_o_error(ticket_id)
+    if error:
+        return error
+
+    con = conexion()
+    with con.cursor() as cur:
+        # Trae todos los movimientos y comentarios del ticket ordenados por fecha
+        cur.execute(
+            """SELECT id, tipo, estado_anterior, estado_nuevo, tecnico_anterior,
+                      tecnico_nuevo, comentario, usuario, usuario_rol, created_at, minutos_desde
+                 FROM v_ticket_timeline
+                WHERE ticket_id = %s
+                ORDER BY created_at ASC""",
+            (ticket_id,)
+        )
+        historial = cur.fetchall()
+
+        # Formatear las fechas para JSON
+        for item in historial:
+            item["created_at"] = _fecha(item["created_at"])
+
+    return jsonify(historial=historial)
+
 
 @tickets_bp.get("/api/evidencias/<int:evidencia_id>/<any(miniatura, imagen):tipo>")
 @login_requerido
@@ -949,3 +1081,108 @@ def ver_evidencia(evidencia_id, tipo):
     respuesta.headers["Cache-Control"] = "private, max-age=600"
     respuesta.headers["X-Content-Type-Options"] = "nosniff"
     return respuesta
+
+# ==========================================
+# RUTAS PARA TICKET_HISTORIAL
+# ==========================================
+
+# @tickets_bp.route('/api_insertar_historial', methods=['POST'])
+""" def api_insertar_historial():
+    rpta = dict()
+    try:
+        objConexion = obtener_conexion()
+        # Ajusta los nombres de estos campos según el JSON que envíes desde Postman
+        v_ticket_id = request.json["ticket_id"]
+        v_accion = request.json["accion"]
+        v_detalles = request.json.get("detalles", "") # .get() evita error si viene vacío
+
+        with objConexion:
+            with objConexion.cursor() as cursor:
+                sql = "INSERT INTO `ticket_historial` (`ticket_id`, `accion`, `detalles`) VALUES (%s, %s, %s)"
+                cursor.execute(sql, (v_ticket_id, v_accion, v_detalles))
+            objConexion.commit()
+
+        rpta["status"] = 1
+        rpta["data"] = {}
+        rpta["message"] = "Historial del ticket registrado correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    return jsonify(rpta)
+
+# @tickets_bp.route('/api_obtener_historial', methods=['GET'])
+def api_obtener_historial():
+    rpta = dict()
+    try:
+        # Permite filtrar por ticket si envías ?ticket_id=X en la URL
+        v_ticket_id = request.args.get('ticket_id')
+
+        objConexion = obtener_conexion()
+        with objConexion:
+            with objConexion.cursor() as cursor:
+                if v_ticket_id:
+                    sql = "SELECT * FROM `ticket_historial` WHERE `ticket_id` = %s"
+                    cursor.execute(sql, (v_ticket_id,))
+                else:
+                    sql = "SELECT * FROM `ticket_historial`"
+                    cursor.execute(sql)
+                result = cursor.fetchall()
+
+        rpta["status"] = 1
+        rpta["data"] = result
+        rpta["message"] = "Historial listado correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    return jsonify(rpta)
+
+
+# ==========================================
+# RUTAS PARA NOTIFICACIONES
+# ==========================================
+
+# @tickets_bp.route('/api_insertar_notificacion', methods=['POST'])
+def api_insertar_notificacion():
+    rpta = dict()
+    try:
+        objConexion = obtener_conexion()
+        v_usuario_id = request.json["usuario_id"]
+        v_mensaje = request.json["mensaje"]
+        v_estado = request.json.get("estado", "Pendiente")
+
+        with objConexion:
+            with objConexion.cursor() as cursor:
+                sql = "INSERT INTO `notificaciones` (`usuario_id`, `mensaje`, `estado`) VALUES (%s, %s, %s)"
+                cursor.execute(sql, (v_usuario_id, v_mensaje, v_estado))
+            objConexion.commit()
+
+        rpta["status"] = 1
+        rpta["data"] = {}
+        rpta["message"] = "Notificación generada correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    return jsonify(rpta)
+
+# @tickets_bp.route('/api_obtener_notificaciones', methods=['GET'])
+def api_obtener_notificaciones():
+    rpta = dict()
+    try:
+        objConexion = obtener_conexion()
+        with objConexion:
+            with objConexion.cursor() as cursor:
+                sql = "SELECT * FROM `notificaciones` ORDER BY id DESC"
+                cursor.execute(sql)
+                result = cursor.fetchall()
+
+        rpta["status"] = 1
+        rpta["data"] = result
+        rpta["message"] = "Notificaciones listadas correctamente"
+    except Exception as e:
+        rpta["status"] = -1
+        rpta["data"] = {}
+        rpta["message"] = "Error: " + repr(e)
+    return jsonify(rpta) """
