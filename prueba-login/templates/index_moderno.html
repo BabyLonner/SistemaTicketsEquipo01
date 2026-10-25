@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión | Sistema de Gestión de Tickets TI</title>
+    <style>
+        :root {
+            --brand-primary: #2672C7;
+            --brand-secondary: #DCE8F8;
+            --bg-dark: #0B1120;
+            --card-bg: #FFFFFF;
+            --text-main: #0F172A;
+            --text-muted: #64748B;
+            --border-color: #E2E8F0;
+            --error-bg: #FEF2F2;
+            --error-text: #DC2626;
+            --error-border: #FECACA;
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background-color: var(--bg-dark);
+            background-image:
+                radial-gradient(at 0% 0%, color-mix(in srgb, var(--brand-primary) 38%, transparent) 0px, transparent 55%),
+                radial-gradient(at 100% 100%, color-mix(in srgb, var(--brand-primary) 25%, transparent) 0px, transparent 50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            transition: background 0.5s ease;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 1020px;
+            min-height: 600px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+        }
+
+        /* PANEL IZQUIERDO: IDENTIDAD CORPORATIVA DINÁMICA */
+        .brand-showcase {
+            position: relative;
+            padding: 48px;
+            color: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: linear-gradient(145deg, color-mix(in srgb, var(--brand-primary) 85%, #090D16), #0B1120);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .brand-showcase::before {
+            content: "";
+            position: absolute;
+            width: 340px;
+            height: 340px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, transparent 70%);
+            top: -80px;
+            right: -80px;
+            pointer-events: none;
+        }
+
+        .system-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            width: fit-content;
+        }
+
+        .system-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ADE80;
+            box-shadow: 0 0 10px #4ADE80;
+        }
+
+        .company-identity {
+            my: auto;
+            padding: 28px 0;
+        }
+
+        .company-logo-box {
+            width: 88px;
+            height: 88px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+            transition: var(--transition);
+        }
+
+        .company-logo-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .company-logo-fallback {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--brand-primary);
+            letter-spacing: -0.03em;
+        }
+
+        .company-identity h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 14px;
+            letter-spacing: -0.02em;
+        }
+
+        .company-identity p {
+            font-size: 0.98rem;
+            color: rgba(255, 255, 255, 0.78);
+            line-height: 1.6;
+            max-width: 390px;
+        }
+
+        .feature-pills {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .feature-pill {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.88);
+        }
+
+        .feature-pill strong {
+            display: block;
+            color: #FFFFFF;
+            margin-bottom: 2px;
+            font-size: 0.86rem;
+        }
+
+        /* PANEL DERECHO: FORMULARIO DE ACCESO */
+        .form-panel {
+            background: var(--card-bg);
+            padding: 52px 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-header {
+            margin-bottom: 28px;
+        }
+
+        .detected-company-pill {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: var(--brand-secondary);
+            color: var(--brand-primary);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            width: fit-content;
+            margin-bottom: 12px;
+        }
+
+        .form-header h2 {
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 6px;
+            letter-spacing: -0.02em;
+        }
+
+        .form-header p {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+        }
+
+        /* ALERTAS FLASH DE FLASK */
+        .flash-list {
+            margin-bottom: 20px;
+        }
+
+        .flash-alert {
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-text);
+            font-size: 0.88rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* CAMPOS DEL FORMULARIO */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .input-field {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-field input {
+            width: 100%;
+            padding: 13px 42px 13px 15px;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            background: #F8FAFC;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-md);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .input-field input:focus {
+            background: #FFFFFF;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-primary) 15%, transparent);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 4px 6px;
+            border-radius: 6px;
+        }
+
+        .toggle-password:hover {
+            color: var(--text-main);
+            background: #E2E8F0;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: var(--radius-md);
+            background: var(--brand-primary);
+            color: #FFFFFF;
+            font-size: 0.96rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 10px 20px -5px color-mix(in srgb, var(--brand-primary) 50%, transparent);
+            transition: var(--transition);
+            margin-top: 8px;
+        }
+
+        .btn-submit:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+
+        .form-footer {
+            margin-top: 26px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        @media (max-width: 820px) {
+            .login-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-showcase {
+                padding: 32px;
+            }
+
+            .form-panel {
+                padding: 36px 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="login-wrapper">
+        <!-- Lado Izquierdo: Identidad Corporativa y Logo Dinámico -->
+        <section class="brand-showcase">
+            <div class="system-badge">
+                <span class="dot"></span>
+                <span>MESA DE AYUDA CORPORATIVA TI</span>
+            </div>
+
+            <div class="company-identity">
+                <div class="company-logo-box" id="logo-box">
+                    <img id="company-logo-img" src="" alt="Logo de la empresa">
+                    <span id="company-logo-fallback" class="company-logo-fallback">TI</span>
+                </div>
+                <h1 id="system-title">Soporte TI Multiempresa</h1>
+                <p id="system-subtitle">
+                    Ingresa con tu correo corporativo. El sistema identificará automáticamente tu empresa, entorno de
+                    trabajo y acuerdos de nivel de servicio (SLA).
+                </p>
+            </div>
+
+            <div class="feature-pills">
+                <div class="feature-pill">
+                    <strong>Monitoreo SLA</strong>
+                    Control de tiempos en vivo
+                </div>
+                <div class="feature-pill">
+                    <strong>Multiempresa</strong>
+                    Entornos 100% aislados
+                </div>
+            </div>
+        </section>
+
+        <!-- Lado Derecho: Formulario de Inicio de Sesión -->
+        <section class="form-panel">
+            <div class="form-header">
+                <div class="detected-company-pill" id="detected-pill">
+                    <span>●</span>
+                    <span id="detected-name">Empresa detectada</span>
+                </div>
+                <h2>Bienvenido de nuevo</h2>
+                <p>Ingresa tus credenciales para acceder al panel de soporte</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-list">
+                {% for category, message in messages %}
+                <div class="flash-alert" role="alert">
+                    <span>⚠</span>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('inicio') }}" id="login-form">
+                <div class="input-group">
+                    <label for="correo">Correo corporativo</label>
+                    <div class="input-field">
+                        <input type="email" id="correo" name="correo" placeholder="usuario@tuempresa.com.pe"
+                            autocomplete="email" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="clave">Contraseña</label>
+                    <div class="input-field">
+                        <input type="password" id="clave" name="clave" placeholder="••••••••"
+                            autocomplete="current-password" required>
+                        <button type="button" class="toggle-password" id="toggle-pwd">Mostrar</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="btn-submit">
+                    <span>Iniciar sesión</span>
+                    <span>→</span>
+                </button>
+            </form>
+
+            <div class="form-footer">
+                © 2026 Soporte TI · Sistema de Gestión de Tickets
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const inputCorreo = document.getElementById('correo');
+        const inputClave = document.getElementById('clave');
+        const btnTogglePwd = document.getElementById('toggle-pwd');
+        const logoImg = document.getElementById('company-logo-img');
+        const logoFallback = document.getElementById('company-logo-fallback');
+        const systemTitle = document.getElementById('system-title');
+        const detectedPill = document.getElementById('detected-pill');
+        const detectedName = document.getElementById('detected-name');
+
+        // Mostrar / Ocultar contraseña
+        btnTogglePwd.addEventListener('click', () => {
+            const esPassword = inputClave.type === 'password';
+            inputClave.type = esPassword ? 'text' : 'password';
+            btnTogglePwd.textContent = esPassword ? 'Ocultar' : 'Mostrar';
+        });
+
+        // Si la imagen del logo no existe aún en /static/img/logos/, mostrar iniciales elegantes
+        logoImg.addEventListener('error', () => {
+            logoImg.style.display = 'none';
+            logoFallback.style.display = 'block';
+        });
+
+        function restaurarIdentidadBase() {
+            document.documentElement.style.setProperty('--brand-primary', '#2672C7');
+            document.documentElement.style.setProperty('--brand-secondary', '#DCE8F8');
+            logoImg.style.display = 'none';
+            logoFallback.style.display = 'block';
+            logoFallback.textContent = 'TI';
+            systemTitle.textContent = 'Soporte TI Multiempresa';
+            detectedPill.style.display = 'none';
+        }
+
+        let timeoutBusqueda = null;
+        inputCorreo.addEventListener('input', () => {
+            clearTimeout(timeoutBusqueda);
+            const valor = inputCorreo.value.trim();
+
+            if (!valor.includes('@') || valor.endsWith('@')) {
+                restaurarIdentidadBase();
+                return;
+            }
+
+            timeoutBusqueda = setTimeout(async () => {
+                try {
+                    const resp = await fetch(`/api/identidad-empresa?correo=${encodeURIComponent(valor)}`);
+                    const data = await resp.json();
+
+                    if (!data.encontrado) {
+                        restaurarIdentidadBase();
+                        return;
+                    }
+
+                    const emp = data.empresa;
+                    document.documentElement.style.setProperty('--brand-primary', emp.color_primario || '#2672C7');
+                    document.documentElement.style.setProperty('--brand-secondary', emp.color_secundario || '#DCE8F8');
+
+                    systemTitle.textContent = emp.titulo_sistema || emp.nombre;
+                    detectedName.textContent = emp.nombre;
+                    detectedPill.style.display = 'inline-flex';
+
+                    // Iniciales de respaldo por si falta el archivo PNG
+                    const iniciales = emp.nombre.split(' ').map(p => p[0]).join('').slice(0, 3).toUpperCase();
+                    logoFallback.textContent = iniciales;
+
+                    if (emp.logo_url) {
+                        logoImg.src = emp.logo_url;
+                        logoImg.alt = `Logo ${emp.nombre}`;
+                        logoImg.style.display = 'block';
+                        logoFallback.style.display = 'none';
+                    }
+                } catch (err) {
+                    console.error('Error al consultar la empresa:', err);
+                }
+            }, 220);
+        });
+    </script>
+</body>
+
+</html>
