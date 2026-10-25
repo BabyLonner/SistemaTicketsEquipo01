@@ -12,15 +12,15 @@
 
 {% block content %}
 <div class="breadcrumb"><a href="{{ url_for('pantalla', pagina='tickets') }}">Tickets</a><span>›</span><span
-    id="breadcrumb-code">TK-2291</span></div>
+    id="breadcrumb-code">TK-0000</span></div>
 <section class="page-heading">
   <div class="ticket-title">
     <span class="title-icon" aria-hidden="true">▤</span>
     <div>
-      <h1><span id="ticket-code">TK-2291</span> - <span id="ticket-subject">Servidor de facturación caído</span></h1>
-      <div class="ticket-tags"><span class="badge priority-high" id="ticket-priority-tag">▥ Alta</span><span
-          class="badge status-progress" id="ticket-status-tag">▤ En proceso</span><span class="badge category-tag">◉
-          Software</span><span class="badge category-tag">▦ Ángel Divino Bus</span></div>
+      <h1><span id="ticket-code">TK-0000</span> - <span id="ticket-subject">Cargando...</span></h1>
+      <div class="ticket-tags"><span class="badge priority-high" id="ticket-priority-tag">▥ </span><span
+          class="badge status-progress" id="ticket-status-tag">▤ </span><span class="badge category-tag">◉
+          </span><span class="badge category-tag">▦ </span></div>
     </div>
   </div>
   <a class="btn-outline" href="{{ url_for('pantalla', pagina='tickets') }}"><span aria-hidden="true">‹</span> Volver al
@@ -31,51 +31,34 @@
   <div class="left-column">
     <section class="panel description-panel">
       <h2><span class="section-icon">▤</span>Descripción</h2>
-      <p class="description-text" id="ticket-description">Desde las 8:00 a. m. no se pueden emitir boletas ni facturas
-        en las tres oficinas de venta de pasajes. El sistema muestra el mensaje: “No se puede conectar con el servidor”.
-      </p>
+      <p class="description-text" id="ticket-description">Cargando descripción...</p>
       <div class="ticket-metadata">
         <div class="metadata-item"><span class="metadata-icon">♙</span>
-          <div><small>Solicitante</small><strong>Rosa Villanueva</strong></div>
+          <div><small>Solicitante</small><strong>—</strong></div>
         </div>
         <div class="metadata-item"><span class="metadata-icon">▥</span>
-          <div><small>Área</small><strong>Administración</strong></div>
+          <div><small>Área</small><strong>—</strong></div>
         </div>
         <div class="metadata-item"><span class="metadata-icon">▦</span>
-          <div><small>Empresa</small><strong>Ángel Divino Bus</strong></div>
+          <div><small>Empresa</small><strong>—</strong></div>
         </div>
         <div class="metadata-item"><span class="metadata-icon">▦</span>
-          <div><small>Creado</small><strong>28/09/2026 08:20</strong></div>
+          <div><small>Creado</small><strong>—</strong></div>
         </div>
       </div>
     </section>
 
     <section class="panel evidence-panel">
       <div class="panel-heading">
-        <h2><span class="section-icon">↗</span>Evidencias</h2><span class="muted" id="file-count">3 archivos</span>
+        <h2><span class="section-icon">↗</span>Evidencias</h2><span class="muted" id="file-count"></span>
       </div>
       <div class="evidence-grid" id="evidence-grid">
-        <article class="evidence-card">
-          <button type="button" class="evidence-preview preview-error" data-preview="error"
-            aria-label="Ver error_servidor.jpg"><span class="fake-window"><span class="window-bar">Ángel Divino
-                <b>×</b></span><span class="error-symbol">×</span><strong>No se puede conectar<br>con el
-                servidor</strong><span class="fake-button">Aceptar</span></span></button>
-          <div class="evidence-name">error_servidor.jpg</div>
-        </article>
-        <article class="evidence-card">
-          <button type="button" class="evidence-preview preview-log" data-preview="log"
-            aria-label="Ver registro_eventos.jpg"><span class="log-line">ERROR 503 · Servicio no disponible</span><span
-              class="log-line">database connection timeout</span><span class="log-line">server:
-              billing-prod-02</span><span class="log-line">retry attempt: 05</span><span class="log-line">connection
-              refused</span></button>
-          <div class="evidence-name">registro_eventos.jpg</div>
-        </article>
-        <article class="evidence-card">
-          <button type="button" class="evidence-preview preview-screen" data-preview="screen"
-            aria-label="Ver pantalla_caja.jpg"><span
-              class="mini-app"><span></span><span></span><span></span><b>Ventas</b><i></i><i></i><i></i></span></button>
-          <div class="evidence-name">pantalla_caja.jpg</div>
-        </article>
+        <!-- Contenedor vacío donde detalle_ticket.js inyectará las fotos reales -->
+        <div id="contenedor-evidencias" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+           <p class="text-muted">Cargando evidencias...</p>
+        </div>
+
+        <!-- Mantenemos el botón de subida por si lo usas más adelante -->
         <label class="upload-zone"><input id="evidence-input" type="file" accept=".jpg,.jpeg,.png,.pdf,.docx" multiple
             hidden><span class="upload-icon">⇧</span><strong>Arrastra más archivos aquí</strong><span>o haz clic para
             seleccionar</span><small>Máx. 10 MB por archivo<br>(JPG, PNG, PDF, DOCX)</small></label>
@@ -94,30 +77,13 @@
           aria-selected="false"><span>↗</span>Archivos</button>
       </div>
       <div class="tab-content" id="tab-conversation" role="tabpanel">
-        <div class="conversation-list" id="conversation-list">
-          <article class="comment"><span class="comment-avatar avatar-requester">RV</span>
-            <div class="comment-body">
-              <div class="comment-meta"><strong>Rosa Villanueva <small>(Solicitante)</small></strong><time>28/09/2026
-                  08:20</time><button type="button" class="comment-more" aria-label="Más opciones">···</button></div>
-              <p>Se presenta el error en las tres oficinas. Adjunto captura de pantalla.</p>
-            </div>
-          </article>
-          <article class="comment"><span class="comment-avatar avatar-tech">LR</span>
-            <div class="comment-body">
-              <div class="comment-meta"><strong>Luis Ramos <small>(Técnico)</small></strong><time>28/09/2026
-                  09:15</time><button type="button" class="comment-more" aria-label="Más opciones">···</button></div>
-              <p>Revisando los logs del servidor. Parece un fallo en el servicio de base de datos.</p>
-            </div>
-          </article>
-          <article class="comment"><span class="comment-avatar avatar-requester">RV</span>
-            <div class="comment-body">
-              <div class="comment-meta"><strong>Rosa Villanueva <small>(Solicitante)</small></strong><time>28/09/2026
-                  09:32</time><button type="button" class="comment-more" aria-label="Más opciones">···</button></div>
-              <p>En la agencia de Piura el sistema ya responde, pero en Lima sigue con el mismo error.</p>
-            </div>
-          </article>
+
+        <!-- Contenedor vacío donde detalle_ticket.js inyectará la conversación real -->
+        <div class="conversation-list" id="contenedor-chat">
+          <p class="text-muted" style="padding: 20px;">Cargando conversación...</p>
         </div>
-        <form class="reply-form" id="reply-form"><span class="comment-avatar avatar-admin">JP</span><label
+
+        <form class="reply-form" id="reply-form"><span class="comment-avatar avatar-admin">US</span><label
             class="reply-input"><span class="sr-only">Escribe un comentario</span><input id="reply-text" type="text"
               maxlength="1000" placeholder="Escribe un comentario..." required><label class="attach-button"
               title="Adjuntar archivo">↗<input id="reply-file" type="file" hidden></label></label><button
@@ -139,9 +105,7 @@
       </div>
       <div class="tab-content alternate-content" id="tab-files" role="tabpanel" hidden>
         <ul class="file-list" id="file-list">
-          <li>▧ <span>error_servidor.jpg</span><small>Imagen adjunta</small></li>
-          <li>▧ <span>registro_eventos.jpg</span><small>Imagen adjunta</small></li>
-          <li>▧ <span>pantalla_caja.jpg</span><small>Imagen adjunta</small></li>
+          <li class="text-muted"><small>Archivos adjuntos cargarán aquí</small></li>
         </ul>
       </div>
     </section>
@@ -186,16 +150,16 @@
     <section class="panel side-panel sla-panel">
       <h2><span class="section-icon">◷</span>SLA y tiempos</h2>
       <div class="sla-warning-box"><span>!</span>
-        <div><strong id="sla-title">Plazo vencido</strong><small>El máximo para prioridad alta es 4 h.</small></div>
+        <div><strong id="sla-title">Calculando...</strong><small>Revisando plazos</small></div>
       </div>
       <div class="sla-stats">
-        <div><small>Tiempo transcurrido</small><strong class="time-danger">◷ <span>6 h 40 min</span></strong></div>
-        <div><small>Tiempo límite (SLA)</small><strong class="time-muted">◷ <span id="sla-limit">4 h</span></strong>
+        <div><small>Tiempo transcurrido</small><strong class="time-danger">◷ <span>--</span></strong></div>
+        <div><small>Tiempo límite (SLA)</small><strong class="time-muted">◷ <span id="sla-limit">--</span></strong>
         </div>
       </div>
-      <p class="sla-note" id="sla-note">Venció hace 2 h 40 min.</p>
+      <p class="sla-note" id="sla-note"></p>
       <div class="sla-progress"><span id="sla-progress-bar"></span></div>
-      <div class="sla-percent" id="sla-percent">167%</div>
+      <div class="sla-percent" id="sla-percent">--%</div>
     </section>
 
     <section class="panel side-panel actions-panel">
@@ -215,8 +179,7 @@
     </section>
   </aside>
 </div>
-<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span id="page-message">Datos
-    de demostración · pendiente de conectar con Flask</span></footer>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span id="page-message">Conectando...</span></footer>
 
 <!-- MÓDULO 3: cambio de estado con comentario obligatorio -->
 <div class="status-modal" id="status-modal" role="dialog" aria-modal="true" aria-labelledby="status-modal-title" hidden>
