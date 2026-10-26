@@ -91,24 +91,31 @@
       </div>
 
       <div class="tarjeta login-card" id="login-card">
-        <h2 class="login-card__titulo">Iniciar sesión</h2>
-        <p class="subtitulo">Usa las credenciales que te asignó el administrador.</p>
 
+        <!-- NUEVO: Contenedor del logo dinámico (Oculto por defecto) -->
+        <div id="contenedor-logo-dinamico" style="display: none; text-align: center; margin-bottom: 20px;">
+          <img id="logo-dinamico-img" src="" alt="Logo Empresa"
+            style="max-height: 85px; max-width: 100%; object-fit: contain; margin-bottom: 10px;">
+          <h3 id="logo-dinamico-texto"
+            style="margin: 0; color: var(--indigo); font-family: var(--serif); font-size: 1.4rem; line-height: 1.2;">
+          </h3>
+        </div>
+
+        <h2 class="login-card__titulo" id="titulo-login-defecto">Iniciar sesión</h2>
+        <p class="subtitulo" id="subtitulo-login-defecto">Usa las credenciales que te asignó el administrador.</p>
 
         {% with mensajes = get_flashed_messages(with_categories=true) %}
-        <!-- La alerta evalúa si existen mensajes; si no, imprime el atributo 'hidden' -->
         <div id="login-alerta" class="alerta-login" role="alert" {% if not mensajes %}hidden{% endif %}>
           <svg class="icono icono--sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <path d="M12 8v4M12 16h.01" />
           </svg>
-
           <span id="login-alerta-texto">
             {% if mensajes %}
-              {% for categoria, mensaje in mensajes %}
-                {{ mensaje }}
-              {% endfor %}
+            {% for categoria, mensaje in mensajes %}
+            {{ mensaje }}
+            {% endfor %}
             {% endif %}
           </span>
         </div>

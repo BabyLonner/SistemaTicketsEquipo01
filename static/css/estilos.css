@@ -399,6 +399,11 @@
   background: var(--rojo-tenue);
   color: var(--rojo);
 }
+
+.alerta-login[hidden] {
+  display: none;
+}
+
 .alerta-login .icono {
   margin-top: 2px;
 }

@@ -2,30 +2,16 @@
    notificaciones.js — Gestión global, filtros y paginación
    ========================================================= */
 
-// Variables de estado para la página completa
 let notificacionesGlobales = [];
 let notificacionesFiltradas = [];
-let idsOcultos = new Set(); // Para las notificaciones que el usuario decida "ocultar" de la vista
+let idsOcultos = new Set();
 let paginaActual = 1;
 const itemsPorPagina = 8;
 let pestanaActual = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
-	// 1. Lógica de la Campana (Header)
-	const btnCampana = document.getElementById('btnCampanaNotif');
-	const dropdown = document.getElementById('dropdownNotificaciones');
-	const wrapper = document.getElementById('notifWrapper');
+	// 1. Lógica de acciones de la Campana (El abrir/cerrar lo controla base.html)
 	const btnLeerTodas = document.getElementById('btnLeerTodas');
-
-	if (btnCampana && dropdown) {
-		btnCampana.addEventListener('click', (e) => {
-			e.stopPropagation();
-			dropdown.classList.toggle('oculto');
-		});
-		document.addEventListener('click', (e) => {
-			if (wrapper && !wrapper.contains(e.target)) dropdown.classList.add('oculto');
-		});
-	}
 
 	if (btnLeerTodas) {
 		btnLeerTodas.addEventListener('click', (e) => {
@@ -37,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	// 2. Lógica de la página completa (Tabs, Búsqueda, Filtros)
 	configurarEventosPagina();
 
-	// 3. Inicializar carga
+	// 3. Inicializar carga de datos
 	cargarNotificaciones();
 	setInterval(cargarNotificaciones, 30000);
 });
@@ -79,10 +65,9 @@ async function cargarNotificaciones() {
 		const data = await res.json();
 		if (!data.ok) return;
 
-		// Guardamos los datos en memoria para paginar y filtrar rápido
 		notificacionesGlobales = data.notificaciones || [];
 
-		// Actualizar el Badge rojo de la campana
+		// Actualizar Badge
 		const badge = document.getElementById('badgeNotificaciones');
 		if (badge) {
 			if (data.no_leidas > 0) {
@@ -94,13 +79,13 @@ async function cargarNotificaciones() {
 			}
 		}
 
-		// Renderizar en la campana (solo las últimas 5)
+		// Renderizar Campana
 		const contenedorDropdown = document.getElementById('listaNotificacionesDropdown');
 		if (contenedorDropdown) {
 			renderizarDropdown(contenedorDropdown, notificacionesGlobales.slice(0, 5));
 		}
 
-		// Si estamos en la página de notificaciones, aplicar los filtros y paginar
+		// Actualizar página completa si está abierta
 		if (document.getElementById('contenedorPaginaNotificaciones')) {
 			actualizarMetricas();
 			aplicarFiltros();
@@ -129,7 +114,7 @@ function actualizarMetricas() {
 }
 
 /* =========================================================================
-   SISTEMA DE FILTRADO Y ORDENAMIENTO (Página Completa)
+   SISTEMA DE FILTRADO Y ORDENAMIENTO
    ========================================================================= */
 function aplicarFiltros() {
 	const searchInput = document.getElementById('notification-search');
@@ -141,27 +126,20 @@ function aplicarFiltros() {
 		: '';
 	const sort = document.getElementById('sort-order')?.value || 'newest';
 
-	// Filtros del panel derecho
 	const typeFilter = document.getElementById('type-filter')?.value.toLowerCase() || '';
 	const stateFilter = document.getElementById('state-filter')?.value || '';
 	const dateFilter = document.getElementById('date-filter')?.value || '';
 
 	notificacionesFiltradas = notificacionesGlobales.filter((n) => {
-		// 1. Si el usuario la "eliminó" de su vista temporal
 		if (idsOcultos.has(n.id)) return false;
-
-		// 2. Filtro de Pestañas (Tabs)
 		if (pestanaActual === 'unread' && n.leido !== 0) return false;
 		if (pestanaActual === 'ticket' && (n.tipo || '').toLowerCase() !== 'ticket') return false;
-
-		// 3. Filtros del panel derecho
 		if (typeFilter && (n.tipo || '').toLowerCase() !== typeFilter) return false;
 		if (stateFilter === 'unread' && n.leido !== 0) return false;
 		if (stateFilter === 'read' && n.leido === 0) return false;
-		if (dateFilter === 'today' && n.hace_minutos > 1440) return false; // 24 horas
-		if (dateFilter === 'week' && n.hace_minutos > 10080) return false; // 7 días
+		if (dateFilter === 'today' && n.hace_minutos > 1440) return false;
+		if (dateFilter === 'week' && n.hace_minutos > 10080) return false;
 
-		// 4. Búsqueda Textual
 		const texto = `${n.titulo} ${n.mensaje}`
 			.toLowerCase()
 			.normalize('NFD')
@@ -171,19 +149,17 @@ function aplicarFiltros() {
 		return true;
 	});
 
-	// Ordenar (hace_minutos: menor valor es más reciente)
 	notificacionesFiltradas.sort((a, b) => {
 		if (sort === 'oldest') return b.hace_minutos - a.hace_minutos;
 		return a.hace_minutos - b.hace_minutos;
 	});
 
-	// Reiniciar a la página 1 cada vez que se filtran datos
 	paginaActual = 1;
 	renderizarPaginacion();
 }
 
 /* =========================================================================
-   SISTEMA DE PAGINACIÓN Y RENDER (Página Completa)
+   SISTEMA DE PAGINACIÓN Y RENDER
    ========================================================================= */
 function renderizarPaginacion() {
 	const contenedorPagina = document.getElementById('contenedorPaginaNotificaciones');
@@ -197,7 +173,6 @@ function renderizarPaginacion() {
 	const fin = inicio + itemsPorPagina;
 	const paginaActualDatos = notificacionesFiltradas.slice(inicio, fin);
 
-	// 1. Renderizar el HTML de los items
 	if (total === 0) {
 		contenedorPagina.innerHTML = `
             <div class="empty-state">
@@ -232,11 +207,9 @@ function renderizarPaginacion() {
 			.join('');
 	}
 
-	// 2. Renderizar Controles de Paginación UI
 	const resultsLabel = document.getElementById('results-label');
-	if (resultsLabel) {
+	if (resultsLabel)
 		resultsLabel.textContent = `Mostrando ${paginaActualDatos.length} de ${total} notificaciones`;
-	}
 
 	const pagContainer = document.querySelector('.pagination');
 	if (pagContainer) {
@@ -247,7 +220,6 @@ function renderizarPaginacion() {
 		htmlPag += `<button id="next-page" type="button" aria-label="Página siguiente" ${paginaActual === totalPaginas ? 'disabled' : ''}>›</button>`;
 		pagContainer.innerHTML = htmlPag;
 
-		// Bind clicks de paginación
 		pagContainer.querySelector('#prev-page').addEventListener('click', () => {
 			if (paginaActual > 1) {
 				paginaActual--;
@@ -267,17 +239,12 @@ function renderizarPaginacion() {
 			});
 		});
 	}
-
-	actualizarBarraSeleccion(); // Esconde la barra múltiple al cambiar de página
+	actualizarBarraSeleccion();
 }
 
-/* =========================================================================
-   EVENTOS DE UI Y BARRA MÚLTIPLE (Página Completa)
-   ========================================================================= */
 function configurarEventosPagina() {
 	if (!document.getElementById('contenedorPaginaNotificaciones')) return;
 
-	// Pestañas (Todas, No leídas, Tickets)
 	document.querySelectorAll('.tabs .tab').forEach((tab) => {
 		tab.addEventListener('click', (e) => {
 			document.querySelectorAll('.tabs .tab').forEach((t) => t.classList.remove('active'));
@@ -287,17 +254,14 @@ function configurarEventosPagina() {
 		});
 	});
 
-	// Inputs inmediatos
 	document.getElementById('notification-search')?.addEventListener('input', aplicarFiltros);
 	document.getElementById('sort-order')?.addEventListener('change', aplicarFiltros);
 
-	// Botón "Aplicar filtros" panel derecho
 	document.getElementById('apply-filters')?.addEventListener('click', () => {
 		aplicarFiltros();
 		mostrarAlertaFlotante('Filtros aplicados');
 	});
 
-	// Checkboxes y barra múltiple
 	document.getElementById('contenedorPaginaNotificaciones').addEventListener('change', (e) => {
 		if (e.target.classList.contains('row-check')) actualizarBarraSeleccion();
 	});
@@ -319,14 +283,14 @@ function configurarEventosPagina() {
 		await Promise.all(promises);
 		document.getElementById('bulk-toolbar').hidden = true;
 		mostrarAlertaFlotante(`${checkboxes.length} notificación(es) marcada(s) como leída(s).`);
-		cargarNotificaciones(); // Recargamos para actualizar el badge y JSON
+		cargarNotificaciones();
 	});
 
 	document.getElementById('delete-selected')?.addEventListener('click', () => {
 		const checkboxes = document.querySelectorAll('.row-check:checked');
 		checkboxes.forEach((cb) => {
 			const id = parseInt(cb.closest('.notification-row').dataset.id);
-			idsOcultos.add(id); // La "eliminamos" visualmente del frontend
+			idsOcultos.add(id);
 		});
 		document.getElementById('bulk-toolbar').hidden = true;
 		actualizarMetricas();

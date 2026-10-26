@@ -6,7 +6,7 @@ import warnings
 from functools import wraps
 
 import pymysql
-from lask import (
+from flask import (
     Blueprint,
     current_app,
     g,
