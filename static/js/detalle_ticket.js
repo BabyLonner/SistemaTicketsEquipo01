@@ -128,6 +128,10 @@ async function cargarDetalleTicket(id) {
             selTec.value = tecValue;
         }
 
+        // MÓDULO 3: recordar el estado y técnico actuales y cargar los técnicos reales
+        ticketDetalleActual = { id: t.id, codigo: t.codigo, estado: t.estado, tecnico: t.tecnico || null };
+        cargarTecnicosDetalle(t.tecnico);
+
         // --- NUEVO 5: PROYECTAR EVIDENCIAS (IMÁGENES) ---
         const contenedorEvidencias = document.getElementById('contenedor-evidencias');
         if (contenedorEvidencias) {
@@ -175,6 +179,7 @@ async function cargarHistorial(ticketId) {
 }
 
 function renderizarHistorial(historialArray) {
+    /* MÓDULO 3: línea de tiempo del ticket (tabla ticket_historial) */
     const list = document.getElementById('history-timeline');
     const counter = document.getElementById('history-count');
     const tabCounter = document.getElementById('history-tab-count');
@@ -188,37 +193,57 @@ function renderizarHistorial(historialArray) {
         return;
     }
 
-    list.innerHTML = historialArray.map((h) => {
+    list.innerHTML = [...historialArray].reverse().map((h) => {
         let iconoStr = '●';
         let claseColor = '';
         let accion = h.tipo;
 
         // Traducir el TIPO de MySQL a un texto amigable
         if (h.tipo === 'CREACION') {
-            iconoStr = '＋'; claseColor = 't-open'; accion = 'Ticket registrado';
+            iconoStr = '＋'; claseColor = 't-open'; accion = 'Ticket creado · estado inicial Abierto';
         } else if (h.tipo === 'CAMBIO_ESTADO') {
-            iconoStr = '⟳'; claseColor = 't-progress'; accion = `Cambió de ${h.estado_anterior} a ${h.estado_nuevo}`;
+            iconoStr = { 'En proceso': '⟳', Resuelto: '✓', Cerrado: '■', Abierto: '!' }[h.estado_nuevo] || '⟳';
+            claseColor = { 'En proceso': 't-progress', Resuelto: 't-resolved', Cerrado: 't-closed', Abierto: 't-open' }[h.estado_nuevo] || 't-progress';
+            accion = h.estado_anterior === 'Resuelto' && h.estado_nuevo === 'En proceso'
+                ? 'Ticket reabierto · Resuelto → En proceso'
+                : `Estado: ${h.estado_anterior} → ${h.estado_nuevo}`;
         } else if (h.tipo === 'ASIGNACION') {
-            iconoStr = '♙'; claseColor = 't-assign'; accion = `Asignado a ${h.tecnico_nuevo || 'Sin asignar'}`;
+            iconoStr = '♙'; claseColor = 't-assign';
+            accion = h.tecnico_anterior
+                ? `Reasignado de ${h.tecnico_anterior} a ${h.tecnico_nuevo}`
+                : `Asignado a ${h.tecnico_nuevo || 'Sin asignar'}`;
         } else if (h.tipo === 'COMENTARIO') {
             iconoStr = '💬'; claseColor = 't-resolved'; accion = 'Nuevo comentario';
         }
 
         const fechaFormat = formatearFecha(h.created_at);
+        const rol = h.usuario_rol ? ` (${escaparHTML(h.usuario_rol)})` : '';
         return `
         <li class="tl-item">
             <span class="tl-icon ${claseColor}" aria-hidden="true">${iconoStr}</span>
             <div class="tl-body">
                 <div class="tl-title">${escaparHTML(accion)}</div>
                 <div class="tl-meta">
-                    <span>${escaparHTML(h.usuario)}</span>
-                    <time datetime="${h.created_at}" title="${fechaFormat}">${fechaFormat}</time>
+                    <span>${escaparHTML(h.usuario)}${rol}</span>
+                    <time datetime="${escaparHTML(h.created_at)}" title="${fechaFormat}">${tiempoRelativoDetalle(h.created_at)}</time>
                 </div>
-                ${h.comentario ? `<p class="tl-comment">\${escaparHTML(h.comentario)}</p>` : ''}
+                ${h.comentario ? `<p class="tl-comment">${escaparHTML(h.comentario)}</p>` : ''}
             </div>
         </li>
         `;
     }).join('');
+}
+
+function tiempoRelativoDetalle(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    const min = Math.floor(Math.max(0, Date.now() - d.getTime()) / 60000);
+    if (min < 1) return 'hace un momento';
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `hace ${h} h`;
+    const dias = Math.floor(h / 24);
+    return dias === 1 ? 'ayer' : `hace ${dias} días`;
 }
 
 function renderizarChat(historialArray) {
@@ -254,6 +279,130 @@ function renderizarChat(historialArray) {
 }
 
 /* =========================================================================
+   MÓDULO 3 — Estado y técnico desde el detalle
+   Cada cambio de estado pide comentario (mínimo 10 caracteres) y solo se
+   permiten las transiciones válidas. El servidor vuelve a validar.
+   ========================================================================= */
+let ticketDetalleActual = null;   // { id, codigo, estado, tecnico }
+let cambioEstadoPendiente = null; // datos a enviar cuando se confirme el comentario
+
+const TRANSICIONES_DETALLE = {
+    Abierto: ['En proceso'],
+    'En proceso': ['Resuelto'],
+    Resuelto: ['Cerrado', 'En proceso'],
+    Cerrado: []
+};
+const MIN_COMENTARIO_DETALLE = 10;
+
+async function cargarTecnicosDetalle(tecnicoActual) {
+    const selTec = document.getElementById('property-technician');
+    if (!selTec) return;
+    try {
+        const res = await fetch('/api/tecnicos', { headers: obtenerHeadersAuth() });
+        if (!res.ok) {
+            // Solicitante u otro rol sin permiso: solo se muestra el técnico actual
+            selTec.innerHTML = '';
+            selTec.add(new Option(tecnicoActual || 'Sin asignar', tecnicoActual || 'Sin asignar'));
+            selTec.disabled = true;
+            return;
+        }
+        const tecnicos = (await res.json()).tecnicos || [];
+        selTec.innerHTML = '';
+        if (!tecnicoActual) selTec.add(new Option('Sin asignar', 'Sin asignar'));
+        tecnicos.forEach((t) => selTec.add(new Option(t.nombre, t.nombre)));
+        selTec.value = tecnicoActual || 'Sin asignar';
+    } catch (e) {
+        console.error('No se pudieron cargar los técnicos', e);
+    }
+}
+
+function motivoCambioNoPermitido(estadoNuevo, tecnico) {
+    const actual = ticketDetalleActual ? ticketDetalleActual.estado : null;
+    if (!actual || estadoNuevo === actual) return '';
+    const permitidos = TRANSICIONES_DETALLE[actual] || [];
+    if (!permitidos.length) return 'El ticket está cerrado; ya no admite cambios de estado.';
+    if (!permitidos.includes(estadoNuevo)) {
+        return `No se puede pasar de ${actual} a ${estadoNuevo}. Desde ${actual} solo se permite: ${permitidos.join(' o ')}.`;
+    }
+    if (estadoNuevo === 'En proceso' && !tecnico) return 'Primero asigna un técnico para pasar el ticket a En proceso.';
+    return '';
+}
+
+function restaurarSelectEstado() {
+    const sel = document.getElementById('property-status');
+    if (sel && ticketDetalleActual) sel.value = ticketDetalleActual.estado;
+}
+
+function abrirModalComentarioEstado(datos) {
+    const modal = document.getElementById('status-modal');
+    if (!modal) return;
+    cambioEstadoPendiente = datos;
+    const desde = document.getElementById('modal-status-from');
+    const hacia = document.getElementById('modal-status-to');
+    desde.textContent = ticketDetalleActual.estado;
+    desde.className = `badge ${CLASE_ESTADO[ticketDetalleActual.estado] || ''}`;
+    hacia.textContent = datos.estado;
+    hacia.className = `badge ${CLASE_ESTADO[datos.estado] || ''}`;
+    const extra = document.getElementById('modal-extra');
+    const cambiaTecnico = datos.tecnico && datos.tecnico !== ticketDetalleActual.tecnico;
+    extra.hidden = !cambiaTecnico;
+    extra.textContent = cambiaTecnico ? `También se asignará el ticket a ${datos.tecnico}.` : '';
+    const comentario = document.getElementById('status-comment');
+    comentario.value = '';
+    comentario.removeAttribute('aria-invalid');
+    document.getElementById('status-comment-count').textContent = '0';
+    document.getElementById('status-comment-error').textContent = '';
+    modal.hidden = false;
+    comentario.focus();
+}
+
+function cerrarModalComentarioEstado() {
+    const modal = document.getElementById('status-modal');
+    if (modal) modal.hidden = true;
+    cambioEstadoPendiente = null;
+    restaurarSelectEstado();
+}
+
+async function enviarCambiosTicket(ticketId, datos) {
+    const formPanel = document.getElementById('ticket-properties');
+    const btnSave = formPanel ? formPanel.querySelector('.save-button') : null;
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerHTML = `<span>...</span>Guardando`;
+    }
+    try {
+        const res = await fetch(`/api/tickets/${ticketId}`, {
+            method: 'PUT',
+            headers: obtenerHeadersAuth(),
+            body: JSON.stringify(datos)
+        });
+        if (res.ok) {
+            mostrarToast(datos.comentario
+                ? `Estado cambiado a ${datos.estado}. Registrado en el historial.`
+                : 'Ticket actualizado correctamente.');
+            cargarDetalleTicket(ticketId);
+            return true;
+        }
+        let msg = 'Error al actualizar.';
+        try {
+            const err = await res.json();
+            msg = err.error || err.msg || msg;
+        } catch (e) { /* respuesta sin JSON */ }
+        mostrarToast(msg);
+        restaurarSelectEstado();
+        return false;
+    } catch (error) {
+        mostrarToast('Error de conexión al guardar cambios.');
+        return false;
+    } finally {
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.innerHTML = `<span>▣</span>Guardar cambios`;
+        }
+    }
+}
+
+/* =========================================================================
    ACTUALIZAR TICKET (Panel Lateral Derecho)
    ========================================================================= */
 function configurarEventosPanelDerecho(ticketId) {
@@ -277,36 +426,85 @@ function configurarEventosPanelDerecho(ticketId) {
                 tecnico: tecNuevo
             };
 
-            const btnSave = formPanel.querySelector('.save-button');
-            if (btnSave) {
-                btnSave.disabled = true;
-                btnSave.innerHTML = `<span>...</span>Guardando`;
+            // MÓDULO 3: si cambia el estado, primero validar y pedir el comentario
+            if (ticketDetalleActual && estadoNuevo !== ticketDetalleActual.estado) {
+                const motivo = motivoCambioNoPermitido(estadoNuevo, tecNuevo);
+                if (motivo) {
+                    mostrarToast(motivo);
+                    restaurarSelectEstado();
+                    return;
+                }
+                abrirModalComentarioEstado(datos);
+                return;
             }
 
-            try {
-                const res = await fetch(`/api/tickets/${ticketId}`, {
-                    method: 'PUT',
-                    headers: obtenerHeadersAuth(),
-                    body: JSON.stringify(datos)
-                });
-
-                if (res.ok) {
-                    mostrarToast('Ticket actualizado correctamente.');
-                    cargarDetalleTicket(ticketId);
-                } else {
-                    const err = await res.json();
-                    mostrarToast(err.msg || 'Error al actualizar.');
-                }
-            } catch (error) {
-                mostrarToast('Error de conexión al guardar cambios.');
-            } finally {
-                if (btnSave) {
-                    btnSave.disabled = false;
-                    btnSave.innerHTML = `<span>▣</span>Guardar cambios`;
-                }
-            }
+            await enviarCambiosTicket(ticketId, datos);
         });
     }
+
+    // MÓDULO 3: confirmar el cambio de estado con el comentario obligatorio
+    const statusForm = document.getElementById('status-form');
+    const statusComment = document.getElementById('status-comment');
+    if (statusForm && statusComment) {
+        statusComment.addEventListener('input', () => {
+            document.getElementById('status-comment-count').textContent = statusComment.value.length;
+            if (statusComment.value.trim().length >= MIN_COMENTARIO_DETALLE) {
+                document.getElementById('status-comment-error').textContent = '';
+                statusComment.removeAttribute('aria-invalid');
+            }
+        });
+        statusForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const comentario = statusComment.value.trim();
+            if (comentario.length < MIN_COMENTARIO_DETALLE) {
+                document.getElementById('status-comment-error').textContent =
+                    `El comentario es obligatorio (mínimo ${MIN_COMENTARIO_DETALLE} caracteres).`;
+                statusComment.setAttribute('aria-invalid', 'true');
+                statusComment.focus();
+                return;
+            }
+            if (!cambioEstadoPendiente) return;
+            const datos = { ...cambioEstadoPendiente, comentario };
+            const ok = await enviarCambiosTicket(ticketId, datos);
+            if (ok) {
+                document.getElementById('status-modal').hidden = true;
+                cambioEstadoPendiente = null;
+                document.querySelector('[data-tab="history"]')?.click();
+            } else {
+                document.getElementById('status-comment-error').textContent =
+                    'No se guardó el cambio. Revisa el mensaje y vuelve a intentarlo.';
+            }
+        });
+        document.getElementById('status-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'status-modal' || e.target.closest('[data-close]')) cerrarModalComentarioEstado();
+        });
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('status-modal');
+            if (e.key === 'Escape' && modal && !modal.hidden) cerrarModalComentarioEstado();
+        });
+    }
+
+    // MÓDULO 3: "Cambiar estado" rápido desde Acciones
+    const quickStatus = document.getElementById('quick-status');
+    if (quickStatus) {
+        quickStatus.addEventListener('change', () => {
+            const valor = quickStatus.value;
+            quickStatus.value = '';
+            if (!valor) return;
+            const selStatus = document.getElementById('property-status');
+            if (selStatus) selStatus.value = valor;
+            formPanel?.requestSubmit();
+        });
+    }
+
+    // MÓDULO 3: "Asignar a otro técnico" lleva al selector de técnico
+    document.querySelector('[data-action="assign"]')?.addEventListener('click', () => {
+        const selTec = document.getElementById('property-technician');
+        if (!selTec) return;
+        selTec.focus();
+        selTec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        mostrarToast('Elige el técnico y pulsa "Guardar cambios".');
+    });
 
     document.querySelectorAll('.tab').forEach((tab) => {
         tab.addEventListener('click', () => {
@@ -320,13 +518,23 @@ function configurarEventosPanelDerecho(ticketId) {
         });
     });
 
+    // MÓDULO 3: "Cerrar ticket" solo desde Resuelto (pide comentario)
     const btnCerrar = document.getElementById('close-ticket');
     if (btnCerrar) {
         btnCerrar.addEventListener('click', () => {
+            if (!ticketDetalleActual) return;
+            if (ticketDetalleActual.estado === 'Cerrado') {
+                mostrarToast('El ticket ya está cerrado.');
+                return;
+            }
+            if (ticketDetalleActual.estado !== 'Resuelto') {
+                mostrarToast('Para cerrar el ticket primero debe estar en estado Resuelto.');
+                return;
+            }
             const selStatus = document.getElementById('property-status');
             if (selStatus) {
                 selStatus.value = 'Cerrado';
-                formPanel.dispatchEvent(new Event('submit'));
+                formPanel?.requestSubmit();
             }
         });
     }

@@ -255,6 +255,40 @@ class Ticket:
                 (horas, ticket_id),
             )
 
+    # ---------------------------------------------------------------
+    # MÓDULO 3 — Asignación, estados e historial
+    # Reglas que valida el servidor (la misma regla está en el JS,
+    # pero aquí es donde se garantiza: "UPDATE validado").
+    # ---------------------------------------------------------------
+    TRANSICIONES = {
+        "Abierto": ("En proceso",),
+        "En proceso": ("Resuelto",),
+        "Resuelto": ("Cerrado", "En proceso"),  # se puede reabrir
+        "Cerrado": (),                          # estado final
+    }
+    MIN_COMENTARIO = 10
+    MAX_COMENTARIO = 500
+
+    @staticmethod
+    def validar_cambio_estado(estado_actual, estado_nuevo, tecnico_id, comentario):
+        """Lanza ErrorRegla si el cambio de estado no está permitido."""
+        if estado_nuevo not in Ticket.ESTADOS:
+            raise ErrorRegla("El estado indicado no existe.")
+        permitidos = Ticket.TRANSICIONES[estado_actual]
+        if estado_nuevo not in permitidos:
+            if not permitidos:
+                raise ErrorRegla("El ticket está cerrado; ya no admite cambios de estado.")
+            raise ErrorRegla(
+                f"No se puede pasar de «{estado_actual}» a «{estado_nuevo}». "
+                f"Desde «{estado_actual}» solo se permite: {', '.join(permitidos)}."
+            )
+        if estado_nuevo == "En proceso" and not tecnico_id:
+            raise ErrorRegla("Primero asigna un técnico para pasar el ticket a «En proceso».")
+        if len(comentario) < Ticket.MIN_COMENTARIO:
+            raise ErrorRegla(
+                f"El comentario es obligatorio (mínimo {Ticket.MIN_COMENTARIO} caracteres)."
+            )
+
     @staticmethod
     def actualizar_gestion(cur, ticket_id, datos, usuario):
         """Procesa los cambios del panel derecho, recalcula SLA y guarda en el historial."""
@@ -273,7 +307,12 @@ class Ticket:
         if not actual:
             raise ErrorRegla("El ticket no existe.")
 
-        estado_nuevo = datos.get("estado", actual["estado"])
+        estado_nuevo = datos.get("estado") or actual["estado"]
+        comentario = (datos.get("comentario") or "").strip()
+        if len(comentario) > Ticket.MAX_COMENTARIO:
+            raise ErrorRegla(
+                f"El comentario no puede superar los {Ticket.MAX_COMENTARIO} caracteres."
+            )
 
         cur.execute(
             "SELECT id FROM prioridades WHERE nombre = %s", (datos.get("prioridad"),)
@@ -287,19 +326,53 @@ class Ticket:
         cat = cur.fetchone()
         categoria_id_nueva = cat["id"] if cat else actual["categoria_id"]
 
+        # --- MÓDULO 3: técnico (solo técnicos activos de la misma empresa) ---
         tecnico_id_nuevo = actual["tecnico_id"]
+        tecnico_nombre = None
         if "tecnico" in datos:
-            if datos["tecnico"] is None or datos["tecnico"] == "Sin asignar":
-                tecnico_id_nuevo = None
+            if datos["tecnico"] in (None, "", "Sin asignar"):
+                if actual["tecnico_id"]:
+                    raise ErrorRegla(
+                        "Un ticket asignado no puede quedar sin técnico. Elige otro técnico para reasignarlo."
+                    )
             else:
                 cur.execute(
-                    "SELECT id FROM users WHERE nombre = %s AND empresa_id = %s",
-                    (datos["tecnico"], empresa_id),
+                    """SELECT id, nombre FROM users
+                        WHERE nombre = %s AND empresa_id = %s AND rol = %s AND activo = 1""",
+                    (datos["tecnico"], empresa_id, ROL_TECNICO),
                 )
                 tec = cur.fetchone()
-                if tec:
-                    tecnico_id_nuevo = tec["id"]
-                    
+                if not tec:
+                    raise ErrorRegla("El técnico elegido no existe o no está activo en tu empresa.")
+                tecnico_id_nuevo = tec["id"]
+                tecnico_nombre = tec["nombre"]
+
+        cambia_estado = estado_nuevo != actual["estado"]
+        cambia_tecnico = tecnico_id_nuevo != actual["tecnico_id"]
+
+        # --- MÓDULO 3: permisos por rol ---
+        if (cambia_estado or cambia_tecnico) and usuario["rol"] == ROL_SOLICITANTE:
+            raise ErrorRegla(
+                "Solo el administrador o el técnico asignado pueden cambiar el estado o el técnico."
+            )
+        if cambia_tecnico:
+            if usuario["rol"] != ROL_ADMIN:
+                raise ErrorRegla("Solo el administrador puede asignar o reasignar técnicos.")
+            if actual["estado"] in ("Resuelto", "Cerrado"):
+                raise ErrorRegla("No se puede reasignar un ticket resuelto o cerrado.")
+        if (
+            cambia_estado
+            and usuario["rol"] == ROL_TECNICO
+            and actual["tecnico_id"] != usuario["id"]
+        ):
+            raise ErrorRegla("Solo el técnico asignado puede cambiar el estado de este ticket.")
+
+        # --- MÓDULO 3: transición válida + comentario obligatorio ---
+        if cambia_estado:
+            Ticket.validar_cambio_estado(
+                actual["estado"], estado_nuevo, tecnico_id_nuevo, comentario
+            )
+
         cur.execute(
             """
             UPDATE tickets 
@@ -324,8 +397,42 @@ class Ticket:
                 (horas, ticket_id),
             )
 
-        # 3. Registrar los movimientos en el historial
-        if estado_nuevo != actual["estado"]:
+        # --- MÓDULO 3: fechas de resolución y cierre (las usa el semáforo SLA) ---
+        if cambia_estado:
+            if estado_nuevo == "Resuelto":
+                cur.execute(
+                    "UPDATE tickets SET fecha_resolucion = NOW() WHERE id = %s", (ticket_id,)
+                )
+            elif estado_nuevo == "Cerrado":
+                cur.execute(
+                    """UPDATE tickets SET fecha_cierre = NOW(),
+                              fecha_resolucion = COALESCE(fecha_resolucion, NOW())
+                        WHERE id = %s""",
+                    (ticket_id,),
+                )
+            elif estado_nuevo == "En proceso" and actual["estado"] == "Resuelto":
+                # Reapertura: el ticket vuelve a contar tiempo
+                cur.execute(
+                    "UPDATE tickets SET fecha_resolucion = NULL WHERE id = %s", (ticket_id,)
+                )
+
+        # 3. Registrar los movimientos en el historial (con el comentario del usuario)
+        if cambia_tecnico:
+            cur.execute(
+                """
+                INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, tecnico_anterior_id, tecnico_nuevo_id, comentario, created_at)
+                VALUES (%s, %s, 'ASIGNACION', %s, %s, %s, NOW())
+            """,
+                (
+                    ticket_id,
+                    usuario["id"],
+                    actual["tecnico_id"],
+                    tecnico_id_nuevo,
+                    comentario or f"Ticket asignado a {tecnico_nombre}.",
+                ),
+            )
+
+        if cambia_estado:
             cur.execute(
                 """
                 INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_anterior, estado_nuevo, comentario, created_at)
@@ -336,18 +443,39 @@ class Ticket:
                     usuario["id"],
                     actual["estado"],
                     estado_nuevo,
-                    f"Actualizado a {estado_nuevo}",
+                    comentario,
                 ),
             )
 
-        if tecnico_id_nuevo != actual["tecnico_id"]:
+        # --- MÓDULO 3: avisos internos al asignar y al cambiar estado ---
+        if cambia_tecnico or cambia_estado:
             cur.execute(
-                """
-                INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, tecnico_anterior_id, tecnico_nuevo_id, comentario, created_at)
-                VALUES (%s, %s, 'ASIGNACION', %s, %s, 'Reasignación de técnico', NOW())
-            """,
-                (ticket_id, usuario["id"], actual["tecnico_id"], tecnico_id_nuevo),
+                "SELECT codigo, asunto, solicitante_id FROM v_tickets WHERE id = %s",
+                (ticket_id,),
             )
+            info = cur.fetchone()
+            if cambia_tecnico and tecnico_id_nuevo != usuario["id"]:
+                cur.execute(
+                    """INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje)
+                       VALUES (%s, 'ASIGNACION', %s, %s, %s)""",
+                    (
+                        tecnico_id_nuevo,
+                        ticket_id,
+                        f"Se te asignó el ticket {info['codigo']}",
+                        f"{info['asunto']} · asignado por {usuario['nombre']}"[:255],
+                    ),
+                )
+            if cambia_estado and info["solicitante_id"] != usuario["id"]:
+                cur.execute(
+                    """INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje)
+                       VALUES (%s, 'CAMBIO_ESTADO', %s, %s, %s)""",
+                    (
+                        info["solicitante_id"],
+                        ticket_id,
+                        f"Tu ticket {info['codigo']} pasó a «{estado_nuevo}»",
+                        f"{usuario['nombre']}: {comentario}"[:255],
+                    ),
+                )
 
     @staticmethod
     def eliminar(cur, ticket_id):
@@ -936,7 +1064,8 @@ def editar_ticket(ticket_id):
     
     try:
         with con.cursor() as cur:
-            if "estado" in datos:
+            # MÓDULO 3: la asignación también llega por aquí (sin "estado")
+            if "estado" in datos or "tecnico" in datos:
                 if g.usuario["rol"] == ROL_SOLICITANTE and ticket["estado"] == "Cerrado":
                     return jsonify(error="No puedes modificar un ticket cerrado."), 403
                 Ticket.actualizar_gestion(cur, ticket_id, datos, g.usuario)
@@ -1083,6 +1212,63 @@ def obtener_historial_ticket(ticket_id):
             item["created_at"] = _fecha(item["created_at"])
 
     return jsonify(historial=historial)
+
+
+# ---------------------------------------------------------------
+# MÓDULO 3 — Datos para la pantalla de Asignación
+# ---------------------------------------------------------------
+@tickets_bp.get("/api/tecnicos")
+@login_requerido
+def listar_tecnicos():
+    """Técnicos activos de la empresa del usuario (para asignar tickets)."""
+    if g.usuario["rol"] == ROL_SOLICITANTE:
+        return jsonify(error="No tienes acceso a esta información."), 403
+    with conexion().cursor() as cur:
+        cur.execute(
+            """SELECT u.id, u.nombre,
+                      (SELECT COUNT(*) FROM tickets t
+                        WHERE t.tecnico_id = u.id AND t.estado IN ('Abierto', 'En proceso')) AS activos
+                 FROM users u
+                WHERE u.empresa_id = %s AND u.rol = %s AND u.activo = 1
+                ORDER BY u.nombre""",
+            (g.usuario["empresa_id"], ROL_TECNICO),
+        )
+        tecnicos = cur.fetchall()
+    return jsonify(tecnicos=tecnicos)
+
+
+@tickets_bp.get("/api/historial/reciente")
+@login_requerido
+def historial_reciente():
+    """Últimos movimientos de ticket_historial de la empresa (actividad reciente)."""
+    if g.usuario["rol"] == ROL_SOLICITANTE:
+        return jsonify(error="No tienes acceso a esta información."), 403
+    try:
+        limite = max(1, min(int(request.args.get("limite", 50)), 300))
+    except ValueError:
+        limite = 50
+    with conexion().cursor() as cur:
+        cur.execute(
+            """SELECT h.id, h.ticket_id, v.codigo, h.tipo, h.estado_anterior, h.estado_nuevo,
+                      h.tecnico_anterior, h.tecnico_nuevo, h.comentario, h.usuario,
+                      h.usuario_rol, h.created_at, h.minutos_desde
+                 FROM v_ticket_timeline h
+                 JOIN v_tickets v ON v.id = h.ticket_id
+                WHERE h.empresa_id = %s
+                ORDER BY h.created_at DESC, h.id DESC
+                LIMIT %s""",
+            (g.usuario["empresa_id"], limite),
+        )
+        historial = cur.fetchall()
+        cur.execute(
+            """SELECT COUNT(*) AS total FROM v_ticket_timeline
+                WHERE empresa_id = %s AND tipo <> 'CREACION' AND DATE(created_at) = CURDATE()""",
+            (g.usuario["empresa_id"],),
+        )
+        movimientos_hoy = cur.fetchone()["total"]
+    for item in historial:
+        item["created_at"] = _fecha(item["created_at"])
+    return jsonify(historial=historial, movimientos_hoy=movimientos_hoy)
 
 
 @tickets_bp.get("/api/evidencias/<int:evidencia_id>/<any(miniatura, imagen):tipo>")
