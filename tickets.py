@@ -1,23 +1,3 @@
-"""
-Tickets — registro de tickets con evidencias fotográficas (Flask + MySQL).
-
-Trabaja sobre la base mesa_ayuda_ti (database/mesa_ayuda_ti.sql):
-    tickets, ticket_evidencias, categorias, prioridades, areas y la vista v_tickets.
-SIN TRIGGERS: este archivo calcula la empresa, el área, el correlativo
-(EPS-0001...), la fecha límite del SLA, el primer registro del historial y la
-notificación a los administradores (antes lo hacían los triggers de la base).
-Funciona con database/mesa_ayuda_ti_sin_triggers.sql (p. ej. en PythonAnywhere).
-
-Contenido (patrón MVC):
-    1. Conexión a MySQL (usa db.py del proyecto)
-    2. Modelo: clases Catalogo, Ticket y Evidencia
-    3. Fotos de evidencia: validación MIME, guardado en /uploads y miniaturas
-    4. Seguridad: usuario de la sesión (login de run.py) y permisos por rol
-    5. Controlador: API JSON
-
-Se registra en run.py con:  app.register_blueprint(tickets_bp)
-"""
-
 import io
 import os
 import shutil
@@ -26,7 +6,7 @@ import warnings
 from functools import wraps
 
 import pymysql
-from flask import (
+from lask import (
     Blueprint,
     current_app,
     g,
@@ -276,6 +256,100 @@ class Ticket:
             )
 
     @staticmethod
+    def actualizar_gestion(cur, ticket_id, datos, usuario):
+        """Procesa los cambios del panel derecho, recalcula SLA y guarda en el historial."""
+        empresa_id = usuario["empresa_id"]
+
+        cur.execute(
+            """
+            SELECT t.estado, t.prioridad_id, t.categoria_id, t.tecnico_id 
+            FROM tickets t
+            WHERE t.id = %s AND t.empresa_id = %s FOR UPDATE
+        """,
+            (ticket_id, empresa_id),
+        )
+
+        actual = cur.fetchone()
+        if not actual:
+            raise ErrorRegla("El ticket no existe.")
+
+        estado_nuevo = datos.get("estado", actual["estado"])
+
+        cur.execute(
+            "SELECT id FROM prioridades WHERE nombre = %s", (datos.get("prioridad"),)
+        )
+        prio = cur.fetchone()
+        prioridad_id_nueva = prio["id"] if prio else actual["prioridad_id"]
+
+        cur.execute(
+            "SELECT id FROM categorias WHERE nombre = %s", (datos.get("categoria"),)
+        )
+        cat = cur.fetchone()
+        categoria_id_nueva = cat["id"] if cat else actual["categoria_id"]
+
+        tecnico_id_nuevo = actual["tecnico_id"]
+        if "tecnico" in datos:
+            if datos["tecnico"] is None or datos["tecnico"] == "Sin asignar":
+                tecnico_id_nuevo = None
+            else:
+                cur.execute(
+                    "SELECT id FROM users WHERE nombre = %s AND empresa_id = %s",
+                    (datos["tecnico"], empresa_id),
+                )
+                tec = cur.fetchone()
+                if tec:
+                    tecnico_id_nuevo = tec["id"]
+                    
+        cur.execute(
+            """
+            UPDATE tickets 
+            SET estado = %s, prioridad_id = %s, categoria_id = %s, tecnico_id = %s 
+            WHERE id = %s AND empresa_id = %s
+        """,
+            (
+                estado_nuevo,
+                prioridad_id_nueva,
+                categoria_id_nueva,
+                tecnico_id_nuevo,
+                ticket_id,
+                empresa_id,
+            ),
+        )
+
+        # 2. Recalcular SLA automáticamente si cambia la prioridad
+        if prioridad_id_nueva != actual["prioridad_id"]:
+            horas = Ticket._horas_sla(cur, prioridad_id_nueva)
+            cur.execute(
+                "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR WHERE id = %s",
+                (horas, ticket_id),
+            )
+
+        # 3. Registrar los movimientos en el historial
+        if estado_nuevo != actual["estado"]:
+            cur.execute(
+                """
+                INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_anterior, estado_nuevo, comentario, created_at)
+                VALUES (%s, %s, 'CAMBIO_ESTADO', %s, %s, %s, NOW())
+            """,
+                (
+                    ticket_id,
+                    usuario["id"],
+                    actual["estado"],
+                    estado_nuevo,
+                    f"Actualizado a {estado_nuevo}",
+                ),
+            )
+
+        if tecnico_id_nuevo != actual["tecnico_id"]:
+            cur.execute(
+                """
+                INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, tecnico_anterior_id, tecnico_nuevo_id, comentario, created_at)
+                VALUES (%s, %s, 'ASIGNACION', %s, %s, 'Reasignación de técnico', NOW())
+            """,
+                (ticket_id, usuario["id"], actual["tecnico_id"], tecnico_id_nuevo),
+            )
+
+    @staticmethod
     def eliminar(cur, ticket_id):
         # evidencias, historial y notificaciones se borran en cascada
         cur.execute("DELETE FROM tickets WHERE id = %s", (ticket_id,))
@@ -300,20 +374,16 @@ class Ticket:
     def listar(usuario, filtros):
         condiciones, params = ["v.empresa_id = %s"], [usuario["empresa_id"]]
 
-        # Solicitante: sus tickets. Técnico: los asignados a él. Administrador: todos.
-        if usuario["rol"] == "Solicitante" or filtros.get("mios"):
+        if filtros.get("mios"):
+            condiciones.append("(v.solicitante_id = %s OR v.tecnico_id = %s)")
+            params.extend([usuario["id"], usuario["id"]])
+        elif usuario["rol"] == ROL_SOLICITANTE:
             condiciones.append("v.solicitante_id = %s")
             params.append(usuario["id"])
-        elif usuario["rol"] == "Técnico":
-            condiciones.append("v.tecnico_id = %s")
-            params.append(usuario["id"])
         elif usuario["rol"] == ROL_TECNICO:
-            # El técnico ve los tickets asignados y los aún no asignados de su empresa.
-            condiciones.append("(t.tecnico_id=%s OR t.tecnico_id IS NULL)")
+            condiciones.append("(v.tecnico_id = %s OR v.tecnico_id IS NULL)")
             params.append(usuario["id"])
-        elif filtros.get("mios"):
-            condiciones.append("(t.solicitante_id=%s OR t.tecnico_id=%s)")
-            params.extend([usuario["id"], usuario["id"]])
+
         if filtros.get("estado") in Ticket.ESTADOS:
             condiciones.append("v.estado = %s")
             params.append(filtros["estado"])
@@ -322,7 +392,8 @@ class Ticket:
             params.append(filtros["prioridad"])
         if filtros.get("q"):
             condiciones.append("(v.asunto LIKE %s OR v.codigo LIKE %s)")
-            params += [f"%{filtros['q']}%"] * 2
+            params.extend([f"%{filtros['q']}%", f"%{filtros['q']}%"])
+
         params.append(filtros.get("limite", 100))
 
         with conexion().cursor() as cur:
@@ -405,17 +476,12 @@ def _entero(valor):
 # =====================================================================
 # 3. FOTOS DE EVIDENCIA
 # =====================================================================
-# Validación en 4 capas: extensión, MIME declarado, MIME REAL por firma
-# binaria (magic numbers) y decodificación con Pillow. Las imágenes se
-# re-guardan con Pillow (sin metadatos EXIF) en:
-#     uploads/<empresa>/<ticket_id>/<uuid>.jpg      imagen completa
-#     uploads/<empresa>/<ticket_id>/<uuid>_min.jpg  miniatura del listado
 EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "png", "webp"}
 MIME_PERMITIDOS = {"image/jpeg", "image/png", "image/webp"}
-TAMANO_MAXIMO = 5 * 1024 * 1024  # 5 MB por foto (igual que el CHECK de la tabla)
-LADO_MAXIMO = 1920  # px de la imagen completa guardada
-TAMANO_MINIATURA = (240, 240)  # px de la miniatura del listado
-Image.MAX_IMAGE_PIXELS = 40_000_000  # protege contra "bombas" de descompresión
+TAMANO_MAXIMO = 5 * 1024 * 1024  
+LADO_MAXIMO = 1920  
+TAMANO_MINIATURA = (240, 240)  
+Image.MAX_IMAGE_PIXELS = 40_000_000  
 
 FORMATO_POR_MIME = {
     "image/jpeg": ("JPEG", "jpg"),
@@ -429,11 +495,6 @@ class ErrorEvidencia(ValueError):
 
 
 def detectar_mime_real(cabecera: bytes):
-    """Tipo MIME según los primeros bytes del archivo, o None.
-
-    JPEG: FF D8 FF      PNG: 89 50 4E 47 0D 0A 1A 0A      WEBP: 'RIFF' ... 'WEBP'
-    """
-
     if cabecera[:3] == b"\xff\xd8\xff":
         return "image/jpeg"
     if cabecera[:8] == b"\x89PNG\r\n\x1a\n":
@@ -444,16 +505,10 @@ def detectar_mime_real(cabecera: bytes):
 
 
 def validar_foto(archivo):
-    """Valida un archivo de request.files. Devuelve bytes + MIME real o lanza ErrorEvidencia."""
     nombre = archivo.filename or "archivo"
-
-    # * 1) Extensión*
-
     extension = nombre.rsplit(".", 1)[-1].lower() if "." in nombre else ""
     if extension not in EXTENSIONES_PERMITIDAS:
         raise ErrorEvidencia(f"«{nombre}»: solo se permiten imágenes JPG, PNG o WEBP.")
-
-    # * 2) MIME declarado por el navegador*
 
     if (archivo.mimetype or "").lower() not in MIME_PERMITIDOS:
         raise ErrorEvidencia(
@@ -466,15 +521,11 @@ def validar_foto(archivo):
     if len(contenido) > TAMANO_MAXIMO:
         raise ErrorEvidencia(f"«{nombre}»: supera el máximo de 5 MB.")
 
-    # * 3) MIME real por firma binaria*
-
     mime_real = detectar_mime_real(contenido[:12])
     if mime_real is None:
         raise ErrorEvidencia(
             f"«{nombre}»: el contenido no es una imagen real (firma no válida)."
         )
-
-    # * 4) Pillow debe poder abrirla y su formato debe coincidir con la firma*
 
     try:
         with warnings.catch_warnings():
@@ -505,7 +556,6 @@ def validar_foto(archivo):
 
 
 def _a_rgb(img):
-    """Convierte a RGB; si la imagen tiene transparencia la pone sobre blanco."""
     if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
         img = img.convert("RGBA")
         fondo = Image.new("RGB", img.size, (255, 255, 255))
@@ -519,23 +569,21 @@ def carpeta_proyecto():
 
 
 def ruta_miniatura(ruta):
-    """uploads/epsel/12/abc.png -> uploads/epsel/12/abc_min.jpg"""
     return ruta.rsplit(".", 1)[0] + "_min.jpg"
 
 
 def guardar_foto(foto, empresa_codigo, ticket_id):
-    """Guarda la imagen normalizada + su miniatura. Devuelve los datos para la BD."""
     carpeta_relativa = f"uploads/{empresa_codigo}/{ticket_id}"
     carpeta = os.path.join(carpeta_proyecto(), *carpeta_relativa.split("/"))
     os.makedirs(carpeta, exist_ok=True)
 
     mime = foto["mime_type"]
     formato, extension = FORMATO_POR_MIME[mime]
-    nombre_base = uuid.uuid4().hex  # nombre imposible de adivinar o repetir
+    nombre_base = uuid.uuid4().hex  
 
     with Image.open(io.BytesIO(foto["contenido"])) as original:
-        img = ImageOps.exif_transpose(original)  # respeta la rotación del celular
-        img.thumbnail((LADO_MAXIMO, LADO_MAXIMO))  # reduce solo si es más grande
+        img = ImageOps.exif_transpose(original)  
+        img.thumbnail((LADO_MAXIMO, LADO_MAXIMO))  
 
         destino = os.path.join(carpeta, f"{nombre_base}.{extension}")
         if formato == "JPEG":
@@ -545,7 +593,6 @@ def guardar_foto(foto, empresa_codigo, ticket_id):
         else:
             img.save(destino, "WEBP", quality=85)
 
-        # Si un PNG enorme quedó en más de 5 MB, se guarda como JPEG
         if os.path.getsize(destino) > TAMANO_MAXIMO:
             os.remove(destino)
             mime, extension = "image/jpeg", "jpg"
@@ -588,8 +635,6 @@ def borrar_carpeta_ticket(empresa_codigo, ticket_id):
 # =====================================================================
 # 4. SEGURIDAD: usuario de la sesión y permisos
 # =====================================================================
-# El login (run.py) guarda en session: usuario_id, empresa_id, nombre, rol.
-# Aquí se vuelve a leer el usuario de la BD para confirmar que sigue activo.
 ROL_ADMIN = "Administrador"
 ROL_TECNICO = "Técnico"
 ROL_SOLICITANTE = "Solicitante"
@@ -619,35 +664,24 @@ def login_requerido(vista):
 
 
 def puede_ver(usuario, ticket):
-    """La empresa ya se filtra en la consulta; el solicitante solo ve los suyos."""
     return (
         usuario["rol"] != ROL_SOLICITANTE or ticket["solicitante_id"] == usuario["id"]
     )
 
 
 def puede_editar(usuario, ticket):
-    """Admin (si no está cerrado). Solicitante: su ticket mientras siga 'Abierto'."""
     if ticket["estado"] == "Cerrado":
         return False
     if usuario["rol"] == ROL_ADMIN:
         return True
-
-    # * El solicitante puede editar su ticket mientras esté abierto.*
-
     if usuario["rol"] == ROL_SOLICITANTE:
         return (
             ticket["solicitante_id"] == usuario["id"] and ticket["estado"] == "Abierto"
         )
-
-    # * El técnico no puede editar los datos generales del ticket*
-
-    # * mediante esta función.*
-
     return False
 
 
 def puede_adjuntar(usuario, ticket):
-    """Subir fotos: dueño del ticket, técnico o admin, mientras no esté cerrado."""
     if ticket["estado"] == "Cerrado":
         return False
     return (
@@ -657,7 +691,6 @@ def puede_adjuntar(usuario, ticket):
 
 
 def puede_eliminar(usuario, ticket):
-    """Admin siempre; solicitante solo si sigue 'Abierto' y sin técnico asignado."""
     if usuario["rol"] == ROL_ADMIN:
         return True
     return (
@@ -670,19 +703,9 @@ def puede_eliminar(usuario, ticket):
 # =====================================================================
 # 5. CONTROLADOR: API JSON
 # =====================================================================
-#   GET    /api/tickets/sesion                   usuario + catálogos del formulario
-#   POST   /api/tickets                          crear ticket + hasta 3 fotos (multipart)
-#   GET    /api/tickets                          listado con miniatura
-#   GET    /api/tickets/<id>                     detalle con evidencias
-#   PUT    /api/tickets/<id>                     editar ticket
-#   DELETE /api/tickets/<id>                     eliminar ticket
-#   POST   /api/tickets/<id>/evidencias          agregar fotos (máx. 3 en total)
-#   DELETE /api/tickets/<id>/evidencias/<eid>    quitar una foto
-#   GET    /api/evidencias/<eid>/miniatura|imagen  archivo protegido por sesión
 @tickets_bp.record_once
 def _configurar(state):
     app = state.app
-    # Límite de la petición completa: 3 fotos x 5 MB + campos del formulario
     if not app.config.get("MAX_CONTENT_LENGTH"):
         app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
@@ -698,13 +721,11 @@ def _demasiado_grande(error):
 
 @tickets_bp.errorhandler(ErrorRegla)
 def _error_regla(error):
-    """Reglas de negocio (antes eran SIGNAL de los triggers)."""
     return jsonify(error=str(error)), 400
 
 
 @tickets_bp.errorhandler(pymysql.MySQLError)
 def _error_mysql(error):
-    """Los triggers usan SIGNAL (código 1644) con un mensaje para el usuario."""
     if error.args and error.args[0] == 1644:
         return jsonify(error=error.args[1]), 400
     current_app.logger.exception("Error de base de datos en tickets")
@@ -746,7 +767,6 @@ def _ticket_base(t):
         "tecnico": t["tecnico"] if t["tecnico_id"] else None,
         "created_at": _fecha(t["created_at"]),
         "fecha_limite": _fecha(t["fecha_limite"]),
-        # Calculados por la vista v_tickets (módulo SLA)
         "semaforo": t["semaforo"],
         "minutos_restantes": t["minutos_restantes"],
         "total_evidencias": t["total_evidencias"],
@@ -788,7 +808,6 @@ def _ticket_detalle(t, usuario):
 
 
 def _fotos_de_la_peticion():
-    """Archivos del campo 'fotos' (flask.request.files); se ignoran los vacíos."""
     return [a for a in request.files.getlist("fotos") if a and a.filename]
 
 
@@ -802,7 +821,6 @@ def _ticket_o_error(ticket_id):
 
 
 def _guardar_fotos(cur, ticket_id, fotos, guardadas):
-    """Guarda cada foto en disco y en la BD usando los 'orden' libres (1, 2, 3)."""
     libres = [
         n
         for n in range(1, Evidencia.MAX_POR_TICKET + 1)
@@ -850,7 +868,6 @@ def crear_ticket():
     if errores:
         return jsonify(error="Revisa los campos marcados.", errores=errores), 400
 
-    # Se validan TODAS las fotos antes de escribir en disco o en la BD
     try:
         fotos = [validar_foto(a) for a in archivos]
     except ErrorEvidencia as e:
@@ -861,7 +878,6 @@ def crear_ticket():
 
     try:
         with con.cursor() as cur:
-            # Solicitante automático: sale de la sesión, nunca del formulario
             ticket_id = Ticket.crear(
                 cur, datos, g.usuario["id"], g.usuario["empresa_id"]
             )
@@ -869,7 +885,7 @@ def crear_ticket():
         con.commit()
     except Exception:
         con.rollback()
-        if ticket_id:  # no deja fotos huérfanas en /uploads
+        if ticket_id:  
             borrar_carpeta_ticket(g.usuario["empresa_codigo"], ticket_id)
         raise
 
@@ -914,29 +930,38 @@ def editar_ticket(ticket_id):
     ticket, error = _ticket_o_error(ticket_id)
     if error:
         return error
-    if not puede_editar(g.usuario, ticket):
-        return jsonify(
-            error="Solo puedes editar tus tickets mientras estén «Abierto»."
-        ), 403
-    datos, errores = Ticket.validar(
-        request.get_json(silent=True) or request.form, g.usuario
-    )
-    if errores:
-        return jsonify(error="Revisa los campos marcados.", errores=errores), 400
-
+        
+    datos = request.get_json(silent=True) or request.form
     con = conexion()
+    
     try:
         with con.cursor() as cur:
-            Ticket.actualizar(cur, ticket_id, datos, g.usuario["empresa_id"])
+            if "estado" in datos:
+                if g.usuario["rol"] == ROL_SOLICITANTE and ticket["estado"] == "Cerrado":
+                    return jsonify(error="No puedes modificar un ticket cerrado."), 403
+                Ticket.actualizar_gestion(cur, ticket_id, datos, g.usuario)
+                
+            elif "asunto" in datos:
+                if not puede_editar(g.usuario, ticket):
+                    return jsonify(error="Solo puedes editar tus tickets mientras estén «Abierto»."), 403
+                    
+                limpios, errores = Ticket.validar(datos, g.usuario)
+                if errores:
+                    return jsonify(error="Revisa los campos marcados.", errores=errores), 400
+                    
+                Ticket.actualizar(cur, ticket_id, limpios, g.usuario["empresa_id"])
+                
         con.commit()
+    except ErrorRegla as e:
+        con.rollback()
+        return jsonify(error=str(e)), 400
     except Exception:
         con.rollback()
         raise
+        
     return jsonify(
-        mensaje="Ticket actualizado.",
-        ticket=_ticket_detalle(
-            Ticket.obtener(ticket_id, g.usuario["empresa_id"]), g.usuario
-        ),
+        mensaje="Ticket actualizado correctamente.",
+        ticket=_ticket_detalle(Ticket.obtener(ticket_id, g.usuario["empresa_id"]), g.usuario)
     )
 
 
@@ -1034,6 +1059,7 @@ def eliminar_evidencia(ticket_id, evidencia_id):
         ),
     )
 
+
 @tickets_bp.get("/api/tickets/<int:ticket_id>/historial")
 @login_requerido
 def obtener_historial_ticket(ticket_id):
@@ -1043,18 +1069,16 @@ def obtener_historial_ticket(ticket_id):
 
     con = conexion()
     with con.cursor() as cur:
-        # Trae todos los movimientos y comentarios del ticket ordenados por fecha
         cur.execute(
             """SELECT id, tipo, estado_anterior, estado_nuevo, tecnico_anterior,
                       tecnico_nuevo, comentario, usuario, usuario_rol, created_at, minutos_desde
                  FROM v_ticket_timeline
                 WHERE ticket_id = %s
                 ORDER BY created_at ASC""",
-            (ticket_id,)
+            (ticket_id,),
         )
         historial = cur.fetchall()
 
-        # Formatear las fechas para JSON
         for item in historial:
             item["created_at"] = _fecha(item["created_at"])
 
@@ -1076,11 +1100,11 @@ def ver_evidencia(evidencia_id, tipo):
         ruta, mime = ruta_miniatura(evidencia["ruta"]), "image/jpeg"
     else:
         ruta, mime = evidencia["ruta"], evidencia["mime_type"]
-    # send_from_directory impide salir de la carpeta del proyecto (protege de "../")
     respuesta = send_from_directory(carpeta_proyecto(), ruta, mimetype=mime, max_age=0)
     respuesta.headers["Cache-Control"] = "private, max-age=600"
     respuesta.headers["X-Content-Type-Options"] = "nosniff"
     return respuesta
+
 
 # ==========================================
 # RUTAS PARA TICKET_HISTORIAL
