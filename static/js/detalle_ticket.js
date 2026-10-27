@@ -162,6 +162,36 @@ async function cargarDetalleTicket(id) {
     }
 }
 
+function calcularSlaDetalleTicket(t) {
+    if (!t.created_at) return;
+
+    const fechaCreacion = new Date(t.created_at.replace(' ', 'T'));
+    const ahora = new Date();
+    const horasTranscurridas = (ahora - fechaCreacion) / (1000 * 60 * 60);
+
+    const prio = t.prioridad || 'Media';
+    const limiteHoras = prio === 'Alta' ? 8 : (prio === 'Media' ? 24 : 72);
+    
+    let textoEstado = "A tiempo";
+    if (t.estado === 'Resuelto' || t.estado === 'Cerrado') {
+        textoEstado = "Cumplido";
+    } else if (horasTranscurridas > limiteHoras) {
+        textoEstado = "Vencido";
+    } else if (horasTranscurridas >= limiteHoras * 0.8) {
+        textoEstado = "Por vencer";
+    }
+
+    const dMin = Math.floor((ahora - fechaCreacion) / 60000);
+    const tiempoTransFormateado = dMin < 60 ? `${dMin} min` : `${(dMin / 60).toFixed(1)} h`;
+
+    // Actualizar de forma segura los elementos de tiempo en el detalle
+    document.querySelectorAll('time').forEach(el => {
+        if (el.closest('.sla-box, [class*="sla"], .right-panel')) {
+            el.textContent = tiempoTransFormateado;
+        }
+    });
+}
+
 /* =========================================================================
    NUEVO: CARGAR HISTORIAL (Línea de Tiempo y Chat)
    ========================================================================= */

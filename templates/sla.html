@@ -23,22 +23,22 @@
       <article class="stat-card stat-compliance"><span class="stat-icon">◷</span>
         <div class="stat-number" id="compliance-number">85%</div>
         <div class="stat-label">Cumplimiento SLA</div>
-        <div class="stat-trend positive">↑ 8% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+
       </article>
       <article class="stat-card stat-ontime"><span class="stat-icon">↶</span>
         <div class="stat-number" id="ontime-count">12</div>
         <div class="stat-label">En tiempo</div>
-        <div class="stat-trend positive">↑ 15% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+
       </article>
       <article class="stat-card stat-due"><span class="stat-icon">⚠</span>
         <div class="stat-number" id="due-count">5</div>
         <div class="stat-label">Por vencer</div>
-        <div class="stat-trend negative">↓ 30% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+
       </article>
       <article class="stat-card stat-overdue"><span class="stat-icon">!</span>
         <div class="stat-number" id="overdue-count">6</div>
         <div class="stat-label">Vencidos</div>
-        <div class="stat-trend negative">↑ 50% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+        
       </article>
     </section>
 
@@ -110,226 +110,53 @@
             </tr>
           </thead>
           <tbody id="tickets-tbody">
-            <tr data-id="TK-2291" data-subject="La impresora no imprime" data-priority="Alta" data-requester="Ana Díaz"
-              data-category="Hardware" data-technician="Luis Ramos" data-status="En proceso" data-sla="En tiempo"
-              data-elapsed="3h 20m" data-limit="4h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2291"></td>
-              <td><span class="ticket-code">TK-2291</span></td>
-              <td>La impresora no imprime</td>
-              <td><span class="priority-badge high"><i></i>Alta</span></td>
+            {% for t in tickets %}
+            <tr data-id="{{ t.codigo }}" data-subject="{{ t.asunto }}" data-priority="{{ t.prioridad }}" 
+                data-requester="{{ t.solicitante }}" data-category="{{ t.categoria }}" data-technician="{{ t.tecnico }}" 
+                data-status="{{ t.estado }}" data-sla="{{ t.semaforo | capitalize }}" 
+                data-elapsed="{{ t.minutos_transcurridos // 60 }}h {{ t.minutos_transcurridos % 60 }}m" data-limit="{{ t.sla_horas }}h">
+              <td><input class="row-check" type="checkbox" aria-label="Seleccionar {{ t.codigo }}"></td>
+              <td><span class="ticket-code">{{ t.codigo }}</span></td>
+              <td>{{ t.asunto }}</td>
               <td>
-                <div class="elapsed"><span>3h 20m</span>
-                  <div class="time-track"><i style="width:83%"></i></div>
+                <span class="priority-badge {{ 'high' if t.prioridad == 'Alta' else ('medium' if t.prioridad == 'Media' else 'low') }}">
+                  <i></i>{{ t.prioridad }}
+                </span>
+              </td>
+              <td>
+                <div class="elapsed">
+                  <span>{{ t.minutos_transcurridos // 60 }}h {{ t.minutos_transcurridos % 60 }}m</span>
+                  <div class="time-track {{ 'green' if t.semaforo == 'verde' else ('amber' if t.semaforo == 'amarillo' else 'red') }}">
+                    <i style="width: {{ t.porcentaje_sla }}%"></i>
+                  </div>
                 </div>
               </td>
-              <td>4h</td>
-              <td><span class="sla-badge ontime"><i></i>En tiempo</span></td>
-              <td><span class="technician-chip"><i>LR</i>Luis Ramos</span></td>
-              <td><span class="status-badge progress">En proceso</span></td>
+              <td>{{ t.sla_horas }}h</td>
               <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2291"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2291" title="Más información">···</button></div>
+                <span class="sla-badge {{ 'ontime' if t.semaforo == 'verde' else ('due' if t.semaforo == 'amarillo' else 'overdue') }}">
+                  <i></i>{{ 'En tiempo' if t.semaforo == 'verde' else ('Por vencer' if t.semaforo == 'amarillo' else 'Vencido') }}
+                </span>
               </td>
-            </tr>
-            <tr data-id="TK-2290" data-subject="Mi computadora está muy lenta" data-priority="Media"
-              data-requester="Luis García" data-category="Software" data-technician="Carla Mendoza"
-              data-status="Asignado" data-sla="Por vencer" data-elapsed="6h 15m" data-limit="8h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2290"></td>
-              <td><span class="ticket-code">TK-2290</span></td>
-              <td>Mi computadora está muy lenta</td>
-              <td><span class="priority-badge medium"><i></i>Media</span></td>
               <td>
-                <div class="elapsed"><span>6h 15m</span>
-                  <div class="time-track amber"><i style="width:78%"></i></div>
+                {% if t.tecnico and t.tecnico != 'Sin asignar' %}
+                  <span class="technician-chip"><i>{{ t.tecnico[:2] | upper }}</i>{{ t.tecnico }}</span>
+                {% else %}
+                  <span class="unassigned">Sin asignar</span>
+                {% endif %}
+              </td>
+              <td><span class="status-badge {{ 'progress' if t.estado == 'En proceso' else ('pending' if t.estado == 'Abierto' else 'resolved') }}">{{ t.estado }}</span></td>
+              <td>
+                <div class="row-actions">
+                  <button class="icon-button view-ticket" type="button" aria-label="Ver {{ t.codigo }}" title="Ver detalle">◉</button>
+                  <button class="icon-button more-action" type="button" aria-label="Más información {{ t.codigo }}" title="Más información">···</button>
                 </div>
               </td>
-              <td>8h</td>
-              <td><span class="sla-badge due"><i></i>Por vencer</span></td>
-              <td><span class="technician-chip"><i>CM</i>Carla Mendoza</span></td>
-              <td><span class="status-badge assigned">Asignado</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2290"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2290" title="Más información">···</button></div>
-              </td>
             </tr>
-            <tr data-id="TK-2289" data-subject="No tengo acceso a un sistema" data-priority="Alta"
-              data-requester="Carla Mendoza" data-category="Acceso" data-technician="José García"
-              data-status="En proceso" data-sla="Vencido" data-elapsed="10h 30m" data-limit="8h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2289"></td>
-              <td><span class="ticket-code">TK-2289</span></td>
-              <td>No tengo acceso a un sistema</td>
-              <td><span class="priority-badge high"><i></i>Alta</span></td>
-              <td>
-                <div class="elapsed"><span>10h 30m</span>
-                  <div class="time-track red"><i style="width:100%"></i></div>
-                </div>
-              </td>
-              <td>8h</td>
-              <td><span class="sla-badge overdue"><i></i>Vencido</span></td>
-              <td><span class="technician-chip"><i>JG</i>José García</span></td>
-              <td><span class="status-badge progress">En proceso</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2289"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2289" title="Más información">···</button></div>
-              </td>
+            {% else %}
+            <tr>
+              <td colspan="10" style="text-align: center; padding: 20px;">No hay tickets reales registrados para mostrar en esta empresa.</td>
             </tr>
-            <tr data-id="TK-2288" data-subject="Error al enviar correos" data-priority="Media"
-              data-requester="Rosa Villanueva" data-category="Redes" data-technician="María Torres"
-              data-status="Asignado" data-sla="En tiempo" data-elapsed="2h 10m" data-limit="8h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2288"></td>
-              <td><span class="ticket-code">TK-2288</span></td>
-              <td>Error al enviar correos</td>
-              <td><span class="priority-badge medium"><i></i>Media</span></td>
-              <td>
-                <div class="elapsed"><span>2h 10m</span>
-                  <div class="time-track green"><i style="width:27%"></i></div>
-                </div>
-              </td>
-              <td>8h</td>
-              <td><span class="sla-badge ontime"><i></i>En tiempo</span></td>
-              <td><span class="technician-chip"><i>MT</i>María Torres</span></td>
-              <td><span class="status-badge assigned">Asignado</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2288"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2288" title="Más información">···</button></div>
-              </td>
-            </tr>
-            <tr data-id="TK-2287" data-subject="Instalación de software" data-priority="Baja"
-              data-requester="Pedro Salazar" data-category="Software" data-technician="Sin asignar"
-              data-status="Pendiente" data-sla="En tiempo" data-elapsed="1h 45m" data-limit="12h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2287"></td>
-              <td><span class="ticket-code">TK-2287</span></td>
-              <td>Instalación de software</td>
-              <td><span class="priority-badge low"><i></i>Baja</span></td>
-              <td>
-                <div class="elapsed"><span>1h 45m</span>
-                  <div class="time-track green"><i style="width:15%"></i></div>
-                </div>
-              </td>
-              <td>12h</td>
-              <td><span class="sla-badge ontime"><i></i>En tiempo</span></td>
-              <td><span class="unassigned">Sin asignar</span></td>
-              <td><span class="status-badge pending">Pendiente</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2287"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2287" title="Más información">···</button></div>
-              </td>
-            </tr>
-            <tr data-id="TK-2286" data-subject="Problemas con la red WiFi" data-priority="Media"
-              data-requester="María Torres" data-category="Redes" data-technician="Rosa Villanueva"
-              data-status="En proceso" data-sla="Por vencer" data-elapsed="7h 50m" data-limit="8h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2286"></td>
-              <td><span class="ticket-code">TK-2286</span></td>
-              <td>Problemas con la red WiFi</td>
-              <td><span class="priority-badge medium"><i></i>Media</span></td>
-              <td>
-                <div class="elapsed"><span>7h 50m</span>
-                  <div class="time-track amber"><i style="width:97%"></i></div>
-                </div>
-              </td>
-              <td>8h</td>
-              <td><span class="sla-badge due"><i></i>Por vencer</span></td>
-              <td><span class="technician-chip"><i>RV</i>Rosa Villanueva</span></td>
-              <td><span class="status-badge progress">En proceso</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2286"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2286" title="Más información">···</button></div>
-              </td>
-            </tr>
-            <tr data-id="TK-2285" data-subject="Solicitud de nuevo equipo" data-priority="Baja"
-              data-requester="José Hernández" data-category="Hardware" data-technician="Luis Ramos"
-              data-status="Asignado" data-sla="En tiempo" data-elapsed="18h 20m" data-limit="24h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2285"></td>
-              <td><span class="ticket-code">TK-2285</span></td>
-              <td>Solicitud de nuevo equipo</td>
-              <td><span class="priority-badge low"><i></i>Baja</span></td>
-              <td>
-                <div class="elapsed"><span>18h 20m</span>
-                  <div class="time-track green"><i style="width:76%"></i></div>
-                </div>
-              </td>
-              <td>24h</td>
-              <td><span class="sla-badge ontime"><i></i>En tiempo</span></td>
-              <td><span class="technician-chip"><i>LR</i>Luis Ramos</span></td>
-              <td><span class="status-badge assigned">Asignado</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2285"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2285" title="Más información">···</button></div>
-              </td>
-            </tr>
-            <tr data-id="TK-2284" data-subject="Pantalla con líneas" data-priority="Alta"
-              data-requester="Lucía Fernández" data-category="Hardware" data-technician="Carla Mendoza"
-              data-status="En proceso" data-sla="Vencido" data-elapsed="26h 15m" data-limit="8h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2284"></td>
-              <td><span class="ticket-code">TK-2284</span></td>
-              <td>Pantalla con líneas</td>
-              <td><span class="priority-badge high"><i></i>Alta</span></td>
-              <td>
-                <div class="elapsed"><span>26h 15m</span>
-                  <div class="time-track red"><i style="width:100%"></i></div>
-                </div>
-              </td>
-              <td>8h</td>
-              <td><span class="sla-badge overdue"><i></i>Vencido</span></td>
-              <td><span class="technician-chip"><i>CM</i>Carla Mendoza</span></td>
-              <td><span class="status-badge progress">En proceso</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2284"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2284" title="Más información">···</button></div>
-              </td>
-            </tr>
-            <tr data-id="TK-2283" data-subject="Restablecer contraseña" data-priority="Baja" data-requester="Juan Pérez"
-              data-category="Acceso" data-technician="José García" data-status="Resuelto" data-sla="En tiempo"
-              data-elapsed="3h 10m" data-limit="12h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2283"></td>
-              <td><span class="ticket-code">TK-2283</span></td>
-              <td>Restablecer contraseña</td>
-              <td><span class="priority-badge low"><i></i>Baja</span></td>
-              <td>
-                <div class="elapsed"><span>3h 10m</span>
-                  <div class="time-track green"><i style="width:26%"></i></div>
-                </div>
-              </td>
-              <td>12h</td>
-              <td><span class="sla-badge ontime"><i></i>En tiempo</span></td>
-              <td><span class="technician-chip"><i>JG</i>José García</span></td>
-              <td><span class="status-badge resolved">Resuelto</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2283"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2283" title="Más información">···</button></div>
-              </td>
-            </tr>
-            <tr data-id="TK-2282" data-subject="No puedo acceder a la VPN" data-priority="Media"
-              data-requester="María López" data-category="Redes" data-technician="Sin asignar" data-status="Pendiente"
-              data-sla="Vencido" data-elapsed="9h 40m" data-limit="8h">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar TK-2282"></td>
-              <td><span class="ticket-code">TK-2282</span></td>
-              <td>No puedo acceder a la VPN</td>
-              <td><span class="priority-badge medium"><i></i>Media</span></td>
-              <td>
-                <div class="elapsed"><span>9h 40m</span>
-                  <div class="time-track red"><i style="width:100%"></i></div>
-                </div>
-              </td>
-              <td>8h</td>
-              <td><span class="sla-badge overdue"><i></i>Vencido</span></td>
-              <td><span class="unassigned">Sin asignar</span></td>
-              <td><span class="status-badge pending">Pendiente</span></td>
-              <td>
-                <div class="row-actions"><button class="icon-button view-ticket" type="button" aria-label="Ver TK-2282"
-                    title="Ver detalle">◉</button><button class="icon-button more-action" type="button"
-                    aria-label="Más información TK-2282" title="Más información">···</button></div>
-              </td>
-            </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
@@ -392,7 +219,7 @@
       </form>
     </section>
 
-    <section class="panel compliance-panel">
+    <section class="panel compliance-panel" style="display: none;">
       <h2><span class="clock-icon">◷</span>Cumplimiento de SLA</h2>
       <div class="compliance-content">
         <div class="donut" role="img" aria-label="85 por ciento de cumplimiento">

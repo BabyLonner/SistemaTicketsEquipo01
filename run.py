@@ -16,6 +16,7 @@ from flask import (
     session,
     url_for,
 )
+
 from jinja2 import TemplateNotFound
 
 from db import obtener_conexion
@@ -479,6 +480,39 @@ def obtener_datos_dashboard(empresa_id):
     finally:
         conexion.close()
 
+@app.route("/sla")
+@login_requerido
+def sla():
+    if not session.get("usuario_id"):
+        return redirect(url_for("inicio"))
+    
+    empresa_id = session["empresa_id"]
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            # Consulta oficial de la vista v_tickets ordenada por urgencia y plazos
+            cursor.execute(
+                """
+                SELECT * FROM v_tickets 
+                WHERE empresa_id = %s 
+                ORDER BY urgencia DESC, minutos_restantes
+                """,
+                (empresa_id,)
+            )
+            tickets = cursor.fetchall()
+    finally:
+        conexion.close()
+
+    empresa = obtener_identidad_empresa(empresa_id)
+
+    return render_template(
+        "sla.html",
+        tickets=tickets,
+        usuario_nombre=session.get("nombre", ""),
+        usuario_rol=session.get("rol", ""),
+        empresa_nombre=empresa["nombre"],
+        empresa_color=empresa["color"]
+    )
 
 @app.route("/dashboard")
 @login_requerido
@@ -599,6 +633,7 @@ def reportes():
         empresa_nombre=empresa["nombre"],
         empresa_color=empresa["color"],
     )
+
 
 
 # Múltiples decoradores permiten que Flask acepte la ruta con o sin .html

@@ -2,6 +2,8 @@ import os
 import sys
 import bcrypt
 from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from datetime import datetime
+from db import obtener_conexion
 
 # Permitir importar db.py desde la carpeta raíz del proyecto
 RUTA_RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -136,6 +138,201 @@ def cerrar_sesion():
     session.clear()
     return redirect(url_for("inicio"))
 
+@app.route("/api/tickets", methods=["GET"])
+def api_listar_tickets():
+    """Lista los tickets según los filtros o permisos de la sesión actual."""
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autorizado"}), 401
+
+    mios = request.args.get("mios", "0")
+    limite = int(request.args.get("limite", 200))
+    empresa_usuario = session.get("empresa_nombre")
+    rol_usuario = session.get("rol")
+    usuario_id = session.get("usuario_id")
+
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            # Construcción dinámica según rol (Administrador, Técnico, Solicitante)
+            sql = """
+                SELECT t.id, t.asunto, t.descripcion, t.categoria, t.prioridad, 
+                       t.estado, t.empresa, t.created_at, t.updated_at,
+                       s.nombre AS solicitante, 
+                       tec.nombre AS tecnico
+                FROM tickets t
+                JOIN users s ON t.solicitante_id = s.id
+                LEFT JOIN users tec ON t.tecnico_id = tec.id
+                WHERE t.empresa = %s
+            """
+            params = [empresa_usuario]
+
+            if rol_usuario == "Solicitante" or mios == "1":
+                sql += " AND t.solicitante_id = %s"
+                params.append(usuario_id)
+            elif rol_usuario == "Técnico":
+                # Los técnicos pueden ver los asignados a ellos o sin asignar
+                pass # Dependiendo de tu regla de negocio
+
+            sql += " ORDER BY t.created_at DESC LIMIT %s"
+            params.append(limite)
+
+            cursor.execute(sql, tuple(params))
+            tickets = cursor.fetchall()
+
+            # Opcional: Agregar información de evidencias (fotos) para cada ticket
+            for t in tickets:
+                cursor.execute("""
+                    SELECT id, archivo AS imagen_url, miniatura AS miniatura_url, nombre_original AS nombre
+                    FROM ticket_fotos WHERE ticket_id = %s
+                """, (t["id"],))
+                fotos = cursor.fetchall()
+                t["evidencias"] = fotos
+                t["total_evidencias"] = len(fotos)
+                if fotos:
+                    t["miniatura_url"] = fotos[0]["miniatura_url"]
+                    t["imagen_url"] = fotos[0]["imagen_url"]
+                else:
+                    t["miniatura_url"] = None
+                    t["imagen_url"] = None
+
+        return jsonify({"ok": True, "tickets": tickets})
+    except Exception as e:
+        app.logger.exception("Error al listar tickets")
+        return jsonify({"error": "Error interno al obtener los tickets"}), 500
+    finally:
+        conexion.close()
+
+
+@app.route("/api/tickets/<int:ticket_id>", methods=["GET"])
+def api_detalle_ticket(ticket_id):
+    """Obtiene el detalle completo de un ticket específico junto con sus evidencias."""
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autorizado"}), 401
+
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute("""
+                SELECT t.id, t.asunto, t.descripcion, t.categoria, t.prioridad, 
+                       t.estado, t.empresa, t.created_at, t.updated_at,
+                       s.nombre AS solicitante, s.email AS solicitante_correo, s.area,
+                       tec.nombre AS tecnico
+                FROM tickets t
+                JOIN users s ON t.solicitante_id = s.id
+                LEFT JOIN users tec ON t.tecnico_id = tec.id
+                WHERE t.id = %s
+            """, (ticket_id,))
+            ticket = cursor.fetchone()
+
+            if not ticket:
+                return jsonify({"error": "Ticket no encontrado"}), 404
+
+            # Obtener evidencias fotográficas asociadas
+            cursor.execute("""
+                SELECT id, archivo AS imagen_url, miniatura AS miniatura_url, nombre_original AS nombre
+                FROM ticket_fotos WHERE ticket_id = %s
+            """, (ticket_id,))
+            ticket["evidencias"] = cursor.fetchall()
+
+        return jsonify({"ok": True, "ticket": ticket})
+    except Exception as e:
+        app.logger.exception("Error al obtener detalle del ticket")
+        return jsonify({"error": "Error interno"}), 500
+    finally:
+        conexion.close()
+
+
+@app.route("/api/tickets/<int:ticket_id>/historial", methods=["GET"])
+def api_historial_ticket(ticket_id):
+    """Devuelve la línea de tiempo de cambios e interacciones del ticket[cite: 43]."""
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autorizado"}), 401
+
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute("""
+                SELECT h.id, h.tipo, h.estado_anterior, h.estado_nuevo, h.texto AS comentario, 
+                       h.created_at, u.nombre AS usuario, u.rol AS usuario_rol
+                FROM ticket_historial h
+                JOIN users u ON h.usuario_id = u.id
+                WHERE h.ticket_id = %s
+                ORDER BY h.created_at DESC
+            """, (ticket_id,))
+            historial = cursor.fetchall()
+
+        return jsonify({"ok": True, "historial": historial})
+    except Exception as e:
+        app.logger.exception("Error al obtener el historial")
+        return jsonify({"error": "Error interno"}), 500
+    finally:
+        conexion.close()
+
+@app.route("/api/sla/metricas", methods=["GET"])
+def api_sla_metricas():
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autorizado"}), 401
+
+    empresa_usuario = session.get("empresa_nombre")
+    conexion = obtener_conexion()
+    
+    try:
+        with conexion.cursor() as cursor:
+            # Consultamos los tickets de la empresa activa
+            cursor.execute("""
+                SELECT id, asunto, prioridad, estado, created_at
+                FROM tickets
+                WHERE empresa = %s
+            """, (empresa_usuario,))
+            tickets = cursor.fetchall()
+
+            en_tiempo = 0
+            por_vencer = 0
+            vencidos = 0
+            ahora = datetime.now()
+
+            for t in tickets:
+                # Si el ticket ya fue resuelto o cerrado, cuenta como cumplido/en tiempo
+                if t["estado"] in ["Resuelto", "Cerrado"]:
+                    en_tiempo += 1
+                    continue
+                
+                # Umbrales basados estricta y exactamente en la configuración visual:
+                # Alta: 8 horas | Media: 24 horas | Baja: 72 horas
+                prio = t["prioridad"]
+                if prio == "Alta":
+                    limite_horas = 8
+                elif prio == "Media":
+                    limite_horas = 24
+                else:
+                    limite_horas = 72  # Baja por defecto
+                
+                # Calcular las horas transcurridas desde la creación del ticket
+                delta_horas = (ahora - t["created_at"]).total_seconds() / 3600
+                
+                if delta_horas > limite_horas:
+                    vencidos += 1
+                elif delta_horas >= (limite_horas * 0.8):  # Si supera el 80% del tiempo se marca como "Por vencer"
+                    por_vencer += 1
+                else:
+                    en_tiempo += 1
+
+            total = len(tickets)
+            cumplimiento = round((en_tiempo / total * 100) if total > 0 else 100)
+
+            return jsonify({
+                "ok": True,
+                "total": total,
+                "cumplimiento": cumplimiento,
+                "en_tiempo": en_tiempo,
+                "por_vencer": por_vencer,
+                "vencidos": vencidos
+            })
+    except Exception as e:
+        app.logger.exception("Error al calcular métricas de SLA")
+        return jsonify({"error": "Error interno"}), 500
+    finally:
+        conexion.close()
 
 if __name__ == "__main__":
     # Corre en el puerto 5001 para no chocar con tu proyecto principal

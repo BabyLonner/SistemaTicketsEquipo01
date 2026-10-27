@@ -938,3 +938,76 @@ tbody td:first-child {
     height: 130px;
   }
 }
+
+/* =========================================================
+   Pastillas de SLA estilo Jira (Integración Limpia)
+   ========================================================= */
+.jira-pill-sla {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+.jira-pill-sla.ok { 
+    background: #def8ed; 
+    color: #079b70; 
+}
+.jira-pill-sla.warning { 
+    background: #fff2d8; 
+    color: #d88a00; 
+}
+.jira-pill-sla.danger { 
+    background: #ffe6e9; 
+    color: #e33849; 
+}
+
+/* =========================================================
+   Ajuste y centrado profesional para las tarjetas de estadísticas
+   ========================================================= */
+.stat-card {
+  position: relative;
+  min-height: 105px;
+  padding: 16px 15px 16px 78px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stat-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%); /* Centra perfectamente el icono a la izquierda */
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 25px;
+  background: #e4f1ff;
+  color: #0875ed;
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #102b50;
+}
+
+.stat-label {
+  font-size: 11px;
+  line-height: 1.3;
+  color: #56769f;
+  margin-top: 3px;
+}
