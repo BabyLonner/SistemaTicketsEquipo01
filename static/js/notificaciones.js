@@ -1,3 +1,8 @@
+/* Escapa el texto antes de insertarlo con innerHTML (evita XSS con asuntos de tickets). */
+function escaparNotif(texto) {
+	return String(texto ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
 /* =========================================================
    notificaciones.js — Gestión global, filtros y paginación
    ========================================================= */
@@ -193,10 +198,10 @@ function renderizarPaginacion() {
                     <div class="notice-icon ${estilo.clase}">${estilo.inicial}</div>
                     <div class="notice-content">
                         <div class="notice-title">
-                            ${n.titulo}
+                            ${escaparNotif(n.titulo)}
                             ${n.leido === 0 ? '<span class="priority-tag">Nueva</span>' : ''}
                         </div>
-                        <p>${n.mensaje || ''}</p>
+                        <p>${escaparNotif(n.mensaje)}</p>
                     </div>
                     <time>${tiempo}</time>
                     <div class="unread-dot" aria-hidden="true"></div>
@@ -324,10 +329,10 @@ function renderizarDropdown(contenedor, notificaciones) {
             <div class="notif-item ${claseNoLeida}" onclick="abrirNotificacion(${n.id}, ${n.referencia_ticket}, ${n.leido})">
                 <div class="notif-item__content">
                     <div class="notif-item__top">
-                        <span class="notif-item__title">${n.titulo}</span>
+                        <span class="notif-item__title">${escaparNotif(n.titulo)}</span>
                         ${n.leido === 0 ? '<span class="notif-item__dot"></span>' : ''}
                     </div>
-                    <p class="notif-item__msg">${n.mensaje || ''}</p>
+                    <p class="notif-item__msg">${escaparNotif(n.mensaje)}</p>
                     <span class="notif-item__time">${tiempo}</span>
                 </div>
             </div>`;

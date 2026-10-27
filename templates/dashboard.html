@@ -42,28 +42,28 @@
     <div>
       <strong id="total-tickets">{{ datos.kpis.total or 0 }}</strong><span>Total de tickets</span>
     </div>
-    <small>↗ datos actuales <em>vs. mes anterior</em></small>
+    <small data-tendencia="tickets.total">… <em>vs. mes anterior</em></small>
   </article>
   <article class="kpi kpi-red">
     <span class="kpi-icon">!</span>
     <div>
       <strong id="open-tickets">{{ datos.kpis.abiertos or 0 }}</strong><span>Abiertos</span>
     </div>
-    <small>↗ datos actuales <em>vs. mes anterior</em></small>
+    <small data-tendencia="tickets.abiertos">… <em>vs. mes anterior</em></small>
   </article>
   <article class="kpi kpi-green">
     <span class="kpi-icon">✓</span>
     <div>
       <strong id="resolved-tickets">{{ datos.kpis.resueltos or 0 }}</strong><span>Resueltos</span>
     </div>
-    <small>↗ datos actuales <em>vs. mes anterior</em></small>
+    <small data-tendencia="tickets.resueltos">… <em>vs. mes anterior</em></small>
   </article>
   <article class="kpi kpi-amber">
     <span class="kpi-icon">◷</span>
     <div>
       <strong id="late-tickets">{{ datos.kpis.vencidos or 0 }}</strong><span>Vencidos (SLA)</span>
     </div>
-    <small>↗ datos actuales<em>vs. mes anterior</em></small>
+    <small data-tendencia="tickets.vencidos">… <em>vs. mes anterior</em></small>
   </article>
 </section>
 

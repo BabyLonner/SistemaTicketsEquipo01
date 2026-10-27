@@ -58,20 +58,16 @@
 </section>
 <section class="stats">
     <article class="stat blue"><span class="stat-icon">▤</span>
-        <div><strong id="total-count">48</strong><span>Total de tickets</span></div><small class="trend up">↑
-            12% <i>vs. periodo anterior</i></small><span class="wave"></span>
+        <div><strong id="total-count">48</strong><span>Total de tickets</span></div><small class="trend up" data-tendencia="tickets.total">… <i>vs. periodo anterior</i></small><span class="wave"></span>
     </article>
     <article class="stat green"><span class="stat-icon">✓</span>
-        <div><strong id="resolved-count">26</strong><span>Resueltos</span></div><small class="trend up">↑ 30%
-            <i>vs. periodo anterior</i></small><span class="wave"></span>
+        <div><strong id="resolved-count">26</strong><span>Resueltos</span></div><small class="trend up" data-tendencia="tickets.resueltos">… <i>vs. periodo anterior</i></small><span class="wave"></span>
     </article>
     <article class="stat amber"><span class="stat-icon">◷</span>
-        <div><strong id="progress-count">16</strong><span>En proceso</span></div><small class="trend up">↑ 7%
-            <i>vs. periodo anterior</i></small><span class="wave"></span>
+        <div><strong id="progress-count">16</strong><span>En proceso</span></div><small class="trend up" data-tendencia="tickets.en_proceso">… <i>vs. periodo anterior</i></small><span class="wave"></span>
     </article>
     <article class="stat red"><span class="stat-icon">!</span>
-        <div><strong id="pending-count">6</strong><span>Pendientes / vencidos</span></div><small class="trend down">↓
-            25% <i>vs. periodo anterior</i></small><span class="wave"></span>
+        <div><strong id="pending-count">6</strong><span>Pendientes / vencidos</span></div><small class="trend down" data-tendencia="tickets.pendientes">… <i>vs. periodo anterior</i></small><span class="wave"></span>
     </article>
 </section>
 <section class="charts">
@@ -118,7 +114,7 @@
             </thead>
             <tbody id="report-tbody">
                 {% for t in tickets %}
-                {% set codigo = t.numero if t.numero else ('TK-' ~ '%04d'|format(t.id)) %}
+                {% set codigo = t.codigo or ('TK-' ~ '%04d'|format(t.id)) %}
                 {% set fecha_creacion = t.created_at.strftime('%Y-%m-%d') if t.created_at else '' %}
                 {% set fecha_limite = t.fecha_limite.strftime('%Y-%m-%d') if t.fecha_limite else '' %}
                 {% set fecha_actualizacion = t.updated_at.strftime('%Y-%m-%d %H:%M') if t.updated_at else '' %}
@@ -138,8 +134,7 @@
                     <td><span class="status">{{ t.estado or 'Sin estado' }}</span></td>
                     <td>{{ t.tecnico or 'Sin asignar' }}</td>
                     <td>{{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at else '—' }}</td>
-                    <td>{{ t.updated_at.strftime('%d/%m/%Y %H:%M') if t.estado == 'Resuelto' and t.updated_at else '—'
-                        }}</td>
+                    <td>{{ t.fecha_resolucion.strftime('%d/%m/%Y %H:%M') if t.fecha_resolucion else '—' }}</td>
                     <td><button class="view" aria-label="Ver {{ codigo }}">◉</button></td>
                 </tr>
                 {% endfor %}

@@ -1,0 +1,93 @@
+{% set active_page = 'perfil' %}
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/usuarios.css') }}">
+<style>
+  .profile-card { padding:24px; }
+  .profile-top { display:flex; align-items:center; gap:16px; margin-bottom:18px; }
+  .profile-top .user-avatar { width:64px; height:64px; font-size:22px; }
+  .profile-top h2 { margin:0 0 6px; font-size:20px; color:#102b50; }
+  .profile-data { display:grid; grid-template-columns:1fr 1fr; gap:14px 24px; margin:0; }
+  .profile-data dt { font-size:12px; color:#58749a; margin-bottom:2px; }
+  .profile-data dd { margin:0; font-weight:600; color:#17375f; word-break:break-word; }
+  .password-tips { margin:14px 0 0; padding-left:18px; color:#58749a; font-size:12px; line-height:1.7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <span class="heading-icon" aria-hidden="true">♙</span>
+  <div>
+    <h1>Mi Perfil</h1>
+    <p>Tus datos en el sistema y el cambio de tu contraseña</p>
+  </div>
+</section>
+
+<div class="users-layout">
+  <div class="main-column">
+    <section class="panel profile-card">
+      <div class="profile-top">
+        <span class="user-avatar">{{ (u.nombre.split()[0][0] ~ (u.nombre.split()[1][0] if u.nombre.split()|length > 1 else ''))|upper }}</span>
+        <div>
+          <h2>{{ u.nombre }}</h2>
+          <span class="role-badge {{ {'Administrador': 'role-admin', 'Técnico': 'role-tech', 'Solicitante': 'role-requester'}.get(u.rol, 'role-admin') }}">{{ u.rol }}</span>
+        </div>
+      </div>
+      <dl class="profile-data">
+        <div><dt>Correo corporativo</dt><dd>{{ u.correo }}</dd></div>
+        <div><dt>Empresa</dt><dd>{{ u.empresa or 'Todas (superusuario)' }}</dd></div>
+        <div><dt>Área</dt><dd>{{ u.area or '—' }}</dd></div>
+        <div><dt>Estado</dt><dd><span class="status-badge active"><i></i>Activo</span></dd></div>
+        <div><dt>Cuenta creada</dt><dd>{{ extra.created_at.strftime('%d/%m/%Y') if extra.created_at else '—' }}</dd></div>
+        <div><dt>Último acceso</dt><dd>{{ extra.ultimo_acceso.strftime('%d/%m/%Y %H:%M') if extra.ultimo_acceso else '—' }}</dd></div>
+      </dl>
+    </section>
+
+    {% if resumen %}
+    <section class="stats-grid" aria-label="Tu actividad" style="grid-template-columns:repeat(3, minmax(0, 1fr));">
+      <article class="stat-card stat-total"><span class="stat-icon">▤</span>
+        <div class="stat-number">{{ resumen.registrados or 0 }}</div>
+        <div class="stat-label">Tickets que registraste</div><span class="stat-wave"></span>
+      </article>
+      <article class="stat-card stat-tech"><span class="stat-icon">♙</span>
+        <div class="stat-number">{{ resumen.asignados or 0 }}</div>
+        <div class="stat-label">Tickets asignados a ti</div><span class="stat-wave"></span>
+      </article>
+      <article class="stat-card stat-admin"><span class="stat-icon">✓</span>
+        <div class="stat-number">{{ resumen.resueltos or 0 }}</div>
+        <div class="stat-label">Resueltos por ti</div><span class="stat-wave"></span>
+      </article>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="right-column">
+    <section class="panel create-panel">
+      <h2><span class="section-icon">🔒</span>Cambiar contraseña</h2>
+      <form method="post" novalidate>
+        <div class="form-field"><label for="actual">Contraseña actual <span>*</span></label>
+          <input id="actual" name="actual" type="password" autocomplete="current-password" required>
+          <small class="field-error">{{ errores.get('actual', '') }}</small></div>
+        <div class="form-field"><label for="nueva">Nueva contraseña <span>*</span></label>
+          <input id="nueva" name="nueva" type="password" autocomplete="new-password" required>
+          <small class="field-error">{{ errores.get('nueva', '') }}</small></div>
+        <div class="form-field"><label for="repetir">Repite la nueva contraseña <span>*</span></label>
+          <input id="repetir" name="repetir" type="password" autocomplete="new-password" required>
+          <small class="field-error">{{ errores.get('repetir', '') }}</small></div>
+        <button class="btn-primary create-button" type="submit"><span>✓</span>Actualizar contraseña</button>
+      </form>
+      <ul class="password-tips">
+        <li>Mínimo 8 caracteres, combinando letras y números.</li>
+        <li>No uses la misma contraseña de tu correo personal.</li>
+        <li>Si la olvidas, pide al administrador de tu empresa que la restablezca.</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Mi cuenta</span></footer>
+{% endblock %}

@@ -126,15 +126,15 @@
               <td>
                 <div class="elapsed">
                   <span>{{ t.minutos_transcurridos // 60 }}h {{ t.minutos_transcurridos % 60 }}m</span>
-                  <div class="time-track {{ 'green' if t.semaforo == 'verde' else ('amber' if t.semaforo == 'amarillo' else 'red') }}">
+                  <div class="time-track {{ 'green' if t.semaforo in ('verde', 'cumplido') else ('amber' if t.semaforo == 'amarillo' else 'red') }}">
                     <i style="width: {{ t.porcentaje_sla }}%"></i>
                   </div>
                 </div>
               </td>
               <td>{{ t.sla_horas }}h</td>
               <td>
-                <span class="sla-badge {{ 'ontime' if t.semaforo == 'verde' else ('due' if t.semaforo == 'amarillo' else 'overdue') }}">
-                  <i></i>{{ 'En tiempo' if t.semaforo == 'verde' else ('Por vencer' if t.semaforo == 'amarillo' else 'Vencido') }}
+                <span class="sla-badge {{ 'ontime' if t.semaforo in ('verde', 'cumplido') else ('due' if t.semaforo == 'amarillo' else 'overdue') }}">
+                  <i></i>{{ {'verde': 'En tiempo', 'amarillo': 'Por vencer', 'rojo': 'Vencido', 'cumplido': 'Cumplido', 'incumplido': 'Fuera de plazo'}[t.semaforo] }}
                 </span>
               </td>
               <td>

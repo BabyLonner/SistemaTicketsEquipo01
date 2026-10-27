@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Error {{ codigo }} | Soporte TI{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/usuarios.css') }}">
+{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <span class="heading-icon" aria-hidden="true">!</span>
+  <div>
+    <h1>{{ {404: 'No encontramos lo que buscas', 403: 'No tienes permiso'}.get(codigo, 'Algo salió mal') }}</h1>
+    <p>{{ mensaje }}</p>
+  </div>
+</section>
+<section class="panel" style="padding:24px;max-width:640px">
+  <p style="margin:0 0 16px;color:#58749a">Código {{ codigo }}.</p>
+  <a class="btn-primary" style="display:inline-flex;padding:10px 18px;text-decoration:none" href="{{ url_for('inicio') }}">Ir al inicio</a>
+</section>
+{% endblock %}

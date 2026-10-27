@@ -84,15 +84,18 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("clear-filters").addEventListener("click",clearFilters);
   document.getElementById("empty-clear").addEventListener("click",clearFilters);
   document.getElementById("table-search").addEventListener("input",() => {page=1;render();});
-  document.getElementById("export-csv").addEventListener("click",() => {
-    const found=filtered(), headers=["Ticket","Asunto","Solicitante","Área","Categoría","Prioridad","Estado","Técnico","Fecha creación","Fecha límite"];
-    const data=found.map(r=>[r.dataset.id,r.dataset.subject,r.dataset.requester,r.dataset.area,r.dataset.category,r.dataset.priority,statusOf(r),r.dataset.technician,r.dataset.created,r.dataset.deadline||"Sin fecha límite"]);
-    const cell=v=>`"${String(v??"").replace(/"/g,'""')}"`;
-    const csv="\ufeff"+[headers,...data].map(row=>row.map(cell).join(";")).join("\r\n");
-    const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"})), a=document.createElement("a");
-    a.href=url;a.download="reporte_soporte_ti.csv";a.click();URL.revokeObjectURL(url);notify(`Exportación preparada: ${found.length} registros.`);
-  });
-  document.getElementById("export-print").addEventListener("click",()=>window.print());
+  // Módulo 6: exportación real en el servidor (openpyxl / ReportLab) con los filtros elegidos
+  function exportar(formato) {
+    const p = new URLSearchParams();
+    const val = id => document.getElementById(id).value;
+    [["desde","date-from"],["hasta","date-to"],["area","area-filter"],["categoria","category-filter"],
+     ["prioridad","priority-filter"],["estado","status-filter"],["tecnico","technician-filter"],["q","table-search"]]
+      .forEach(([k,id]) => { const v = val(id).trim(); if (v) p.set(k, v); });
+    notify(`Generando ${formato === "excel" ? "Excel" : "PDF"} con ${filtered().length} registro(s)...`);
+    window.location.href = `/reportes/exportar/${formato}?${p.toString()}`;
+  }
+  document.getElementById("export-csv").addEventListener("click", () => exportar("excel"));
+  document.getElementById("export-print").addEventListener("click", () => exportar("pdf"));
   tbody.addEventListener("click",e=>{
     const button=e.target.closest(".view"); if(!button)return; const r=button.closest("tr");
     document.getElementById("modal-title").textContent=`Detalle de ${r.dataset.id}`;
@@ -111,9 +114,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("prev-page").addEventListener("click",()=>{if(page>1){page--;render();}});
   document.getElementById("next-page").addEventListener("click",()=>{if(page<Math.ceil(filtered().length/pageSize)){page++;render();}});
   document.querySelectorAll(".page-number").forEach(b=>b.addEventListener("click",()=>{page=Number(b.dataset.page);render();}));
-  document.getElementById("notifications-button").addEventListener("click",()=>location.href="/notificaciones.html");
-  document.getElementById("profile-button").addEventListener("click",()=>location.href="/perfil.html");
-  document.getElementById("global-search").addEventListener("keydown",e=>{
+  // (los botones de notificaciones y perfil los maneja base.html; aquí no existen)
+  document.getElementById("global-search")?.addEventListener("keydown",e=>{
     if(e.key==="Enter"&&e.target.value.trim()){document.getElementById("table-search").value=e.target.value.trim();page=1;render();notify("Búsqueda aplicada.");}
   });
   render();
