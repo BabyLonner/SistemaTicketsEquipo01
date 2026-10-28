@@ -132,6 +132,17 @@
       <ul class="workload-list" id="workload-list"><!-- Generado por asignacion.js --></ul>
     </section>
 
+    <!-- MÓDULO 4: registro de avisos enviados al técnico por WhatsApp (Vonage) -->
+    <section class="panel wa-avisos-panel" aria-labelledby="wa-avisos-titulo">
+      <div class="panel-heading">
+        <h2 id="wa-avisos-titulo"><span class="section-icon wa-icon">✆</span>Avisos por WhatsApp</h2>
+        <span class="muted" id="wa-avisos-resumen"></span>
+      </div>
+      <p class="wa-config-alerta" id="wa-config-alerta" hidden>Vonage no está configurado en el servidor: los avisos
+        se registran como fallidos. Revisa el archivo <code>.env</code>.</p>
+      <ul class="wa-avisos-lista" id="wa-avisos-lista"><!-- Generado por asignacion.js --></ul>
+    </section>
+
     <section class="panel activity-panel">
       <div class="panel-heading">
         <h2><span class="section-icon">◷</span>Actividad reciente</h2><span class="muted" id="activity-count"></span>

@@ -324,6 +324,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			const datos = new FormData();
 			Object.entries(valores).forEach(([k, v]) => datos.append(k, v));
 			fotosNuevas.forEach((f) => datos.append('fotos', f.archivo));
+			// MÓDULO 3 (avance 2): equipo escaneado con QR (lo llena nuevo_ticket_qr.js)
+			if ($('equipo-token')?.value) datos.append('equipo', $('equipo-token').value);
 
 			bloquear(true, 'Enviando…');
 
@@ -343,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				);
 				form.reset();
+				window.EquipoQR?.limpiar(); // MÓDULO 3 (avance 2)
 				fotosNuevas.forEach((f) => URL.revokeObjectURL(f.url));
 				fotosNuevas = [];
 				renderFotos();

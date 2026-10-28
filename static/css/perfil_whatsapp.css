@@ -1,0 +1,31 @@
+/* =========================================================
+   MÓDULO 4 — WhatsApp para avisos (pantalla Mi Perfil)
+   ========================================================= */
+.wa-panel { margin-bottom: 15px; }
+.wa-icon { color: #16a34a; }
+.wa-intro { margin: -4px 0 12px; font-size: 12px; line-height: 1.55; color: var(--muted, #58749a); }
+
+/* Estado del número: sin número / registrado / Vonage sin configurar */
+.wa-estado { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 11px;
+  border-radius: 8px; font-size: 12px; font-weight: 600; background: #f1f5fb; color: #47617f; }
+.wa-estado i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.wa-estado[data-estado="ok"] { background: #e3f8ee; color: #087b55; }
+.wa-estado[data-estado="vacio"] { background: #fff4dc; color: #9a6200; }
+.wa-estado[data-estado="error"] { background: #ffe7ea; color: #c62f3c; }
+
+.wa-input { display: flex; align-items: stretch; border: 1px solid #d4e4f8; border-radius: 6px;
+  overflow: hidden; background: #fff; }
+.wa-input:focus-within { border-color: #6eaae9; box-shadow: 0 0 0 3px rgba(38, 120, 214, 0.09); }
+.wa-prefijo { display: grid; place-items: center; padding: 0 10px; background: #f3f7fc; color: #47617f;
+  font-size: 12px; font-weight: 700; border-right: 1px solid #d4e4f8; }
+.wa-input input { flex: 1; min-width: 0; border: 0 !important; box-shadow: none !important; outline: none; }
+.wa-panel .form-field input[aria-invalid="true"] { color: #c62f3c; }
+
+.wa-acciones { display: flex; gap: 8px; margin-top: 4px; }
+.wa-acciones .btn-primary { flex: 1; height: 40px; }
+.wa-acciones .btn-secondary { height: 40px; white-space: nowrap; }
+.wa-acciones button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.wa-ayuda { margin-top: 12px; font-size: 12px; color: #4c6d97; }
+.wa-ayuda summary { cursor: pointer; font-weight: 600; color: var(--blue, #2672c7); }
+.wa-ayuda ol { margin: 8px 0 0; padding-left: 18px; line-height: 1.6; }

@@ -510,6 +510,12 @@ class Ticket:
                     ),
                 )
 
+        # --- MÓDULO 4: quién debe recibir el aviso por WhatsApp (se envía después del commit) ---
+        return {
+            "tecnico_avisar": tecnico_id_nuevo if cambia_tecnico else None,
+            "reasignacion": bool(cambia_tecnico and actual["tecnico_id"]),
+        }
+
     @staticmethod
     def eliminar(cur, ticket_id):
         # evidencias, historial y notificaciones se borran en cascada
@@ -1053,6 +1059,10 @@ def crear_ticket():
             ticket_id = Ticket.crear(
                 cur, datos, g.usuario["id"], g.usuario["empresa_id"]
             )
+            # MÓDULO 3 (avance 2): ticket registrado escaneando el QR de un equipo
+            if (request.form.get("equipo") or "").strip():
+                from equipos import vincular_equipo
+                vincular_equipo(cur, ticket_id, request.form["equipo"], g.usuario["empresa_id"])
             _guardar_fotos(cur, ticket_id, fotos, [])
         con.commit()
     except Exception:
@@ -1105,6 +1115,7 @@ def editar_ticket(ticket_id):
         
     datos = request.get_json(silent=True) or request.form
     con = conexion()
+    cambios = None
     
     try:
         with con.cursor() as cur:
@@ -1112,7 +1123,7 @@ def editar_ticket(ticket_id):
             if any(k in datos for k in ("estado", "tecnico", "prioridad", "categoria")) and "asunto" not in datos:
                 if g.usuario["rol"] == ROL_SOLICITANTE and ticket["estado"] == "Cerrado":
                     return jsonify(error="No puedes modificar un ticket cerrado."), 403
-                Ticket.actualizar_gestion(cur, ticket_id, datos, g.usuario)
+                cambios = Ticket.actualizar_gestion(cur, ticket_id, datos, g.usuario)
                 
             elif "asunto" in datos:
                 if not puede_editar(g.usuario, ticket):
@@ -1132,9 +1143,17 @@ def editar_ticket(ticket_id):
         con.rollback()
         raise
         
+    # MÓDULO 4: aviso al técnico por WhatsApp (ya con la asignación guardada)
+    aviso = None
+    if cambios and cambios.get("tecnico_avisar"):
+        from avisos_whatsapp import avisar_asignacion
+        aviso = avisar_asignacion(ticket_id, cambios["tecnico_avisar"], cambios["reasignacion"],
+                                  g.usuario["empresa_id"], g.usuario["id"])
+
     return jsonify(
         mensaje="Ticket actualizado correctamente.",
-        ticket=_ticket_detalle(Ticket.obtener(ticket_id, g.usuario["empresa_id"]), g.usuario)
+        ticket=_ticket_detalle(Ticket.obtener(ticket_id, g.usuario["empresa_id"]), g.usuario),
+        aviso_whatsapp=aviso,
     )
 
 
@@ -1432,7 +1451,7 @@ def listar_tecnicos():
         return jsonify(error="No tienes acceso a esta información."), 403
     with conexion().cursor() as cur:
         cur.execute(
-            """SELECT u.id, u.nombre,
+            """SELECT u.id, u.nombre, (u.telefono IS NOT NULL) AS tiene_whatsapp,
                       (SELECT COUNT(*) FROM tickets t
                         WHERE t.tecnico_id = u.id AND t.estado IN ('Abierto', 'En proceso')) AS activos
                  FROM users u
