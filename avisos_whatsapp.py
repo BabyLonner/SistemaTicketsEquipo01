@@ -220,9 +220,11 @@ def _enlace_ticket(ticket_id):
         actual = request.host_url.rstrip("/")
     except RuntimeError:
         actual = ""
-    # 127.0.0.1 / localhost no abre en el celular: si el sistema se usa con la IP del WiFi, se usa esa
-    local = lambda u: re.match(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?(/|$)", u or "") is not None
-    if not base or (local(base) and actual and not local(actual)):
+    # Una dirección local (127.0.0.1, 192.168.x.x, 10.x.x.x) cambia con cada red:
+    # se usa la dirección con la que se abrió el sistema. Un dominio real (PythonAnywhere) se respeta.
+    local = re.compile(r"^https?://(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+"
+                       r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?(/|$)")
+    if actual and (not base or local.match(base)):
         base = actual
     return f"{base}/detalle_ticket?id={ticket_id}"
 

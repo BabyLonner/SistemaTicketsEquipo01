@@ -64,17 +64,23 @@ def nuevo_token():
     return secrets.token_urlsafe(12)
 
 
+# localhost, 127.x y las IP de red local (WiFi de casa, hotspot, laboratorio)
+RED_LOCAL = re.compile(r"^https?://(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+"
+                       r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?(/|$)")
+
+
 def _es_local(url):
-    return re.match(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?(/|$)", url or "") is not None
+    return RED_LOCAL.match(url or "") is not None
 
 
 def url_publica():
     """Dirección del sistema que va dentro del QR (la misma variable del módulo 4).
-    Si APP_URL_PUBLICA dice localhost/127.0.0.1 pero el sistema se abrió con la IP del WiFi
-    (p. ej. http://192.168.0.105:5000), se usa la IP: 127.0.0.1 no sirve en el celular."""
+    APP_URL_PUBLICA solo se usa si es un dominio real (PythonAnywhere, ngrok).
+    Si está vacía o es una dirección local (127.0.0.1, 192.168.x.x, 10.x.x.x), se usa la
+    dirección con la que se abrió el sistema: así funciona aunque cambies de WiFi o hotspot."""
     base = (os.getenv("APP_URL_PUBLICA") or "").strip().rstrip("/")
     actual = request.host_url.rstrip("/")
-    if not base or (_es_local(base) and not _es_local(actual)):
+    if not base or _es_local(base):
         return actual
     return base
 
