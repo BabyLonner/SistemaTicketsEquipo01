@@ -1,0 +1,184 @@
+{% set active_page = 'usuarios' %}
+{% extends "base.html" %}
+
+{% block title %}Usuarios | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/usuarios.css') }}">
+<script src="{{ url_for('static', filename='js/usuarios.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <span class="heading-icon" aria-hidden="true">♙</span>
+  <div>
+    <h1>Usuarios</h1>
+    <p>Gestiona los usuarios del sistema de soporte TI</p>
+  </div>
+</section>
+
+<div class="users-layout">
+  <div class="main-column">
+    <section class="stats-grid" aria-label="Resumen de usuarios">
+      <article class="stat-card stat-total"><span class="stat-icon">♟</span>
+        <div class="stat-number" id="total-users">0</div>
+        <div class="stat-label">Total de usuarios</div>
+        <div class="stat-trend positive" data-tendencia="usuarios.total">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+      </article>
+      <article class="stat-card stat-admin"><span class="stat-icon">♟</span>
+        <div class="stat-number" id="total-admins">0</div>
+        <div class="stat-label">Administradores</div>
+        <div class="stat-trend positive" data-tendencia="usuarios.administradores">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+      </article>
+      <article class="stat-card stat-tech"><span class="stat-icon">♙</span>
+        <div class="stat-number" id="total-techs">0</div>
+        <div class="stat-label">Técnicos</div>
+        <div class="stat-trend positive" data-tendencia="usuarios.tecnicos">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+      </article>
+      <article class="stat-card stat-requester"><span class="stat-icon">♙</span>
+        <div class="stat-number" id="total-requesters">0</div>
+        <div class="stat-label">Solicitantes</div>
+        <div class="stat-trend positive" data-tendencia="usuarios.solicitantes">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+      </article>
+    </section>
+
+    <section class="panel filters-panel" aria-label="Filtros de usuarios">
+      <div class="search-field"><span>⌕</span><input id="user-search" type="search"
+          placeholder="Buscar por nombre, correo o empresa..." aria-label="Buscar usuarios"></div>
+      <label class="filter-control"><span>Rol</span><select id="role-filter">
+          <option value="">Todos los roles</option>
+          <option>Administrador</option>
+          <option>Técnico</option>
+          <option>Solicitante</option>
+        </select></label>
+      <label class="filter-control"><span>Empresa</span><select id="company-filter">
+          <option value="">Todas las empresas</option>
+        </select></label>
+      <label class="filter-control"><span>Estado</span><select id="status-filter">
+          <option value="">Todos los estados</option>
+          <option>Activo</option>
+          <option>Inactivo</option>
+        </select></label>
+      <button class="btn-primary filter-button" id="apply-filters" type="button"><span>▽</span>Aplicar filtros</button>
+      <button class="reset-filters" id="reset-filters" type="button">Limpiar filtros</button>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="check-col"><input id="select-all" type="checkbox"
+                  aria-label="Seleccionar todos los usuarios visibles"></th>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Empresa</th>
+              <th>Área</th>
+              <th>Estado</th>
+              <th>Fecha de registro</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:24px;color:#58749a;">Cargando usuarios...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer"><span id="results-label">Cargando usuarios...</span>
+        <div class="pagination" aria-label="Paginación"><button type="button" id="previous-page"
+            aria-label="Página anterior">‹</button><button type="button" class="page-number active"
+            data-page="1">1</button><button type="button" class="page-number" data-page="2">2</button><button
+            type="button" class="page-number" data-page="3">3</button><button type="button" id="next-page"
+            aria-label="Página siguiente">›</button></div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="right-column">
+    <section class="panel create-panel">
+      <h2><span class="section-icon">♙<b>＋</b></span>Nuevo usuario</h2>
+      <form id="create-user-form" novalidate>
+        <div class="form-field"><label for="new-name">Nombre completo <span>*</span></label><input id="new-name"
+            type="text" placeholder="Ej. Carlos Martínez" required><small class="field-error"
+            id="new-name-error"></small></div>
+        <div class="form-field"><label for="new-email">Correo corporativo <span>*</span></label><input id="new-email"
+            type="email" placeholder="nombre.apellido@empresa.com.pe" required><small class="field-error"
+            id="new-email-error"></small></div>
+        <div class="form-field"><label for="new-password">Contraseña temporal <span>*</span></label><input id="new-password"
+            type="text" placeholder="Mínimo 8 caracteres con letras y números" autocomplete="new-password" required><small
+            class="field-error" id="new-password-error"></small></div>
+        <div class="form-field"><label for="new-role">Rol <span>*</span></label><select id="new-role" required>
+            <option value="">Selecciona un rol</option>
+            <option>Administrador</option>
+            <option>Técnico</option>
+            <option>Solicitante</option>
+          </select><small class="field-error" id="new-role-error"></small></div>
+        <div class="form-field"><label for="new-company">Empresa <span>*</span></label><select id="new-company"
+            required>
+            
+          </select><small class="field-error" id="new-company-error"></small></div>
+        <div class="form-field"><label for="new-area">Área</label><select id="new-area">
+            <option value="">Selecciona un área</option>
+          </select></div>
+        <button class="btn-primary create-button" type="submit"><span>＋</span>Crear usuario</button>
+      </form>
+    </section>
+
+    <section class="panel roles-panel">
+      <h2><span class="role-shield">♢</span>Roles del sistema</h2>
+      <article class="role-info admin-info"><span class="role-illustration">♛</span>
+        <div><strong>Administrador</strong>
+          <p>Gestiona usuarios, configura el sistema y tiene acceso a todos los módulos.</p>
+        </div>
+      </article>
+      <article class="role-info tech-info"><span class="role-illustration">⚒</span>
+        <div><strong>Técnico</strong>
+          <p>Atiende y resuelve tickets asignados.</p>
+        </div>
+      </article>
+      <article class="role-info requester-info"><span class="role-illustration">♙</span>
+        <div><strong>Solicitante</strong>
+          <p>Crea tickets y da seguimiento a sus solicitudes.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel important-panel">
+      <h2><span class="info-icon">i</span>Información importante</h2>
+      <ul>
+        <li>Las cuentas se crean por el administrador.</li>
+        <li>Cada usuario debe tener un correo corporativo.</li>
+        <li>Puedes desactivar usuarios si ya no pertenecen a la empresa.</li>
+        <li>Los cambios de rol se aplican de forma inmediata.</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Datos en vivo de la empresa</span></footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="user-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+  <div class="modal-card"><button class="modal-close" type="button" id="close-modal" aria-label="Cerrar">×</button><span
+      class="modal-icon">♙</span>
+    <h2 id="modal-title">Editar usuario</h2>
+    <p id="modal-description"></p>
+    <form id="edit-user-form" class="create-panel" novalidate hidden>
+      <div class="form-field"><label for="edit-name">Nombre completo</label><input id="edit-name" type="text"><small
+          class="field-error" id="edit-name-error"></small></div>
+      <div class="form-field"><label for="edit-email">Correo corporativo</label><input id="edit-email" type="email"><small
+          class="field-error" id="edit-email-error"></small></div>
+      <div class="form-field"><label for="edit-role">Rol</label><select id="edit-role">
+          <option>Administrador</option><option>Técnico</option><option>Solicitante</option>
+        </select><small class="field-error" id="edit-role-error"></small></div>
+      <div class="form-field"><label for="edit-area">Área</label><select id="edit-area"></select></div>
+      <div class="form-field"><label for="edit-password">Restablecer contraseña</label><input id="edit-password" type="text"
+          placeholder="Déjalo vacío para no cambiarla" autocomplete="new-password"><small class="field-error"
+          id="edit-password-error"></small></div>
+    </form>
+    <div class="modal-actions"><button class="btn-secondary" type="button" id="cancel-modal">Cancelar</button><button
+        class="btn-primary" type="button" id="confirm-modal">Guardar</button></div>
+  </div>
+</div>
+{% endblock %}

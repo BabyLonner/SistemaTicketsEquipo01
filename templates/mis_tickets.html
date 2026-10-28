@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Mis Tickets | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mis_tickets.css') }}">
+<script src="{{ url_for('static', filename='js/mis_tickets.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading"><span class="heading-icon">▤</span>
+    <div>
+        <h1>Mis Tickets</h1>
+        <p>Consulta el estado de tus solicitudes de soporte técnico</p>
+    </div>
+</section>
+<div class="content-grid">
+    <section class="main-column">
+        <section class="stats-grid">
+            <article class="stat-card blue"><span class="stat-icon">●</span><strong
+                    id="total-count">0</strong><label>Total de tickets</label><small class="trend good" data-tendencia="mios.total">… <em>vs. mes anterior</em></small></article>
+            <article class="stat-card green"><span class="stat-icon">✓</span><strong
+                    id="resolved-count">0</strong><label>Resueltos</label><small class="trend good" data-tendencia="mios.resueltos">… <em>vs. mes anterior</em></small></article>
+            <article class="stat-card amber"><span class="stat-icon">◷</span><strong
+                    id="progress-count">0</strong><label>En proceso</label><small class="trend good" data-tendencia="mios.en_proceso">… <em>vs. mes anterior</em></small></article>
+            <article class="stat-card red"><span class="stat-icon">!</span><strong
+                    id="pending-count">0</strong><label>Pendientes</label><small class="trend bad" data-tendencia="mios.abiertos">… <em>vs.
+                        mes anterior</em></small></article>
+        </section>
+        <section class="filter-panel">
+            <label class="search-field"><span>⌕</span><input id="ticket-search" type="search"
+                    placeholder="Buscar por código, asunto o descripción..."></label>
+            <label class="filter-field"><span>Estado</span><select id="status-filter">
+                    <option value="">Todos</option>
+                    <option>Abierto</option>
+                    <option>En proceso</option>
+                    <option>Resuelto</option>
+                    <option>Cerrado</option>
+                </select></label>
+            <label class="filter-field"><span>Prioridad</span><select id="priority-filter">
+                    <option value="">Todas</option>
+                    <option>Alta</option>
+                    <option>Media</option>
+                    <option>Baja</option>
+                </select></label>
+            <label class="filter-field"><span>Categoría</span><select id="category-filter">
+                    <option value="">Todas</option>
+                </select></label>
+            <button class="btn-primary" id="apply-filters">▽ Aplicar filtros</button><button class="clear-button"
+                id="clear-filters">Limpiar</button>
+        </section>
+        <section class="panel tickets-panel">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Ticket</th>
+                            <th>Asunto</th>
+                            <th>Categoría</th>
+                            <th>Prioridad</th>
+                            <th>Estado</th>
+                            <th>Técnico asignado</th>
+                            <th>Fecha de creación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tickets-tbody">
+                        <tr><td colspan="9" style="text-align:center;padding:24px;color:#58749a;">Cargando tus tickets...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="empty-state" id="empty-state" hidden><strong>No encontramos tickets</strong>
+                <p>Prueba con otra búsqueda o limpia los filtros.</p><button class="btn-secondary"
+                    id="empty-clear">Limpiar filtros</button>
+            </div>
+            <div class="table-footer"><span id="results-label">Cargando...</span>
+                <div class="pagination"><button id="prev-page" aria-label="Página anterior">‹</button><button
+                        class="page-number active" data-page="1">1</button><button class="page-number"
+                        data-page="2">2</button><button id="next-page" aria-label="Página siguiente">›</button>
+                </div>
+            </div>
+        </section>
+        <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Portal
+                del solicitante</span></footer>
+    </section>
+    <aside class="right-column">
+        <section class="panel quick-action"><a class="btn-primary new-ticket-link"
+                href="{{ url_for('pantalla', pagina='nuevo_ticket') }}">＋
+                Nuevo ticket <span>›</span></a></section>
+        <section class="panel recent-panel">
+            <h2><span class="section-icon">◷</span>Mis solicitudes recientes</h2>
+            <div class="recent-list">
+            </div><button class="text-link" id="view-all-tickets">Ver todos mis tickets <span>→</span></button>
+        </section>
+        <section class="panel help-panel">
+            <h2><span class="section-icon">◫</span>¿Necesitas ayuda?</h2>
+            <p>Revisa nuestra base de conocimientos para encontrar soluciones rápidas.</p><a class="btn-outline"
+                href="#">▣ Ir a la base de conocimientos</a>
+        </section>
+        <section class="panel tip-panel">
+            <h2><span class="tip-icon">✦</span>Consejo</h2>
+            <p>Antes de crear un nuevo ticket, revisa si tu problema ya tiene una solución en la base de
+                conocimientos. ¡Podrás resolverlo más rápido!</p>
+        </section>
+    </aside>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal" id="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-card"><button class="modal-close" id="modal-close" aria-label="Cerrar">×</button><span
+            class="modal-icon">▤</span>
+        <h2 id="modal-title">Detalle del ticket</h2>
+        <p id="modal-description"></p>
+        <div class="modal-actions"><button class="btn-secondary" id="modal-cancel">Cerrar</button><button
+                class="btn-primary" id="modal-confirm">Entendido</button></div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle del ticket | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/detalle_ticket.css') }}">
+<script src="{{ url_for('static', filename='js/detalle_ticket.js') }}" defer></script>
+<!-- tickets.js va después: muestra las fotos reales del ticket (?id=N) -->
+<script src="{{ url_for('static', filename='js/tickets.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url_for('pantalla', pagina='tickets') }}">Tickets</a><span>›</span><span
+    id="breadcrumb-code">TK-0000</span></div>
+<section class="page-heading">
+  <div class="ticket-title">
+    <span class="title-icon" aria-hidden="true">▤</span>
+    <div>
+      <h1><span id="ticket-code">TK-0000</span> - <span id="ticket-subject">Cargando...</span></h1>
+      <div class="ticket-tags"><span class="badge priority-high" id="ticket-priority-tag">▥ </span><span
+          class="badge status-progress" id="ticket-status-tag">▤ </span><span class="badge category-tag">◉
+          </span><span class="badge category-tag">▦ </span></div>
+    </div>
+  </div>
+  <a class="btn-outline" href="{{ url_for('pantalla', pagina='tickets') }}"><span aria-hidden="true">‹</span> Volver al
+    listado</a>
+</section>
+
+<div class="detail-layout">
+  <div class="left-column">
+    <section class="panel description-panel">
+      <h2><span class="section-icon">▤</span>Descripción</h2>
+      <p class="description-text" id="ticket-description">Cargando descripción...</p>
+      <div class="ticket-metadata">
+        <div class="metadata-item"><span class="metadata-icon">♙</span>
+          <div><small>Solicitante</small><strong>—</strong></div>
+        </div>
+        <div class="metadata-item"><span class="metadata-icon">▥</span>
+          <div><small>Área</small><strong>—</strong></div>
+        </div>
+        <div class="metadata-item"><span class="metadata-icon">▦</span>
+          <div><small>Empresa</small><strong>—</strong></div>
+        </div>
+        <div class="metadata-item"><span class="metadata-icon">▦</span>
+          <div><small>Creado</small><strong>—</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel evidence-panel">
+      <div class="panel-heading">
+        <h2><span class="section-icon">↗</span>Evidencias</h2><span class="muted" id="file-count"></span>
+      </div>
+      <div class="evidence-grid" id="evidence-grid">
+        <!-- Contenedor vacío donde detalle_ticket.js inyectará las fotos reales -->
+        <div id="contenedor-evidencias" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+           <p class="text-muted">Cargando evidencias...</p>
+        </div>
+
+        <!-- Mantenemos el botón de subida por si lo usas más adelante -->
+        <label class="upload-zone"><input id="evidence-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple
+            hidden><span class="upload-icon">⇧</span><strong>Arrastra más archivos aquí</strong><span>o haz clic para
+            seleccionar</span><small>Máx. 5 MB por foto · hasta 3 fotos<br>(JPG, PNG o WEBP)</small></label>
+      </div>
+    </section>
+
+    <section class="panel activity-panel">
+      <div class="tabs" role="tablist" aria-label="Actividad del ticket">
+        <button type="button" class="tab active" data-tab="conversation" role="tab"
+          aria-selected="true"><span>●</span>Conversación</button>
+        <button type="button" class="tab" data-tab="history" role="tab" aria-selected="false"><span>◷</span>Historial <b
+            class="tab-count" id="history-tab-count"></b></button>
+        <button type="button" class="tab" data-tab="tasks" role="tab"
+          aria-selected="false"><span>☑</span>Tareas</button>
+        <button type="button" class="tab" data-tab="files" role="tab"
+          aria-selected="false"><span>↗</span>Archivos</button>
+      </div>
+      <div class="tab-content" id="tab-conversation" role="tabpanel">
+
+        <!-- Contenedor vacío donde detalle_ticket.js inyectará la conversación real -->
+        <div class="conversation-list" id="contenedor-chat">
+          <p class="text-muted" style="padding: 20px;">Cargando conversación...</p>
+        </div>
+
+        <form class="reply-form" id="reply-form"><span class="comment-avatar avatar-admin">US</span><label
+            class="reply-input"><span class="sr-only">Escribe un comentario</span><input id="reply-text" type="text"
+              maxlength="1000" placeholder="Escribe un comentario..." required><label class="attach-button"
+              title="Adjuntar archivo">↗<input id="reply-file" type="file" accept="image/jpeg,image/png,image/webp" hidden></label></label><button
+            class="btn-primary send-button" type="submit"><span>➤</span>Enviar</button></form>
+      </div>
+      <div class="tab-content alternate-content" id="tab-history" role="tabpanel" hidden>
+        <!-- MÓDULO 3: línea de tiempo generada por detalle_ticket.js (tabla ticket_historial) -->
+        <div class="history-head"><strong>Línea de tiempo</strong><span class="muted" id="history-count"></span></div>
+        <ol class="timeline" id="history-timeline"></ol>
+      </div>
+      <div class="tab-content alternate-content" id="tab-tasks" role="tabpanel" hidden>
+        <form class="task-form" id="task-form"><input id="task-text" type="text"
+            placeholder="Escribe una nueva tarea..." required><button class="btn-primary" type="submit">＋
+            Agregar</button></form>
+        <ul class="task-list" id="task-list">
+          <li class="text-muted"><small>Cargando tareas...</small></li>
+        </ul>
+      </div>
+      <div class="tab-content alternate-content" id="tab-files" role="tabpanel" hidden>
+        <ul class="file-list" id="file-list">
+          <li class="text-muted"><small>Archivos adjuntos cargarán aquí</small></li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <aside class="right-column">
+    <section class="panel side-panel status-panel">
+      <h2><span class="section-icon">◷</span>Estado actual</h2>
+      <form id="ticket-properties">
+        <label class="property-row"><span class="property-label"><span>●</span>Estado</span><select
+            id="property-status">
+            <option>Abierto</option>
+            <option selected>En proceso</option>
+            <option>Resuelto</option>
+            <option>Cerrado</option>
+          </select></label>
+        <label class="property-row"><span class="property-label"><span>▥</span>Prioridad</span><select
+            id="property-priority">
+            <option>Alta</option>
+            <option>Media</option>
+            <option>Baja</option>
+          </select></label>
+        <label class="property-row"><span class="property-label"><span>▱</span>Categoría</span><select
+            id="property-category">
+            <option>Software</option>
+            <option>Hardware</option>
+            <option>Red e internet</option>
+            <option>Accesos y cuentas</option>
+            <option>Impresoras</option>
+          </select></label>
+        <label class="property-row"><span class="property-label"><span>♙</span>Técnico asignado</span><select
+            id="property-technician">
+            <option>Luis Ramos</option>
+            <option>Carla Mendoza</option>
+            <option>Pedro Salazar</option>
+            <option>Sin asignar</option>
+          </select></label>
+        <button class="btn-primary save-button" type="submit"><span>▣</span>Guardar cambios</button>
+      </form>
+    </section>
+
+    <section class="panel side-panel sla-panel">
+      <h2><span class="section-icon">◷</span>SLA y tiempos</h2>
+      <div class="sla-warning-box"><span>!</span>
+        <div><strong id="sla-title">Calculando...</strong><small>Revisando plazos</small></div>
+      </div>
+      <div class="sla-stats">
+        <div><small>Tiempo transcurrido</small><strong class="time-danger">◷ <span>--</span></strong></div>
+        <div><small>Tiempo límite (SLA)</small><strong class="time-muted">◷ <span id="sla-limit">--</span></strong>
+        </div>
+      </div>
+      <p class="sla-note" id="sla-note"></p>
+      <div class="sla-progress"><span id="sla-progress-bar"></span></div>
+      <div class="sla-percent" id="sla-percent">--%</div>
+    </section>
+
+    <section class="panel side-panel actions-panel">
+      <h2><span class="section-icon">⚙</span>Acciones</h2>
+      <button class="action-button" type="button" data-action="reply"><span>▱</span>Responder</button>
+      <button class="action-button" type="button" data-action="task"><span>☑</span>Agregar tarea</button>
+      <label class="action-button action-select"><span>⟳</span>Cambiar estado<select id="quick-status"
+          aria-label="Cambiar estado rápidamente">
+          <option value="">Seleccionar estado...</option>
+          <option>Abierto</option>
+          <option>En proceso</option>
+          <option>Resuelto</option>
+          <option>Cerrado</option>
+        </select><b>⌄</b></label>
+      <button class="action-button" type="button" data-action="assign"><span>♙</span>Asignar a otro técnico</button>
+      <button class="action-button action-danger" type="button" id="close-ticket"><span>▣</span>Cerrar ticket</button>
+    </section>
+  </aside>
+</div>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span id="page-message">Conectando...</span></footer>
+
+<!-- MÓDULO 3: cambio de estado con comentario obligatorio -->
+<div class="status-modal" id="status-modal" role="dialog" aria-modal="true" aria-labelledby="status-modal-title" hidden>
+  <form class="status-dialog" id="status-form" novalidate>
+    <button type="button" class="status-close" data-close aria-label="Cerrar">×</button>
+    <h2 id="status-modal-title"><span class="section-icon">⟳</span>Confirmar cambio de estado</h2>
+    <div class="status-transition">
+      <div><small>Estado actual</small><span class="badge" id="modal-status-from">—</span></div><span
+        class="transition-arrow" aria-hidden="true">→</span>
+      <div><small>Nuevo estado</small><span class="badge" id="modal-status-to">—</span></div>
+    </div>
+    <p class="status-extra" id="modal-extra" hidden></p>
+    <label class="status-field"><span>Comentario del técnico <b>*</b></span>
+      <textarea id="status-comment" rows="4" maxlength="500"
+        placeholder="Describe qué se hizo o por qué cambia el estado (mínimo 10 caracteres)."></textarea>
+      <small class="char-count"><span id="status-comment-count">0</span>/500</small>
+    </label>
+    <p class="status-error" id="status-comment-error"></p>
+    <div class="status-actions"><button type="button" class="btn-outline" data-close>Cancelar</button><button
+        type="submit" class="btn-primary"><span>✓</span>Guardar cambio</button></div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="preview-modal" id="preview-modal" role="dialog" aria-modal="true" aria-label="Vista previa de evidencia"
+  hidden>
+  <div class="preview-dialog"><button type="button" id="close-preview" aria-label="Cerrar vista previa">×</button>
+    <div id="preview-content"></div>
+    <p id="preview-caption"></p>
+  </div>
+</div>
+{% endblock %}

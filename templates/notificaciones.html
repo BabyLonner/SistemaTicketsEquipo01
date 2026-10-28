@@ -1,0 +1,112 @@
+{% set active_page = 'notificaciones' %}
+{% extends "base.html" %}
+
+{% block title %}Notificaciones | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/notificaciones.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <span class="heading-icon" aria-hidden="true">♧</span>
+  <div class="heading-copy">
+    <h1>Notificaciones</h1>
+    <p>Mantente al día con las actividades del sistema</p>
+  </div>
+  <!-- Botón adicional para la página completa -->
+  <button class="btn-outline mark-all-button" id="mark-all-read-page" type="button"
+    onclick="marcarTodasComoLeidas()"><span>✓</span>Marcar todas como leídas</button>
+</section>
+
+<section class="stats-grid" aria-label="Resumen de notificaciones">
+  <article class="stat-card stat-total"><span class="stat-icon">♧</span>
+    <div class="stat-number" id="total-count">-</div>
+    <div class="stat-label">Total</div>
+    <div class="stat-trend positive" data-tendencia="notificaciones.total">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+  </article>
+  <article class="stat-card stat-unread"><span class="stat-icon">♧</span>
+    <div class="stat-number" id="unread-count">-</div>
+    <div class="stat-label">No leídas</div>
+    <div class="stat-trend negative" data-tendencia="notificaciones.no_leidas">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+  </article>
+  <article class="stat-card stat-tickets"><span class="stat-icon">▤</span>
+    <div class="stat-number" id="ticket-count">-</div>
+    <div class="stat-label">Tickets</div>
+    <div class="stat-trend positive" data-tendencia="notificaciones.tickets">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+  </article>
+  <article class="stat-card stat-system"><span class="stat-icon">⚙</span>
+    <div class="stat-number" id="system-count">-</div>
+    <div class="stat-label">Sistema</div>
+    <div class="stat-trend positive" data-tendencia="notificaciones.sistema">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+  </article>
+</section>
+
+<div class="notifications-layout">
+  <section class="panel notification-panel">
+    <div class="list-toolbar">
+      <div class="tabs" role="tablist" aria-label="Filtrar notificaciones">
+        <button class="tab active" type="button" role="tab" aria-selected="true" data-type="all">Todas</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-type="unread">No leídas</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-type="ticket">Tickets</button>
+      </div>
+      <div class="list-controls">
+        <label class="list-search"><span>⌕</span><input id="notification-search" type="search"
+            placeholder="Buscar en notificaciones..." aria-label="Buscar en notificaciones"></label>
+        <select id="sort-order" aria-label="Orden de notificaciones">
+          <option value="newest">Más recientes</option>
+          <option value="oldest">Más antiguas</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="bulk-toolbar" id="bulk-toolbar" hidden><span id="selected-count">0 seleccionadas</span><button
+        type="button" id="mark-selected-read">Marcar como leídas</button><button type="button"
+        id="delete-selected">Eliminar de la vista</button><button type="button" id="clear-selection">Cancelar
+        selección</button></div>
+
+    <!-- El script JS (renderizarLista) inyectará las filas aquí -->
+    <div class="notification-list" id="contenedorPaginaNotificaciones" aria-live="polite">
+      <div class="text-center py-4 text-muted small">Cargando notificaciones desde la base de datos...</div>
+    </div>
+
+    <div class="list-footer"><span id="results-label">Mostrando notificaciones actuales</span>
+      <div class="pagination"><button id="prev-page" type="button" aria-label="Página anterior">‹</button><button
+          class="page-number active" type="button" data-page="1">1</button><button class="page-number" type="button"
+          data-page="2">2</button><button id="next-page" type="button" aria-label="Página siguiente">›</button></div>
+    </div>
+  </section>
+
+  <aside class="right-column">
+    <section class="panel filters-panel">
+      <h2><span class="panel-icon">▽</span>Filtros</h2>
+      <label for="type-filter">Tipo</label><select id="type-filter">
+        <option value="">Todos los tipos</option>
+        <option value="ticket">Tickets</option>
+        <option value="system">Sistema</option>
+        <option value="user">Usuarios</option>
+      </select>
+      <label for="state-filter">Estado</label><select id="state-filter">
+        <option value="">Todas</option>
+        <option value="unread">No leídas</option>
+        <option value="read">Leídas</option>
+      </select>
+      <label for="date-filter">Fecha</label><select id="date-filter">
+        <option value="">Todos los periodos</option>
+        <option value="today">Últimas 24 horas</option>
+        <option value="week">Últimos 7 días</option>
+      </select>
+      <button class="btn-primary apply-filter-button" id="apply-filters" type="button"><span>▽</span>Aplicar
+        filtros</button>
+    </section>
+
+    <section class="panel info-panel">
+      <h2><span class="info-icon">i</span>Información</h2>
+      <p>Las notificaciones te mantienen informado sobre las actividades importantes del sistema. Los eventos del
+        historial de tickets se generan automáticamente.</p>
+    </section>
+  </aside>
+</div>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span></footer>
+{% endblock %}

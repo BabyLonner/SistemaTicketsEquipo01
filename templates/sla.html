@@ -1,0 +1,264 @@
+{% set active_page = 'sla' %}
+{% extends "base.html" %}
+
+{% block title %}SLA | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/sla.css') }}">
+<script src="{{ url_for('static', filename='js/sla.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading"><span class="heading-icon">◷</span>
+  <div>
+    <h1>SLA - Acuerdos de Nivel de Servicio</h1>
+    <p>Monitorea y controla los tiempos de respuesta y resolución de los tickets.</p>
+  </div>
+</section>
+
+<div class="content-grid">
+  <section class="main-column">
+    <section class="stats-grid" aria-label="Resumen SLA">
+      <article class="stat-card stat-compliance"><span class="stat-icon">◷</span>
+        <div class="stat-number" id="compliance-number">85%</div>
+        <div class="stat-label">Cumplimiento SLA</div>
+
+      </article>
+      <article class="stat-card stat-ontime"><span class="stat-icon">↶</span>
+        <div class="stat-number" id="ontime-count">12</div>
+        <div class="stat-label">En tiempo</div>
+
+      </article>
+      <article class="stat-card stat-due"><span class="stat-icon">⚠</span>
+        <div class="stat-number" id="due-count">5</div>
+        <div class="stat-label">Por vencer</div>
+
+      </article>
+      <article class="stat-card stat-overdue"><span class="stat-icon">!</span>
+        <div class="stat-number" id="overdue-count">6</div>
+        <div class="stat-label">Vencidos</div>
+        
+      </article>
+    </section>
+
+    <section class="panel tickets-panel">
+      <div class="tabs" role="tablist" aria-label="Filtrar por estado SLA">
+        <button class="tab active" type="button" data-sla="all" role="tab" aria-selected="true">Todos
+          <span>(48)</span></button>
+        <button class="tab" type="button" data-sla="En tiempo" role="tab" aria-selected="false">En tiempo
+          <span>(12)</span></button>
+        <button class="tab" type="button" data-sla="Por vencer" role="tab" aria-selected="false">Por vencer
+          <span>(5)</span></button>
+        <button class="tab" type="button" data-sla="Vencido" role="tab" aria-selected="false">Vencidos
+          <span>(6)</span></button>
+        <label class="period-select"><span>▣</span><select id="period-filter" aria-label="Periodo">
+            <option value="month">Este mes</option>
+            <option value="week">Esta semana</option>
+            <option value="all">Todo el periodo</option>
+          </select></label>
+      </div>
+
+      <!-- BARRA DE FILTROS SIMPLIFICADA Y AUTOMÁTICA -->
+      <div class="filter-toolbar">
+        <label class="mini-filter"><span>Prioridad</span><select id="priority-filter">
+            <option value="">Todas</option>
+            <option>Alta</option>
+            <option>Media</option>
+            <option>Baja</option>
+          </select></label>
+        <label class="mini-filter"><span>Categoría</span><select id="category-filter">
+            <option value="">Todas</option>
+            <option>Hardware</option>
+            <option>Software</option>
+            <option>Redes</option>
+            <option>Acceso</option>
+          </select></label>
+        <label class="mini-filter"><span>Técnico</span><select id="technician-filter">
+            <option value="">Todos</option>
+            <option>Luis Ramos</option>
+            <option>Carla Mendoza</option>
+            <option>José García</option>
+            <option>María Torres</option>
+            <option>Rosa Villanueva</option>
+            <option>Sin asignar</option>
+          </select></label>
+        <label class="mini-filter"><span>Estado</span><select id="status-filter">
+            <option value="">Todos</option>
+            <option>Pendiente</option>
+            <option>Asignado</option>
+            <option>En proceso</option>
+            <option>Resuelto</option>
+          </select></label>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="check-col"><input id="select-all" type="checkbox" aria-label="Seleccionar tickets visibles">
+              </th>
+              <th>Ticket</th>
+              <th>Asunto</th>
+              <th>Prioridad</th>
+              <th>Tiempo transcurrido</th>
+              <th>Tiempo límite</th>
+              <th>Estado SLA</th>
+              <th>Técnico</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tickets-tbody">
+            {% for t in tickets %}
+            <tr data-id="{{ t.codigo }}" data-subject="{{ t.asunto }}" data-priority="{{ t.prioridad }}" 
+                data-requester="{{ t.solicitante }}" data-category="{{ t.categoria }}" data-technician="{{ t.tecnico }}" 
+                data-status="{{ t.estado }}" data-sla="{{ t.semaforo | capitalize }}" 
+                data-elapsed="{{ t.minutos_transcurridos // 60 }}h {{ t.minutos_transcurridos % 60 }}m" data-limit="{{ t.sla_horas }}h">
+              <td><input class="row-check" type="checkbox" aria-label="Seleccionar {{ t.codigo }}"></td>
+              <td><span class="ticket-code">{{ t.codigo }}</span></td>
+              <td>{{ t.asunto }}</td>
+              <td>
+                <span class="priority-badge {{ 'high' if t.prioridad == 'Alta' else ('medium' if t.prioridad == 'Media' else 'low') }}">
+                  <i></i>{{ t.prioridad }}
+                </span>
+              </td>
+              <td>
+                <div class="elapsed">
+                  <span>{{ t.minutos_transcurridos // 60 }}h {{ t.minutos_transcurridos % 60 }}m</span>
+                  <div class="time-track {{ 'green' if t.semaforo in ('verde', 'cumplido') else ('amber' if t.semaforo == 'amarillo' else 'red') }}">
+                    <i style="width: {{ t.porcentaje_sla }}%"></i>
+                  </div>
+                </div>
+              </td>
+              <td>{{ t.sla_horas }}h</td>
+              <td>
+                <span class="sla-badge {{ 'ontime' if t.semaforo in ('verde', 'cumplido') else ('due' if t.semaforo == 'amarillo' else 'overdue') }}">
+                  <i></i>{{ {'verde': 'En tiempo', 'amarillo': 'Por vencer', 'rojo': 'Vencido', 'cumplido': 'Cumplido', 'incumplido': 'Fuera de plazo'}[t.semaforo] }}
+                </span>
+              </td>
+              <td>
+                {% if t.tecnico and t.tecnico != 'Sin asignar' %}
+                  <span class="technician-chip"><i>{{ t.tecnico[:2] | upper }}</i>{{ t.tecnico }}</span>
+                {% else %}
+                  <span class="unassigned">Sin asignar</span>
+                {% endif %}
+              </td>
+              <td><span class="status-badge {{ 'progress' if t.estado == 'En proceso' else ('pending' if t.estado == 'Abierto' else 'resolved') }}">{{ t.estado }}</span></td>
+              <td>
+                <div class="row-actions">
+                  <button class="icon-button view-ticket" type="button" aria-label="Ver {{ t.codigo }}" title="Ver detalle">◉</button>
+                  <button class="icon-button more-action" type="button" aria-label="Más información {{ t.codigo }}" title="Más información">···</button>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="10" style="text-align: center; padding: 20px;">No hay tickets reales registrados para mostrar en esta empresa.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer"><span id="results-label">Mostrando 10 de 48 tickets</span>
+        <div class="pagination"><button id="prev-page" type="button" aria-label="Página anterior">‹</button><button
+            class="page-number active" type="button" data-page="1">1</button><button class="page-number" type="button"
+            data-page="2">2</button><button class="page-number" type="button" data-page="3">3</button><button
+            class="page-number" type="button" data-page="4">4</button><button class="page-number" type="button"
+            data-page="5">5</button><button id="next-page" type="button" aria-label="Página siguiente">›</button></div>
+      </div>
+    </section>
+    <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Prototipo visual ·
+        Datos de ejemplo</span></footer>
+  </section>
+
+  <aside class="right-column">
+    <section class="panel config-panel">
+      <h2><span class="config-icon">⚙</span>Configuración de SLA</h2>
+      <div class="config-head"><span>Prioridad</span><span>Tiempo de respuesta</span><span>Tiempo de resolución</span>
+      </div>
+      <form id="sla-config-form">
+        <div class="sla-config-row"><span class="priority-name"><i class="dot red"></i>Alta</span><select
+            aria-label="Tiempo de respuesta prioridad alta" data-priority="Alta" data-kind="response">
+            <option>15 minutos</option>
+            <option selected>30 minutos</option>
+            <option>1 hora</option>
+            <option>2 horas</option>
+          </select><select aria-label="Tiempo de resolución prioridad alta" data-priority="Alta" data-kind="resolution">
+            <option>4 horas</option>
+            <option selected>8 horas</option>
+            <option>12 horas</option>
+            <option>24 horas</option>
+          </select></div>
+        <div class="sla-config-row"><span class="priority-name"><i class="dot amber"></i>Media</span><select
+            aria-label="Tiempo de respuesta prioridad media" data-priority="Media" data-kind="response">
+            <option>30 minutos</option>
+            <option>1 hora</option>
+            <option selected>2 horas</option>
+            <option>4 horas</option>
+          </select><select aria-label="Tiempo de resolución prioridad media" data-priority="Media"
+            data-kind="resolution">
+            <option>8 horas</option>
+            <option selected>24 horas</option>
+            <option>48 horas</option>
+            <option>72 horas</option>
+          </select></div>
+        <div class="sla-config-row"><span class="priority-name"><i class="dot green"></i>Baja</span><select
+            aria-label="Tiempo de respuesta prioridad baja" data-priority="Baja" data-kind="response">
+            <option>2 horas</option>
+            <option>4 horas</option>
+            <option selected>8 horas</option>
+            <option>12 horas</option>
+          </select><select aria-label="Tiempo de resolución prioridad baja" data-priority="Baja" data-kind="resolution">
+            <option>24 horas</option>
+            <option>48 horas</option>
+            <option selected>72 horas</option>
+            <option>5 días</option>
+          </select></div>
+        <button class="btn-primary save-config" type="submit"><span>▣</span>Guardar configuración</button>
+      </form>
+    </section>
+
+    <section class="panel compliance-panel" style="display: none;">
+      <h2><span class="clock-icon">◷</span>Cumplimiento de SLA</h2>
+      <div class="compliance-content">
+        <div class="donut" role="img" aria-label="85 por ciento de cumplimiento">
+          <div><strong id="donut-percent">85%</strong><span>Cumplimiento<br>general</span></div>
+        </div>
+        <div class="legend">
+          <div><i class="dot green"></i><b id="legend-ontime">41</b><span>En tiempo</span></div>
+          <div><i class="dot amber"></i><b id="legend-due">5</b><span>Por vencer</span></div>
+          <div><i class="dot red"></i><b id="legend-overdue">6</b><span>Vencidos</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel chart-panel">
+      <h2><span class="chart-icon">▥</span>Tickets por estado de SLA</h2>
+      <div class="bar-chart" role="img" aria-label="Gráfico de tickets por estado SLA">
+        <div class="y-labels"><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>0</span>
+        </div>
+        <div class="chart-bars">
+          <div class="bar-column"><b id="bar-ontime-value">41</b><span class="bar green-bar" id="bar-ontime"
+              style="height:82%"></span><small>En tiempo</small></div>
+          <div class="bar-column"><b id="bar-due-value">5</b><span class="bar amber-bar" id="bar-due"
+              style="height:10%"></span><small>Por vencer</small></div>
+          <div class="bar-column"><b id="bar-overdue-value">6</b><span class="bar red-bar" id="bar-overdue"
+              style="height:12%"></span><small>Vencidos</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel info-panel">
+      <h2><span class="info-icon">i</span>Información importante</h2>
+      <ul>
+        <li>El tiempo de respuesta se cuenta desde la creación del ticket.</li>
+        <li>El tiempo de resolución se cuenta hasta cerrar el ticket.</li>
+        <li>Los tickets vencidos requieren atención prioritaria.</li>
+        <li>Puedes configurar tiempos de SLA según la prioridad.</li>
+        <li>El cumplimiento mostrado es ilustrativo en este prototipo.</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}
