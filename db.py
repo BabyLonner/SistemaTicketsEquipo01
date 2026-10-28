@@ -1,21 +1,51 @@
-
-import os
-
+"""Conexión a MySQL con PyMySQL. Los datos se leen del archivo .env (ver config.py)."""
 import pymysql
-from dotenv import load_dotenv
+import pymysql.cursors
 
-load_dotenv()
+import config
 
 
 def obtener_conexion():
-    """Abre una conexión con la base de datos local."""
+    """Abre una conexión nueva. Cada conexión trabaja en hora de Perú (UTC-5),
+    así NOW() devuelve lo mismo en XAMPP y en PythonAnywhere (que está en UTC)."""
     return pymysql.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", "3306")),
-        user=os.getenv("DB_USER", "admin"),       # Cambiado a 'root'
-        password=os.getenv("DB_PASSWORD", "admin"),   # Contraseña vacía para XAMPP
-        database=os.getenv("DB_NAME", "mesa_ayuda_ti"),
+        host=config.DB_HOST,
+        port=config.DB_PORT,
+        user=config.DB_USER,
+        password=config.DB_PASSWORD,
+        database=config.DB_NAME,
         charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor,
         connect_timeout=10,
+        init_command="SET time_zone = '-05:00'",
+        autocommit=False,
     )
+
+
+# ---------------------------------------------------------------------
+#  Una conexión por petición HTTP (se cierra sola al terminar, ver run.py)
+# ---------------------------------------------------------------------
+def conexion():
+    from flask import g
+
+    if "db" not in g:
+        g.db = obtener_conexion()
+    return g.db
+
+
+def cerrar_conexion(_error=None):
+    from flask import g
+
+    con = g.pop("db", None)
+    if con is not None:
+        try:
+            con.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def consultar(sql, params=None, uno=False):
+    """SELECT rápido con la conexión de la petición."""
+    with conexion().cursor() as cur:
+        cur.execute(sql, params or ())
+        return cur.fetchone() if uno else cur.fetchall()

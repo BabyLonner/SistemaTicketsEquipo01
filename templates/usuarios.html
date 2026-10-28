@@ -22,24 +22,24 @@
   <div class="main-column">
     <section class="stats-grid" aria-label="Resumen de usuarios">
       <article class="stat-card stat-total"><span class="stat-icon">♟</span>
-        <div class="stat-number" id="total-users">28</div>
+        <div class="stat-number" id="total-users">0</div>
         <div class="stat-label">Total de usuarios</div>
-        <div class="stat-trend positive">↑ 12% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+        <div class="stat-trend positive" data-tendencia="usuarios.total">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
       </article>
       <article class="stat-card stat-admin"><span class="stat-icon">♟</span>
-        <div class="stat-number" id="total-admins">4</div>
+        <div class="stat-number" id="total-admins">0</div>
         <div class="stat-label">Administradores</div>
-        <div class="stat-trend positive">↑ 0% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+        <div class="stat-trend positive" data-tendencia="usuarios.administradores">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
       </article>
       <article class="stat-card stat-tech"><span class="stat-icon">♙</span>
-        <div class="stat-number" id="total-techs">8</div>
+        <div class="stat-number" id="total-techs">0</div>
         <div class="stat-label">Técnicos</div>
-        <div class="stat-trend positive">↑ 14% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+        <div class="stat-trend positive" data-tendencia="usuarios.tecnicos">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
       </article>
       <article class="stat-card stat-requester"><span class="stat-icon">♙</span>
-        <div class="stat-number" id="total-requesters">16</div>
+        <div class="stat-number" id="total-requesters">0</div>
         <div class="stat-label">Solicitantes</div>
-        <div class="stat-trend positive">↑ 23% <small>vs. mes anterior</small></div><span class="stat-wave"></span>
+        <div class="stat-trend positive" data-tendencia="usuarios.solicitantes">… <small>vs. mes anterior</small></div><span class="stat-wave"></span>
       </article>
     </section>
 
@@ -54,12 +54,6 @@
         </select></label>
       <label class="filter-control"><span>Empresa</span><select id="company-filter">
           <option value="">Todas las empresas</option>
-          <option>Grupo M&M</option>
-          <option>EPSEL</option>
-          <option>Robotic Air Systems</option>
-          <option>Ángel Divino Bus</option>
-          <option>Agrofutura</option>
-          <option>Atlántica</option>
         </select></label>
       <label class="filter-control"><span>Estado</span><select id="status-filter">
           <option value="">Todos los estados</option>
@@ -87,212 +81,11 @@
             </tr>
           </thead>
           <tbody id="users-tbody">
-            <tr data-name="Ana Díaz" data-email="ana.diaz@empresa.pe" data-role="Administrador" data-company="Grupo M&M"
-              data-area="TI" data-status="Activo" data-date="01/08/2026 10:24">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar Ana Díaz"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">AD</span>
-                  <div><strong>Ana Díaz</strong><small>ana.diaz@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-admin">Administrador</span></td>
-              <td>Grupo M&M</td>
-              <td>TI</td>
-              <td><span class="status-badge active"><i></i>Activo</span></td>
-              <td>01/08/2026<br><small>10:24</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar Ana Díaz" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para Ana Díaz"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="Luis Ramos" data-email="luis.ramos@empresa.pe" data-role="Técnico" data-company="EPSEL"
-              data-area="Sistemas" data-status="Activo" data-date="02/08/2026 09:17">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar Luis Ramos"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">LR</span>
-                  <div><strong>Luis Ramos</strong><small>luis.ramos@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-tech">Técnico</span></td>
-              <td>EPSEL</td>
-              <td>Sistemas</td>
-              <td><span class="status-badge active"><i></i>Activo</span></td>
-              <td>02/08/2026<br><small>09:17</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar Luis Ramos" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para Luis Ramos"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="Carla Mendoza" data-email="carla.mendoza@empresa.pe" data-role="Técnico"
-              data-company="Robotic Air Systems" data-area="TI" data-status="Activo" data-date="03/08/2026 11:03">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar Carla Mendoza"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">CM</span>
-                  <div><strong>Carla Mendoza</strong><small>carla.mendoza@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-tech">Técnico</span></td>
-              <td>Robotic Air Systems</td>
-              <td>TI</td>
-              <td><span class="status-badge active"><i></i>Activo</span></td>
-              <td>03/08/2026<br><small>11:03</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar Carla Mendoza" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para Carla Mendoza"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="Rosa Villanueva" data-email="rosa.villanueva@empresa.pe" data-role="Solicitante"
-              data-company="Ángel Divino Bus" data-area="Administración" data-status="Activo"
-              data-date="04/08/2026 14:32">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar Rosa Villanueva"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">RV</span>
-                  <div><strong>Rosa Villanueva</strong><small>rosa.villanueva@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-requester">Solicitante</span></td>
-              <td>Ángel Divino Bus</td>
-              <td>Administración</td>
-              <td><span class="status-badge active"><i></i>Activo</span></td>
-              <td>04/08/2026<br><small>14:32</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar Rosa Villanueva" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para Rosa Villanueva"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="Pedro Salazar" data-email="pedro.salazar@empresa.pe" data-role="Técnico"
-              data-company="Agrofutura" data-area="Sistemas" data-status="Activo" data-date="05/08/2026 08:50">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar Pedro Salazar"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">PS</span>
-                  <div><strong>Pedro Salazar</strong><small>pedro.salazar@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-tech">Técnico</span></td>
-              <td>Agrofutura</td>
-              <td>Sistemas</td>
-              <td><span class="status-badge active"><i></i>Activo</span></td>
-              <td>05/08/2026<br><small>08:50</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar Pedro Salazar" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para Pedro Salazar"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="María Torres" data-email="maria.torres@empresa.pe" data-role="Solicitante"
-              data-company="Atlántica" data-area="Ventas" data-status="Activo" data-date="06/08/2026 09:41">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar María Torres"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">MT</span>
-                  <div><strong>María Torres</strong><small>maria.torres@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-requester">Solicitante</span></td>
-              <td>Atlántica</td>
-              <td>Ventas</td>
-              <td><span class="status-badge active"><i></i>Activo</span></td>
-              <td>06/08/2026<br><small>09:41</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar María Torres" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para María Torres"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="José García" data-email="jose.garcia@empresa.pe" data-role="Solicitante"
-              data-company="Grupo M&M" data-area="Logística" data-status="Inactivo" data-date="10/08/2026 16:20">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar José García"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">JG</span>
-                  <div><strong>José García</strong><small>jose.garcia@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-requester">Solicitante</span></td>
-              <td>Grupo M&M</td>
-              <td>Logística</td>
-              <td><span class="status-badge inactive"><i></i>Inactivo</span></td>
-              <td>10/08/2026<br><small>16:20</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar José García" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para José García"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="Lucía Fernández" data-email="lucia.fernandez@empresa.pe" data-role="Solicitante"
-              data-company="EPSEL" data-area="Administración" data-status="Activo" data-date="12/08/2026 11:14">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar Lucía Fernández"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">LF</span>
-                  <div><strong>Lucía Fernández</strong><small>lucia.fernandez@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-requester">Solicitante</span></td>
-              <td>EPSEL</td>
-              <td>Administración</td>
-              <td><span class="status-badge active"><i></i>Activo</span></td>
-              <td>12/08/2026<br><small>11:14</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar Lucía Fernández" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para Lucía Fernández"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="Juan Pérez" data-email="juan.perez@empresa.pe" data-role="Administrador"
-              data-company="Grupo M&M" data-area="TI" data-status="Activo" data-date="12/08/2026 11:14">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar Juan Pérez"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">JP</span>
-                  <div><strong>Juan Pérez</strong><small>juan.perez@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-admin">Administrador</span></td>
-              <td>Grupo M&M</td>
-              <td>TI</td>
-              <td><span class="status-badge active"><i></i>Activo</span></td>
-              <td>12/08/2026<br><small>11:14</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar Juan Pérez" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para Juan Pérez"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
-            <tr data-name="María López" data-email="maria.lopez@empresa.pe" data-role="Solicitante"
-              data-company="Robotic Air Systems" data-area="Administración" data-status="Inactivo"
-              data-date="15/08/2026 15:27">
-              <td><input class="row-check" type="checkbox" aria-label="Seleccionar María López"></td>
-              <td>
-                <div class="user-cell"><span class="user-avatar">ML</span>
-                  <div><strong>María López</strong><small>maria.lopez@empresa.pe</small></div>
-                </div>
-              </td>
-              <td><span class="role-badge role-requester">Solicitante</span></td>
-              <td>Robotic Air Systems</td>
-              <td>Administración</td>
-              <td><span class="status-badge inactive"><i></i>Inactivo</span></td>
-              <td>15/08/2026<br><small>15:27</small></td>
-              <td>
-                <div class="row-actions"><button type="button" class="icon-button edit-user"
-                    aria-label="Editar María López" title="Editar">✎</button><button type="button"
-                    class="icon-button more-user" aria-label="Más acciones para María López"
-                    title="Más acciones">···</button></div>
-              </td>
-            </tr>
+            <tr><td colspan="8" style="text-align:center;padding:24px;color:#58749a;">Cargando usuarios...</td></tr>
           </tbody>
         </table>
       </div>
-      <div class="table-footer"><span id="results-label">Mostrando 10 de 28 usuarios</span>
+      <div class="table-footer"><span id="results-label">Cargando usuarios...</span>
         <div class="pagination" aria-label="Paginación"><button type="button" id="previous-page"
             aria-label="Página anterior">‹</button><button type="button" class="page-number active"
             data-page="1">1</button><button type="button" class="page-number" data-page="2">2</button><button
@@ -310,8 +103,11 @@
             type="text" placeholder="Ej. Carlos Martínez" required><small class="field-error"
             id="new-name-error"></small></div>
         <div class="form-field"><label for="new-email">Correo corporativo <span>*</span></label><input id="new-email"
-            type="email" placeholder="nombre@empresa.com" required><small class="field-error"
+            type="email" placeholder="nombre.apellido@empresa.com.pe" required><small class="field-error"
             id="new-email-error"></small></div>
+        <div class="form-field"><label for="new-password">Contraseña temporal <span>*</span></label><input id="new-password"
+            type="text" placeholder="Mínimo 8 caracteres con letras y números" autocomplete="new-password" required><small
+            class="field-error" id="new-password-error"></small></div>
         <div class="form-field"><label for="new-role">Rol <span>*</span></label><select id="new-role" required>
             <option value="">Selecciona un rol</option>
             <option>Administrador</option>
@@ -320,24 +116,10 @@
           </select><small class="field-error" id="new-role-error"></small></div>
         <div class="form-field"><label for="new-company">Empresa <span>*</span></label><select id="new-company"
             required>
-            <option value="">Selecciona una empresa</option>
-            <option>Grupo M&M</option>
-            <option>EPSEL</option>
-            <option>Robotic Air Systems</option>
-            <option>Ángel Divino Bus</option>
-            <option>Agrofutura</option>
-            <option>Atlántica</option>
+            
           </select><small class="field-error" id="new-company-error"></small></div>
         <div class="form-field"><label for="new-area">Área</label><select id="new-area">
             <option value="">Selecciona un área</option>
-            <option>TI</option>
-            <option>Sistemas</option>
-            <option>Administración</option>
-            <option>Recursos Humanos</option>
-            <option>Contabilidad</option>
-            <option>Operaciones</option>
-            <option>Ventas</option>
-            <option>Logística</option>
           </select></div>
         <button class="btn-primary create-button" type="submit"><span>＋</span>Crear usuario</button>
       </form>
@@ -374,17 +156,29 @@
   </aside>
 </div>
 
-<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Prototipo visual · Datos
-    de ejemplo</span></footer>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Datos en vivo de la empresa</span></footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="modal" id="user-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
   <div class="modal-card"><button class="modal-close" type="button" id="close-modal" aria-label="Cerrar">×</button><span
       class="modal-icon">♙</span>
     <h2 id="modal-title">Editar usuario</h2>
-    <p id="modal-description">Vista de demostración para editar un usuario.</p>
+    <p id="modal-description"></p>
+    <form id="edit-user-form" class="create-panel" novalidate hidden>
+      <div class="form-field"><label for="edit-name">Nombre completo</label><input id="edit-name" type="text"><small
+          class="field-error" id="edit-name-error"></small></div>
+      <div class="form-field"><label for="edit-email">Correo corporativo</label><input id="edit-email" type="email"><small
+          class="field-error" id="edit-email-error"></small></div>
+      <div class="form-field"><label for="edit-role">Rol</label><select id="edit-role">
+          <option>Administrador</option><option>Técnico</option><option>Solicitante</option>
+        </select><small class="field-error" id="edit-role-error"></small></div>
+      <div class="form-field"><label for="edit-area">Área</label><select id="edit-area"></select></div>
+      <div class="form-field"><label for="edit-password">Restablecer contraseña</label><input id="edit-password" type="text"
+          placeholder="Déjalo vacío para no cambiarla" autocomplete="new-password"><small class="field-error"
+          id="edit-password-error"></small></div>
+    </form>
     <div class="modal-actions"><button class="btn-secondary" type="button" id="cancel-modal">Cancelar</button><button
-        class="btn-primary" type="button" id="confirm-modal">Guardar vista</button></div>
+        class="btn-primary" type="button" id="confirm-modal">Guardar</button></div>
   </div>
 </div>
 {% endblock %}

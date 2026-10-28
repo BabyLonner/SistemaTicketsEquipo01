@@ -1,0 +1,162 @@
+{% set active_page = 'empresas' %}
+{% extends "base.html" %}
+
+{% block title %}Empresas | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/usuarios.css') }}">
+<style>
+  /* Pequeños ajustes de esta pantalla (mismo estilo que Usuarios) */
+  .company-swatch { display:inline-flex; gap:3px; margin-right:8px; vertical-align:middle; }
+  .company-swatch i { width:14px; height:14px; border-radius:4px; border:1px solid rgba(0,0,0,.08); display:inline-block; }
+  .company-actions { display:flex; flex-direction:column; gap:6px; min-width:150px; }
+  .company-actions form, .company-actions .btn-small { width:100%; }
+  .company-actions form { margin:0; }
+  .company-actions .btn-small { padding:6px 10px; border-radius:8px; border:1px solid #c9d8ec; background:#fff; color:#1f4f86; font-weight:600; cursor:pointer; font-size:12px; }
+  .company-actions .btn-small.primary { background:#0b6bcb; color:#fff; border-color:#0b6bcb; }
+  .company-actions .btn-small.danger { color:#b42318; border-color:#f3c3be; }
+  .active-company { background:#e8f2fd; border:1px solid #b9d6f5; color:#173b5d; padding:12px 16px; border-radius:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .two-cols { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .color-row { display:flex; gap:14px; align-items:center; }
+  .color-row input[type=color] { width:46px; height:36px; padding:2px; border:1px solid #c9d8ec; border-radius:8px; background:#fff; }
+  .delete-box { display:flex; gap:6px; align-items:center; }
+  .delete-box button { width:auto !important; }
+  .delete-box input { width:100%; min-width:0; padding:6px 8px; border:1px solid #f3c3be; border-radius:8px; font-size:12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <span class="heading-icon" aria-hidden="true">▦</span>
+  <div>
+    <h1>Empresas</h1>
+    <p>Superusuario: agrega o elimina empresas y entra a administrar cualquiera de ellas</p>
+  </div>
+</section>
+
+<div class="users-layout">
+  <div class="main-column">
+    {% if session.get('empresa_activa') %}
+    <div class="active-company">
+      <span>Estás administrando <strong>{{ session.get('empresa_nombre') }}</strong>. Las pantallas de Tickets, Asignación, SLA, Reportes y Usuarios muestran sus datos.</span>
+      <form method="post" action="{{ url_for('empresas.dejar_de_administrar') }}"><button class="btn-secondary" type="submit">Dejar de administrar</button></form>
+    </div>
+    {% endif %}
+
+    <section class="stats-grid" aria-label="Resumen de empresas">
+      <article class="stat-card stat-total"><span class="stat-icon">▦</span>
+        <div class="stat-number">{{ empresas|length }}</div>
+        <div class="stat-label">Empresas</div><span class="stat-wave"></span>
+      </article>
+      <article class="stat-card stat-admin"><span class="stat-icon">✓</span>
+        <div class="stat-number">{{ empresas|selectattr('activo')|list|length }}</div>
+        <div class="stat-label">Activas</div><span class="stat-wave"></span>
+      </article>
+      <article class="stat-card stat-tech"><span class="stat-icon">♙</span>
+        <div class="stat-number">{{ empresas|sum(attribute='total_usuarios') }}</div>
+        <div class="stat-label">Usuarios en total</div><span class="stat-wave"></span>
+      </article>
+      <article class="stat-card stat-requester"><span class="stat-icon">▤</span>
+        <div class="stat-number">{{ empresas|sum(attribute='total_tickets') }}</div>
+        <div class="stat-label">Tickets en total</div><span class="stat-wave"></span>
+      </article>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Empresa</th><th>Dominio / administrador</th><th>Usuarios</th><th>Tickets</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody>
+            {% for e in empresas %}
+            <tr>
+              <td>
+                <div class="user-cell">
+                  {% if e.logo_url %}<img src="{{ e.logo_url }}" alt="" style="width:36px;height:36px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid #e1eaf6;">
+                  {% else %}<span class="user-avatar" style="background:{{ e.color_primario }}">{{ e.prefijo_ticket[:2] }}</span>{% endif %}
+                  <div><strong>{{ e.nombre }}</strong><small><span class="company-swatch"><i style="background:{{ e.color_primario }}"></i><i style="background:{{ e.color_secundario }}"></i></span>{{ e.prefijo_ticket }} · {{ e.codigo }}</small></div>
+                </div>
+              </td>
+              <td>@{{ e.dominio or '—' }}<br><small>{{ e.administrador or '—' }}</small></td>
+              <td>{{ e.total_usuarios }}</td>
+              <td>{{ e.total_tickets }}</td>
+              <td><span class="status-badge {{ 'active' if e.activo else 'inactive' }}"><i></i>{{ 'Activa' if e.activo else 'Inactiva' }}</span></td>
+              <td>
+                <div class="company-actions">
+                  <form method="post" action="{{ url_for('empresas.administrar', empresa_id=e.id) }}">
+                    <button class="btn-small primary" type="submit">Administrar</button>
+                  </form>
+                  <form method="post" action="{{ url_for('empresas.cambiar_estado', empresa_id=e.id) }}"
+                        onsubmit="return {{ 'confirm(\'¿Desactivar ' ~ e.nombre ~ '? Sus usuarios no podrán ingresar.\')' if e.activo else 'true' }};">
+                    <button class="btn-small" type="submit">{{ 'Desactivar' if e.activo else 'Activar' }}</button>
+                  </form>
+                  <form method="post" action="{{ url_for('empresas.eliminar', empresa_id=e.id) }}" class="delete-box"
+                        onsubmit="return confirm('¿Eliminar {{ e.nombre }} con TODOS sus usuarios, tickets y fotos? No se puede deshacer.');">
+                    <input name="confirmacion" placeholder="{{ e.codigo }}" aria-label="Escribe {{ e.codigo }} para eliminar" required>
+                    <button class="btn-small danger" type="submit">Eliminar</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:#58749a;">No hay empresas registradas.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer"><span>Para eliminar una empresa escribe su código en la casilla y pulsa Eliminar.</span></div>
+    </section>
+  </div>
+
+  <aside class="right-column">
+    <section class="panel create-panel">
+      <h2><span class="section-icon">▦<b>＋</b></span>Nueva empresa</h2>
+      <form method="post" novalidate>
+        <div class="form-field"><label for="nombre">Nombre comercial <span>*</span></label>
+          <input id="nombre" name="nombre" value="{{ form.get('nombre', '') }}" placeholder="Ej. Clínica Provida" required>
+          <small class="field-error">{{ errores.get('nombre', '') }}</small></div>
+        <div class="form-field"><label for="razon_social">Razón social</label>
+          <input id="razon_social" name="razon_social" value="{{ form.get('razon_social', '') }}"></div>
+        <div class="two-cols">
+          <div class="form-field"><label for="ruc">RUC</label>
+            <input id="ruc" name="ruc" value="{{ form.get('ruc', '') }}" maxlength="11" inputmode="numeric">
+            <small class="field-error">{{ errores.get('ruc', '') }}</small></div>
+          <div class="form-field"><label for="prefijo_ticket">Prefijo <span>*</span></label>
+            <input id="prefijo_ticket" name="prefijo_ticket" value="{{ form.get('prefijo_ticket', '') }}" maxlength="5" placeholder="CPV" style="text-transform:uppercase">
+            <small class="field-error">{{ errores.get('prefijo_ticket', '') }}</small></div>
+        </div>
+        <div class="form-field"><label for="dominio">Dominio de correo <span>*</span></label>
+          <input id="dominio" name="dominio" value="{{ form.get('dominio', '') }}" placeholder="clinicaprovida.com.pe">
+          <small class="field-error">{{ errores.get('dominio', '') }}</small></div>
+        <div class="form-field"><label for="titulo_sistema">Título del sistema</label>
+          <input id="titulo_sistema" name="titulo_sistema" value="{{ form.get('titulo_sistema', '') }}" placeholder="Soporte TI Clínica Provida"></div>
+        <div class="form-field"><label>Colores</label>
+          <div class="color-row">
+            <label><input type="color" name="color_primario" value="{{ form.get('color_primario') or '#0077B6' }}"> Principal</label>
+            <label><input type="color" name="color_secundario" value="{{ form.get('color_secundario') or '#D6EEF8' }}"> Suave</label>
+          </div>
+          <small class="field-error">{{ errores.get('color_primario', '') }}</small></div>
+        <div class="form-field"><label for="logo_url">Logo (ruta)</label>
+          <input id="logo_url" name="logo_url" value="{{ form.get('logo_url', '') }}" placeholder="/static/img/logos/mi-empresa.png"></div>
+        <div class="form-field"><label for="areas">Áreas</label>
+          <input id="areas" name="areas" value="{{ form.get('areas') or areas_defecto }}"></div>
+        <h2 style="margin-top:8px"><span class="section-icon">♙</span>Administrador de la empresa</h2>
+        <div class="form-field"><label for="admin_nombre">Nombre completo <span>*</span></label>
+          <input id="admin_nombre" name="admin_nombre" value="{{ form.get('admin_nombre', '') }}">
+          <small class="field-error">{{ errores.get('admin_nombre', '') }}</small></div>
+        <div class="form-field"><label for="admin_correo">Correo <span>*</span></label>
+          <input id="admin_correo" name="admin_correo" type="email" value="{{ form.get('admin_correo', '') }}" placeholder="nombre.apellido@dominio.com.pe">
+          <small class="field-error">{{ errores.get('admin_correo', '') }}</small></div>
+        <div class="form-field"><label for="admin_clave">Contraseña temporal <span>*</span></label>
+          <input id="admin_clave" name="admin_clave" type="text" autocomplete="new-password">
+          <small class="field-error">{{ errores.get('admin_clave', '') }}</small></div>
+        <button class="btn-primary create-button" type="submit"><span>＋</span>Crear empresa y administrador</button>
+      </form>
+    </section>
+  </aside>
+</div>
+
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Panel del superusuario</span></footer>
+{% endblock %}

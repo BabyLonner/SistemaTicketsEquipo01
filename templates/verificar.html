@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Verificar reporte | Soporte TI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/verificar.css') }}">
+    <!-- Página pública (sin login): no usa base.html porque no hay menú ni sesión -->
+    {% if reporte %}<style>:root { --color: {{ reporte.color_primario }}; }</style>{% endif %}
+</head>
+<body>
+    <main>
+        <section class="tarjeta">
+            {% if not reporte %}
+            <div class="cabecera">
+                <div>
+                    <h1>Reporte no registrado</h1>
+                    <p class="sub">Verificación de reportes · Mesa de Ayuda TI</p>
+                </div>
+            </div>
+            <div class="aviso mal">
+                ❌ El código «{{ codigo }}» no corresponde a ningún reporte emitido por el sistema.
+                <small>El documento podría ser falso, o el código QR fue modificado.</small>
+            </div>
+            {% else %}
+            <div class="cabecera">
+                {% if reporte.logo_url %}<img src="{{ reporte.logo_url }}" alt="Logo de {{ reporte.empresa }}">{% endif
+                %}
+                <div>
+                    <h1>Reporte de tickets · {{ reporte.empresa }}</h1>
+                    <p class="sub">Este código QR fue emitido por la Mesa de Ayuda TI</p>
+                </div>
+            </div>
+
+            {% if resultado == 'autentico' %}
+            <div class="aviso ok">
+                ✅ Documento auténtico: no fue modificado.
+                <small>La huella SHA-256 del archivo coincide con la registrada al generarlo.</small>
+            </div>
+            {% elif resultado == 'alterado' %}
+            <div class="aviso mal">
+                ❌ Documento alterado: el archivo no es el original.
+                <small>Su huella SHA-256 es distinta a la registrada. Huella del archivo subido:
+                    <span class="hash">{{ huella_subida }}</span></small>
+            </div>
+            {% elif error %}
+            <div class="aviso info">⚠ {{ error }}</div>
+            {% else %}
+            <div class="aviso info">
+                El código existe. Sube el PDF que recibiste para comprobar que no fue modificado.
+            </div>
+            {% endif %}
+
+            <dl>
+                <dt>Empresa</dt>
+                <dd>{{ reporte.empresa }}</dd>
+                <dt>Periodo</dt>
+                <dd>{{ reporte.periodo_desde.strftime('%d/%m/%Y') if reporte.periodo_desde else 'Desde el inicio' }}
+                    — {{ reporte.periodo_hasta.strftime('%d/%m/%Y') if reporte.periodo_hasta else 'hasta la fecha de
+                    emisión' }}</dd>
+                <dt>Filtros</dt>
+                <dd>{{ reporte.filtros }}</dd>
+                <dt>Tickets</dt>
+                <dd>{{ reporte.total_tickets }}</dd>
+                <dt>Emitido</dt>
+                <dd>{{ reporte.created_at.strftime('%d/%m/%Y %H:%M') }}</dd>
+                <dt>Generado por</dt>
+                <dd>{{ reporte.generado_por }}</dd>
+                <dt>Huella SHA-256</dt>
+                <dd class="hash">{{ reporte.hash_sha256 }}</dd>
+            </dl>
+
+            <form method="post" enctype="multipart/form-data">
+                <input type="file" name="pdf" accept="application/pdf,.pdf" required
+                    aria-label="Archivo PDF del reporte">
+                <button type="submit">Verificar PDF</button>
+            </form>
+            {% endif %}
+        </section>
+    </main>
+</body>
+
+</html>

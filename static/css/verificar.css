@@ -1,0 +1,140 @@
+/* Color por defecto; verificar.html lo cambia por el color de la empresa del reporte */
+:root {
+    --color: #0077B6;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Figtree, system-ui, sans-serif;
+    background: #EEF4FB;
+    color: #1d2b44;
+}
+
+main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 32px 16px;
+}
+
+.tarjeta {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 6px 24px #1d2b4414;
+    padding: 28px;
+}
+
+.cabecera {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.cabecera img {
+    height: 44px;
+}
+
+h1 {
+    font-size: 1.35rem;
+    margin: 0;
+}
+
+.sub {
+    color: #58749a;
+    margin: 2px 0 0;
+    font-size: .92rem;
+}
+
+dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 8px 16px;
+    margin: 0 0 22px;
+}
+
+dt {
+    color: #58749a;
+    font-weight: 600;
+}
+
+dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.hash {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: .8rem;
+}
+
+.aviso {
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.aviso small {
+    display: block;
+    font-weight: 400;
+    margin-top: 4px;
+}
+
+.ok {
+    background: #DCF5E6;
+    color: #116b3a;
+    border: 1px solid #9fdcb8;
+}
+
+.mal {
+    background: #FBE4E4;
+    color: #9b1c1c;
+    border: 1px solid #f0a9a9;
+}
+
+.info {
+    background: #FFF6DB;
+    color: #7a5a00;
+    border: 1px solid #f0d78a;
+}
+
+form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+input[type=file] {
+    flex: 1 1 260px;
+    padding: 10px;
+    border: 1px dashed #b8c9e0;
+    border-radius: 8px;
+    background: #f8fbff;
+}
+
+button {
+    background: var(--color);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+button:hover {
+    filter: brightness(.9);
+}
+
+.pie {
+    text-align: center;
+    color: #58749a;
+    font-size: .82rem;
+    margin-top: 18px;
+}

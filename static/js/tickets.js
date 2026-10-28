@@ -369,7 +369,7 @@ const Evidencias = (() => {
 		if (!ticket.miniatura_url) return `<span class="m2-mini m2-mini--vacia">▧</span>`;
 		const total =
 			ticket.total_evidencias > 1 ? `<b class="m2-mini__total">${ticket.total_evidencias}</b>` : '';
-		return `<button type="button" class="m2-mini" data-miniatura-url="${escapar(ticket.miniatura_url)}" data-imagen-url="${escapar(ticket.imagen_url)}" data-nombre="${escapar(ticket.codigo)}" ${galeria ? `data-galeria="\${escapar(galeria)}"` : ''}>${total}</button>`;
+		return `<button type="button" class="m2-mini" data-miniatura-url="${escapar(ticket.miniatura_url)}" data-imagen-url="${escapar(ticket.imagen_url)}" data-nombre="${escapar(ticket.codigo)}" ${galeria ? `data-galeria="${escapar(galeria)}"` : ''}>${total}</button>`;
 	}
 
 	async function hidratar(elemento) {
@@ -619,7 +619,7 @@ function generarFilaHTML(t) {
         <td>
             <div class="row-actions">
                 <a href="${urlDetalle}" aria-label="Ver detalle">◉</a>
-                ${t.estado === 'Abierto' ? `<a href="/nuevo_ticket?editar=\${t.id}" aria-label="Editar">✎</a>` : ''}
+                ${t.estado === 'Abierto' ? `<a href="/nuevo_ticket?editar=${t.id}" aria-label="Editar">✎</a>` : ''}
             </div>
         </td>
       </tr>

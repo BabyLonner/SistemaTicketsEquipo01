@@ -34,30 +34,24 @@ function obtenerCodigoTicket(t) {
     return 'CPV-' + String(t.id).padStart(4, '0');
 }
 
+// MÓDULO 4: el semáforo ya viene calculado por el servidor (Python) con los plazos reales
+// de la tabla prioridades (Alta 4 h, Media 24 h, Baja 72 h). Aquí solo se traduce a la vista.
 function calcularPlazoVisualSla(t) {
-    if (t.estado === 'Resuelto' || t.estado === 'Cerrado') {
-        return { texto: 'Cumplido', clase: 'ok', nivel: 'en-tiempo', detalle: 'SLA Finalizado' };
-    }
-    
-    const prio = t.prioridad || 'Media';
-    const limiteHoras = prio === 'Alta' ? 8 : (prio === 'Media' ? 24 : 72);
-    
-    if (t.created_at) {
-        const fechaCreacion = new Date(t.created_at.replace(' ', 'T'));
-        const ahora = new Date();
-        const horasTranscurridas = (ahora - fechaCreacion) / (1000 * 60 * 60);
-        
-        if (horasTranscurridas > limiteHoras) {
+    const horas = m => Math.max(0, Math.ceil((m || 0) / 60));
+    switch (t.semaforo) {
+        case 'cumplido':
+            return { texto: 'Cumplido', clase: 'ok', nivel: 'finalizado', detalle: 'Resuelto dentro del plazo' };
+        case 'incumplido':
+            return { texto: 'Fuera de plazo', clase: 'danger', nivel: 'finalizado', detalle: 'Resuelto después del plazo' };
+        case 'rojo':
             return { texto: 'Vencido', clase: 'danger', nivel: 'vencidos', detalle: 'Plazo excedido' };
-        } else if (horasTranscurridas >= limiteHoras * 0.8) {
-            const horasRestantes = Math.ceil(limiteHoras - horasTranscurridas);
-            return { texto: `Por vencer (${horasRestantes}h)`, clase: 'warning', nivel: 'por-vencer', detalle: `${horasRestantes}h restantes` };
-        } else {
-            const horasRestantes = Math.floor(limiteHoras - horasTranscurridas);
-            return { texto: `A tiempo (${horasRestantes}h)`, clase: 'ok', nivel: 'en-tiempo', detalle: `${horasRestantes}h restantes` };
-        }
+        case 'amarillo':
+            return { texto: `Por vencer (${horas(t.minutos_restantes)}h)`, clase: 'warning', nivel: 'por-vencer',
+                     detalle: `${horas(t.minutos_restantes)}h restantes` };
+        default:
+            return { texto: `A tiempo (${horas(t.minutos_restantes)}h)`, clase: 'ok', nivel: 'en-tiempo',
+                     detalle: `${horas(t.minutos_restantes)}h restantes` };
     }
-    return { texto: 'A tiempo', clase: 'ok', nivel: 'en-tiempo', detalle: 'En curso' };
 }
 
 async function cargarTicketsSla() {
@@ -79,60 +73,19 @@ async function cargarTicketsSla() {
 }
 
 function poblarFiltrosDinamicosSla(tickets) {
-    // 1. Técnicos oficiales según requerimiento
-    const selectTecnico = document.getElementById('technician-filter');
-    if (selectTecnico) {
-        const tecnicosOficiales = [
-            "Luis Ramos",
-            "Carla Mendoza",
-            "José García",
-            "María Torres",
-            "Rosa Villanueva",
-            "Sin asignar"
-        ];
-        let html = `<option value="">Todos los técnicos</option>`;
-        tecnicosOficiales.forEach(tec => {
-            html += `<option value="${escaparHTML(tec)}">${escaparHTML(tec)}</option>`;
-        });
-        selectTecnico.innerHTML = html;
-        selectTecnico.value = ""; // Valor por defecto en "Todos"
-    }
-
-    // 2. Categorías oficiales según requerimiento
-    const selectCategoria = document.getElementById('category-filter');
-    if (selectCategoria) {
-        const categoriasOficiales = [
-            "Accesos y cuentas",
-            "Correo",
-            "Hardware",
-            "Impresoras",
-            "Red e internet",
-            "Software"
-        ];
-        let html = `<option value="">Todas</option>`;
-        categoriasOficiales.forEach(cat => {
-            html += `<option value="${escaparHTML(cat)}">${escaparHTML(cat)}</option>`;
-        });
-        selectCategoria.innerHTML = html;
-    }
-
-    // 3. Estados oficiales según requerimiento (incluyendo "Abierto")
-    const selectEstado = document.getElementById('status-filter');
-    if (selectEstado) {
-        const estadosOficiales = [
-            "Abierto",
-            "Pendiente",
-            "Asignado",
-            "En proceso",
-            "Resuelto",
-            "Cerrado"
-        ];
-        let html = `<option value="">Todos</option>`;
-        estadosOficiales.forEach(est => {
-            html += `<option value="${escaparHTML(est)}">${escaparHTML(est)}</option>`;
-        });
-        selectEstado.innerHTML = html;
-    }
+    // Opciones tomadas de los tickets reales de la empresa (nada escrito a mano)
+    const llenar = (id, valores, textoTodos) => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        const actual = select.value;
+        select.innerHTML = `<option value="">${textoTodos}</option>` +
+            valores.map(v => `<option value="${escaparHTML(v)}">${escaparHTML(v)}</option>`).join('');
+        if (valores.includes(actual)) select.value = actual;
+    };
+    const unicos = arr => [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    llenar('technician-filter', unicos(tickets.map(t => t.tecnico || 'Sin asignar')), 'Todos los técnicos');
+    llenar('category-filter', unicos(tickets.map(t => t.categoria)), 'Todas');
+    llenar('status-filter', ['Abierto', 'En proceso', 'Resuelto', 'Cerrado'], 'Todos');
 }
 
 function aplicarFiltrosSla() {
@@ -188,7 +141,7 @@ function actualizarMetricasSlaGlobales() {
 
         if (t.estado === 'Resuelto' || t.estado === 'Cerrado') {
             totalResueltos++;
-            if (info.nivel === 'en-tiempo' || info.texto.includes('Cumplido')) {
+            if (t.semaforo === 'cumplido') {
                 resueltosATiempo++;
             }
         }
@@ -390,3 +343,70 @@ function configurarEventosSla() {
     const globalSearch = document.getElementById('global-search');
     globalSearch?.addEventListener('input', aplicarFiltrosSla);
 }
+
+/* ---------------------------------------------------------
+   Configuración de SLA: muestra los plazos reales de la BD y
+   los guarda (solo el superusuario; son iguales para todas las empresas).
+   --------------------------------------------------------- */
+function mensajeSla(texto) {
+    const toast = document.getElementById('toast');
+    if (!toast) { alert(texto); return; }
+    toast.textContent = texto;
+    toast.classList.add('show');
+    clearTimeout(mensajeSla.t);
+    mensajeSla.t = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+function horasDeOpcion(texto) {
+    const n = parseInt(texto, 10);
+    if (isNaN(n)) return null;
+    return /d[ií]a/i.test(texto) ? n * 24 : (/min/i.test(texto) ? null : n);
+}
+
+async function cargarConfiguracionSla() {
+    const form = document.getElementById('sla-config-form');
+    if (!form) return;
+    try {
+        const res = await fetch('/api/sla/configuracion', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const { prioridades } = await res.json();
+        prioridades.forEach(p => {
+            const select = form.querySelector(`select[data-priority="${p.nombre}"][data-kind="resolution"]`);
+            if (!select) return;
+            let opcion = [...select.options].find(o => horasDeOpcion(o.textContent) === p.sla_horas);
+            if (!opcion) {
+                opcion = new Option(`${p.sla_horas} horas`);
+                select.add(opcion, 0);
+            }
+            select.value = opcion.value;
+        });
+    } catch (e) {
+        console.error('No se pudo leer la configuración de SLA', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('sla-config-form');
+    if (!form) return;
+    cargarConfiguracionSla();
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const prioridades = {};
+        form.querySelectorAll('select[data-kind="resolution"]').forEach(s => {
+            const horas = horasDeOpcion(s.options[s.selectedIndex].textContent);
+            if (horas) prioridades[s.dataset.priority] = horas;
+        });
+        try {
+            const res = await fetch('/api/sla/configuracion', {
+                method: 'PUT', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prioridades })
+            });
+            const datos = await res.json();
+            mensajeSla(datos.mensaje || datos.error || 'No se pudo guardar.');
+            if (res.ok) cargarTicketsSla();
+        } catch (err) {
+            mensajeSla('No se pudo conectar con el servidor.');
+        }
+    });
+});

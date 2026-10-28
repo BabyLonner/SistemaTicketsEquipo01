@@ -59,8 +59,8 @@ function mostrarToast(msg) {
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-const CLASE_PRIORIDAD = { Alta: 'priority-high', Media: 'priority-medium', Baja: 'priority-low' };
-const CLASE_ESTADO = {
+const CLASE_PRIORIDAD_DET = { Alta: 'priority-high', Media: 'priority-medium', Baja: 'priority-low' };
+const CLASE_ESTADO_DET = {
     Abierto: 'status-open',
     'En proceso': 'status-progress',
     Resuelto: 'status-resolved',
@@ -88,16 +88,18 @@ async function cargarDetalleTicket(id) {
         document.getElementById('ticket-subject').textContent = escaparHTML(t.asunto);
 
         // 2. Etiquetas (Tags) Superiores
-        document.getElementById('ticket-priority-tag').className = `badge ${CLASE_PRIORIDAD[t.prioridad] || ''}`;
+        document.getElementById('ticket-priority-tag').className = `badge ${CLASE_PRIORIDAD_DET[t.prioridad] || ''}`;
         document.getElementById('ticket-priority-tag').textContent = `▥ ${escaparHTML(t.prioridad)}`;
 
-        document.getElementById('ticket-status-tag').className = `badge ${CLASE_ESTADO[t.estado] || ''}`;
+        document.getElementById('ticket-status-tag').className = `badge ${CLASE_ESTADO_DET[t.estado] || ''}`;
         document.getElementById('ticket-status-tag').textContent = `▤ ${escaparHTML(t.estado)}`;
 
         const tagCategoria = document.querySelectorAll('.ticket-tags .category-tag')[0];
         const tagEmpresa = document.querySelectorAll('.ticket-tags .category-tag')[1];
         if (tagCategoria) tagCategoria.textContent = `◉ ${escaparHTML(t.categoria)}`;
         if (tagEmpresa) tagEmpresa.textContent = `▦ ${escaparHTML(t.empresa)}`;
+
+        calcularSlaDetalleTicket(t);
 
         // 3. Descripción y Metadatos (Panel Izquierdo)
         document.getElementById('ticket-description').textContent = escaparHTML(t.descripcion);
@@ -152,6 +154,8 @@ async function cargarDetalleTicket(id) {
             }
         }
 
+        renderizarArchivos(t.evidencias || []);
+
         // --- NUEVO 6: OBTENER HISTORIAL Y CONVERSACIÓN ---
         cargarHistorial(id);
 
@@ -162,34 +166,54 @@ async function cargarDetalleTicket(id) {
     }
 }
 
+// MÓDULO 4: el servidor calcula el SLA en Python (semáforo, minutos y % del plazo);
+// aquí solo se pinta el recuadro "SLA y tiempos".
 function calcularSlaDetalleTicket(t) {
-    if (!t.created_at) return;
-
-    const fechaCreacion = new Date(t.created_at.replace(' ', 'T'));
-    const ahora = new Date();
-    const horasTranscurridas = (ahora - fechaCreacion) / (1000 * 60 * 60);
-
-    const prio = t.prioridad || 'Media';
-    const limiteHoras = prio === 'Alta' ? 8 : (prio === 'Media' ? 24 : 72);
-    
-    let textoEstado = "A tiempo";
-    if (t.estado === 'Resuelto' || t.estado === 'Cerrado') {
-        textoEstado = "Cumplido";
-    } else if (horasTranscurridas > limiteHoras) {
-        textoEstado = "Vencido";
-    } else if (horasTranscurridas >= limiteHoras * 0.8) {
-        textoEstado = "Por vencer";
+    const duracion = (min) => {
+        min = Math.max(0, Math.round(min || 0));
+        const d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60;
+        if (d) return `${d} d ${h} h`;
+        if (h) return `${h} h ${m} min`;
+        return `${m} min`;
+    };
+    const textos = {
+        verde: ['En tiempo', `Quedan ${duracion(t.minutos_restantes)}`],
+        amarillo: ['Por vencer', `Quedan ${duracion(t.minutos_restantes)}`],
+        rojo: ['Plazo vencido', `Venció hace ${duracion(-(t.minutos_restantes || 0))}`],
+        cumplido: ['Cumplido', 'Se resolvió dentro del plazo'],
+        incumplido: ['Fuera de plazo', 'Se resolvió después del plazo'],
+    };
+    const [titulo, detalle] = textos[t.semaforo] || ['Sin datos', ''];
+    const caja = document.querySelector('.sla-warning-box');
+    const tituloEl = document.getElementById('sla-title');
+    if (tituloEl) {
+        tituloEl.textContent = titulo;
+        const small = tituloEl.parentElement.querySelector('small');
+        if (small) small.textContent = detalle;
     }
-
-    const dMin = Math.floor((ahora - fechaCreacion) / 60000);
-    const tiempoTransFormateado = dMin < 60 ? `${dMin} min` : `${(dMin / 60).toFixed(1)} h`;
-
-    // Actualizar de forma segura los elementos de tiempo en el detalle
-    document.querySelectorAll('time').forEach(el => {
-        if (el.closest('.sla-box, [class*="sla"], .right-panel')) {
-            el.textContent = tiempoTransFormateado;
-        }
-    });
+    if (caja) {
+        const colores = { verde: ['#e8f7ef', '#12805c'], cumplido: ['#e8f7ef', '#12805c'],
+                          amarillo: ['#fff6e0', '#9a6700'], rojo: ['#fdecec', '#b42318'], incumplido: ['#fdecec', '#b42318'] };
+        const [fondo, color] = colores[t.semaforo] || ['#eef3fa', '#24466b'];
+        caja.style.background = fondo;
+        caja.style.color = color;
+        const icono = caja.querySelector('span');
+        if (icono) { icono.textContent = ['verde', 'cumplido'].includes(t.semaforo) ? '✓' : '!'; icono.style.background = color; }
+    }
+    const transcurrido = document.querySelector('.sla-stats .time-danger span');
+    if (transcurrido) transcurrido.textContent = duracion(t.minutos_transcurridos);
+    const limite = document.getElementById('sla-limit');
+    if (limite) limite.textContent = `${t.sla_horas} h · ${formatearFecha(t.fecha_limite)}`;
+    const nota = document.getElementById('sla-note');
+    if (nota) nota.textContent = `Prioridad ${t.prioridad}: máximo ${t.sla_horas} h para resolverlo.`;
+    const pct = Math.min(100, Math.round(t.porcentaje_sla || 0));
+    const barra = document.getElementById('sla-progress-bar');
+    if (barra) {
+        barra.style.width = `${pct}%`;
+        barra.style.background = { verde: '#14b88a', cumplido: '#14b88a', amarillo: '#f0a500' }[t.semaforo] || '#f04452';
+    }
+    const porcentaje = document.getElementById('sla-percent');
+    if (porcentaje) porcentaje.textContent = `${pct}%`;
 }
 
 /* =========================================================================
@@ -370,9 +394,9 @@ function abrirModalComentarioEstado(datos) {
     const desde = document.getElementById('modal-status-from');
     const hacia = document.getElementById('modal-status-to');
     desde.textContent = ticketDetalleActual.estado;
-    desde.className = `badge ${CLASE_ESTADO[ticketDetalleActual.estado] || ''}`;
+    desde.className = `badge ${CLASE_ESTADO_DET[ticketDetalleActual.estado] || ''}`;
     hacia.textContent = datos.estado;
-    hacia.className = `badge ${CLASE_ESTADO[datos.estado] || ''}`;
+    hacia.className = `badge ${CLASE_ESTADO_DET[datos.estado] || ''}`;
     const extra = document.getElementById('modal-extra');
     const cambiaTecnico = datos.tecnico && datos.tecnico !== ticketDetalleActual.tecnico;
     extra.hidden = !cambiaTecnico;
@@ -569,3 +593,200 @@ function configurarEventosPanelDerecho(ticketId) {
         });
     }
 }
+
+
+/* =========================================================================
+   Pestaña Conversación: enviar comentario (POST /api/tickets/<id>/comentarios)
+   ========================================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+    const idTicket = new URLSearchParams(window.location.search).get('id');
+    const form = document.getElementById('reply-form');
+    const input = document.getElementById('reply-text');
+    if (!idTicket || !form || !input) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const comentario = input.value.trim();
+        if (comentario.length < 2) {
+            mostrarToast('Escribe un comentario.');
+            input.focus();
+            return;
+        }
+        const boton = form.querySelector('button[type="submit"]');
+        if (boton) boton.disabled = true;
+        try {
+            const res = await fetch(`/api/tickets/${idTicket}/comentarios`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: obtenerHeadersAuth(),
+                body: JSON.stringify({ comentario })
+            });
+            const datos = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                mostrarToast(datos.error || 'No se pudo enviar el comentario.');
+                return;
+            }
+            input.value = '';
+            mostrarToast('Comentario enviado.');
+            cargarHistorial(idTicket);
+        } catch (err) {
+            mostrarToast('No se pudo conectar con el servidor.');
+        } finally {
+            if (boton) boton.disabled = false;
+        }
+    });
+
+    // "Responder" lleva al cuadro de comentario de la conversación
+    document.querySelector('[data-action="reply"]')?.addEventListener('click', () => {
+        document.querySelector('.tab[data-tab="conversation"], .tab[data-tab="conversacion"]')?.click();
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        input.focus();
+    });
+});
+
+/* =========================================================================
+   Evidencias: agregar fotos desde el detalle (POST /api/tickets/<id>/evidencias)
+   ========================================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+    const idTicket = new URLSearchParams(window.location.search).get('id');
+    const input = document.getElementById('evidence-input');
+    const zona = input ? input.closest('.upload-zone') : null;
+    if (!idTicket || !input) return;
+
+    async function subir(archivos) {
+        const fotos = [...archivos].filter((f) => /^image\/(jpeg|png|webp)$/.test(f.type));
+        if (!fotos.length) { mostrarToast('Solo se aceptan imágenes JPG, PNG o WEBP.'); return; }
+        const datos = new FormData();
+        fotos.forEach((f) => datos.append('fotos', f));
+        mostrarToast(`Subiendo ${fotos.length} foto(s)...`);
+        try {
+            const res = await fetch(`/api/tickets/${idTicket}/evidencias`, { method: 'POST', body: datos, credentials: 'same-origin' });
+            const r = await res.json().catch(() => ({}));
+            mostrarToast(r.mensaje || r.error || 'No se pudo subir la foto.');
+            if (res.ok) cargarDetalleTicket(idTicket);
+        } catch (e) {
+            mostrarToast('No se pudo conectar con el servidor.');
+        } finally {
+            input.value = '';
+        }
+    }
+
+    input.addEventListener('change', () => input.files.length && subir(input.files));
+    if (zona) {
+        ['dragenter', 'dragover'].forEach((ev) => zona.addEventListener(ev, (e) => { e.preventDefault(); zona.classList.add('dragging'); }));
+        ['dragleave', 'drop'].forEach((ev) => zona.addEventListener(ev, (e) => { e.preventDefault(); zona.classList.remove('dragging'); }));
+        zona.addEventListener('drop', (e) => e.dataTransfer?.files?.length && subir(e.dataTransfer.files));
+    }
+});
+
+
+/* =========================================================================
+   Pestaña Archivos: lista de las fotos de evidencia del ticket
+   ========================================================================= */
+function renderizarArchivos(evidencias) {
+    const lista = document.getElementById('file-list');
+    if (!lista) return;
+    if (!evidencias.length) {
+        lista.innerHTML = '<li class="text-muted"><small>Este ticket no tiene archivos adjuntos.</small></li>';
+        return;
+    }
+    lista.innerHTML = evidencias.map((f) => `
+        <li><span>▧ ${escaparHTML(f.nombre)}</span>
+            <small>${f.tamano_bytes ? Math.round(f.tamano_bytes / 1024) + ' KB' : ''}</small>
+            <a href="${f.imagen_url}" target="_blank" rel="noopener">Ver</a></li>`).join('');
+}
+
+/* =========================================================================
+   Pestaña Tareas (GET/POST /api/tickets/<id>/tareas, PUT/DELETE /api/tareas/<id>)
+   ========================================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+    const idTicket = new URLSearchParams(window.location.search).get('id');
+    const lista = document.getElementById('task-list');
+    const form = document.getElementById('task-form');
+    const input = document.getElementById('task-text');
+    if (!idTicket || !lista || !form) return;
+    let puedeEditar = false;
+
+    function pintar(tareas) {
+        if (!tareas.length) {
+            lista.innerHTML = '<li class="text-muted"><small>Aún no hay tareas para este ticket.</small></li>';
+            return;
+        }
+        lista.innerHTML = tareas.map((t) => `
+            <li data-id="${t.id}">
+                <label><input type="checkbox" ${t.completada ? 'checked' : ''} ${puedeEditar ? '' : 'disabled'}>
+                    ${t.completada ? `<s>${escaparHTML(t.descripcion)}</s>` : escaparHTML(t.descripcion)}</label>
+                <span>${t.completada ? `Hecha · ${escaparHTML(t.completada_por || '')}` : 'Pendiente'}</span>
+                ${puedeEditar ? '<button type="button" class="icon-button" data-borrar title="Eliminar tarea" aria-label="Eliminar tarea">×</button>' : ''}
+            </li>`).join('');
+    }
+
+    async function pedir(url, opciones = {}) {
+        const res = await fetch(url, { credentials: 'same-origin', headers: obtenerHeadersAuth(), ...opciones });
+        const datos = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(datos.error || 'No se pudo completar la acción.');
+        return datos;
+    }
+
+    async function cargar() {
+        try {
+            const datos = await pedir(`/api/tickets/${idTicket}/tareas`);
+            puedeEditar = datos.puede_editar;
+            form.hidden = !puedeEditar;
+            pintar(datos.tareas);
+        } catch (e) {
+            lista.innerHTML = `<li class="text-muted"><small>${escaparHTML(e.message)}</small></li>`;
+        }
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const descripcion = input.value.trim();
+        if (descripcion.length < 3) { mostrarToast('Describe la tarea (mínimo 3 caracteres).'); return; }
+        try {
+            const datos = await pedir(`/api/tickets/${idTicket}/tareas`, { method: 'POST', body: JSON.stringify({ descripcion }) });
+            input.value = '';
+            pintar(datos.tareas);
+            mostrarToast(datos.mensaje);
+        } catch (err) { mostrarToast(err.message); }
+    });
+
+    lista.addEventListener('change', async (e) => {
+        if (e.target.type !== 'checkbox') return;
+        const id = e.target.closest('li').dataset.id;
+        try {
+            const datos = await pedir(`/api/tareas/${id}`, { method: 'PUT', body: JSON.stringify({ completada: e.target.checked }) });
+            pintar(datos.tareas);
+            if (e.target.checked) cargarHistorial(idTicket);
+        } catch (err) { mostrarToast(err.message); cargar(); }
+    });
+
+    lista.addEventListener('click', async (e) => {
+        if (!e.target.closest('[data-borrar]')) return;
+        const id = e.target.closest('li').dataset.id;
+        if (!confirm('¿Eliminar esta tarea?')) return;
+        try {
+            const datos = await pedir(`/api/tareas/${id}`, { method: 'DELETE' });
+            pintar(datos.tareas);
+        } catch (err) { mostrarToast(err.message); }
+    });
+
+    // Botón "Agregar tarea" del panel Acciones
+    document.querySelector('[data-action="task"]')?.addEventListener('click', () => {
+        document.querySelector('.tab[data-tab="tasks"]')?.click();
+        if (puedeEditar) { input.focus(); } else { mostrarToast('Solo el administrador o el técnico asignado pueden agregar tareas.'); }
+    });
+
+    // Clip del cuadro de comentario: adjunta una foto al ticket
+    document.getElementById('reply-file')?.addEventListener('change', (e) => {
+        const evidencia = document.getElementById('evidence-input');
+        if (!evidencia || !e.target.files.length) return;
+        const dt = new DataTransfer();
+        [...e.target.files].forEach((f) => dt.items.add(f));
+        evidencia.files = dt.files;
+        evidencia.dispatchEvent(new Event('change'));
+        e.target.value = '';
+    });
+
+    cargar();
+});

@@ -13,9 +13,42 @@
     <script src="{{ url_for('static', filename='js/notificaciones.js') }}" defer></script>
 
     {% block extra_head %}{% endblock %}
+    {% if paleta %}
+    <!-- Identidad visual de la empresa (colores guardados en la tabla empresas).
+         Se aplica encima de los estilos del equipo: mismo diseño, otros colores. -->
+    <style id="tema-empresa">
+        :root {
+            --navy: {{ paleta.oscuro }};
+            --navy-dark: {{ paleta.profundo }};
+            --blue: {{ paleta.primario }};
+            --blue-strong: {{ paleta.primario }};
+            --blue-light: {{ paleta.claro }};
+            --canvas: {{ paleta.lienzo }};
+            --company-color: {{ paleta.primario }};
+        }
+        body { background: var(--canvas); }
+        .topbar { background: linear-gradient(110deg, {{ paleta.oscuro }}, {{ paleta.profundo }}) !important; }
+        .company-badge { background: {{ paleta.secundario }} !important; color: {{ paleta.profundo }} !important; border-color: transparent !important; }
+        .side-link.active { background: linear-gradient(100deg, {{ paleta.medio }}, {{ paleta.oscuro }}) !important;
+                            box-shadow: 0 4px 10px {{ paleta.primario }}55 !important; }
+        .side-link:hover:not(.active) { background: {{ paleta.claro }} !important; }
+        .side-category { color: {{ paleta.oscuro }} !important; }
+        .btn-primary, button.primary, .primary.generate, .page-number.active, .pagination .active,
+        .tab-button.active, .create-button, .save-button, .send-button {
+            background: {{ paleta.primario }} !important; border-color: {{ paleta.primario }} !important; color: #fff !important;
+        }
+        .btn-primary:hover, .create-button:hover, .save-button:hover { background: {{ paleta.oscuro }} !important; }
+        .tab.active, .tabs .active { color: {{ paleta.primario }} !important; border-color: {{ paleta.primario }} !important; }
+        .ticket-code, .code, a.ticket-code, .breadcrumb a, .text-link { color: {{ paleta.primario }} !important; }
+        .heading-icon, .section-icon, .title-icon, .page-icon { color: {{ paleta.primario }} !important; }
+        .sidebar { background: linear-gradient(180deg, {{ paleta.claro }}, {{ paleta.lienzo }}) !important; }
+        input:focus, select:focus, textarea:focus { outline-color: {{ paleta.primario }} !important; border-color: {{ paleta.primario }} !important; }
+        .user-avatar, .profile-avatar { background: {{ paleta.primario }} !important; }
+    </style>
+    {% endif %}
 </head>
 
-<body style="--company-color: {{ color_primario | default('#0077B6') }};">
+<body style="--company-color: {{ paleta.primario if paleta else '#0077B6' }};">
     <header class="topbar">
         <a class="brand" href="{{ url_for('pantalla', pagina='dashboard') }}" aria-label="Soporte TI, inicio">
             {% if session.get('empresa_logo') %}
@@ -88,12 +121,14 @@
                         <span>Conectado como</span>
                         <strong>{{ session.nombre if session.nombre else 'Usuario' }}</strong>
                     </div>
-                    <a href="#" class="dropdown-item">
+                    <a href="{{ url_for('cuenta.perfil') }}" class="dropdown-item">
                         <i data-lucide="user"></i> Mi Perfil
                     </a>
-                    <a href="#" class="dropdown-item">
+                    {% if session.rol == 'Administrador' or (session.rol == 'Superusuario' and session.get('empresa_activa')) %}
+                    <a href="{{ url_for('cuenta.configuracion') }}" class="dropdown-item">
                         <i data-lucide="settings"></i> Configuración
                     </a>
+                    {% endif %}
                     <div class="dropdown-divider"></div>
                     <a href="{{ url_for('cerrar_sesion') }}" class="dropdown-item logout-btn">
                         <i data-lucide="log-out"></i> Cerrar sesión
@@ -112,13 +147,15 @@
                 <span class="side-icon"><i data-lucide="ticket"></i></span>
                 <span>Tickets</span>
             </a>
+            {% if session.rol != 'Superusuario' %}
             <a href="{{ url_for('pantalla', pagina='nuevo_ticket') }}"
                 class="side-link {% if active_page == 'nuevo_ticket' %}active{% endif %}">
                 <span class="side-icon"><i data-lucide="plus-circle"></i></span>
                 <span>Nuevo</span>
             </a>
+            {% endif %}
 
-            {% if session.rol in ['Administrador', 'Técnico'] %}
+            {% if session.rol in ['Administrador', 'Técnico', 'Superusuario'] %}
             <div class="side-category">MÉTRICAS</div>
             <a href="{{ url_for('pantalla', pagina='dashboard') }}"
                 class="side-link {% if active_page == 'dashboard' %}active{% endif %}">
@@ -132,7 +169,7 @@
             </a>
             {% endif %}
 
-            {% if session.rol == 'Administrador' %}
+            {% if session.rol in ['Administrador', 'Superusuario'] %}
             <div class="side-category">GESTIÓN</div>
             <a href="{{ url_for('pantalla', pagina='sla') }}"
                 class="side-link {% if active_page == 'sla' %}active{% endif %}">
@@ -151,6 +188,15 @@
             </a>
             {% endif %}
 
+            {% if session.rol == 'Superusuario' %}
+            <div class="side-category">SUPERUSUARIO</div>
+            <a href="{{ url_for('empresas.listado') }}"
+                class="side-link {% if active_page == 'empresas' %}active{% endif %}">
+                <span class="side-icon"><i data-lucide="building-2"></i></span>
+                <span>Empresas</span>
+            </a>
+            {% endif %}
+
             <div class="side-category">SISTEMA</div>
             <a href="{{ url_for('pantalla', pagina='notificaciones') }}"
                 class="side-link {% if active_page == 'notificaciones' %}active{% endif %}">
@@ -164,6 +210,14 @@
         <!-- Aquí se inyecta el contenido de dashboard.html, tickets.html, etc. -->
         {% block content %}{% endblock %}
     </main>
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+    {% if mensajes %}
+    <div class="toast show" id="toast-flash" role="status" aria-live="polite">
+        {% for categoria, mensaje in mensajes %}{{ mensaje }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+    </div>
+    <script>setTimeout(() => document.getElementById('toast-flash')?.classList.remove('show'), 4500);</script>
+    {% endif %}
+    {% endwith %}
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             // Lógica de Perfil
@@ -205,6 +259,7 @@
             });
         });
     </script>
+    <script src="{{ url_for('static', filename='js/tendencias.js') }}"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         if (window.lucide) {

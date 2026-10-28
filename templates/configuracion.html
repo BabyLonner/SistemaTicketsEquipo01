@@ -1,0 +1,124 @@
+{% set active_page = 'configuracion' %}
+{% extends "base.html" %}
+
+{% block title %}Configuración | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/usuarios.css') }}">
+<style>
+  .config-card { padding:24px; }
+  .config-card h2 { margin-top:0; }
+  .two-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .color-row { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+  .color-row label { display:flex; gap:8px; align-items:center; font-size:13px; color:#254f81; }
+  .color-row input[type=color] { width:46px; height:36px; padding:2px; border:1px solid #c9d8ec; border-radius:8px; background:#fff; }
+  .preview { border:1px solid #d8e5f4; border-radius:12px; overflow:hidden; margin:6px 0 18px; }
+  .preview-bar { display:flex; align-items:center; gap:10px; padding:12px 16px; background:#24466b; color:#fff; }
+  .preview-bar img { width:34px; height:34px; object-fit:contain; background:#fff; border-radius:8px; }
+  .preview-bar .badge { margin-left:auto; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; }
+  .preview-body { padding:12px 16px; background:#f5f9ff; display:flex; gap:8px; }
+  .preview-body span { padding:6px 14px; border-radius:8px; color:#fff; font-size:12px; font-weight:700; }
+  .area-form { display:flex; gap:8px; margin-bottom:12px; }
+  .area-form input { flex:1; padding:10px 12px; border:1px solid #c9d8ec; border-radius:8px; }
+  .area-actions form { margin:0; }
+  .btn-small { padding:6px 10px; border-radius:8px; border:1px solid #c9d8ec; background:#fff; color:#1f4f86; font-weight:600; cursor:pointer; font-size:12px; }
+  .area-list { list-style:none; margin:0; padding:0; }
+  .area-list li { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #e8f0fa; }
+  .area-list li > div { flex:1; min-width:0; }
+  .area-list strong { display:block; color:#17375f; font-size:13px; }
+  .area-list small { color:#58749a; font-size:11px; }
+  .domain-list { margin:6px 0 0; padding:0; list-style:none; }
+  .domain-list li { font-weight:600; color:#17375f; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <span class="heading-icon" aria-hidden="true">⚙</span>
+  <div>
+    <h1>Configuración</h1>
+    <p>Identidad y áreas de {{ e.nombre }}</p>
+  </div>
+</section>
+
+<div class="users-layout">
+  <div class="main-column">
+    <section class="panel config-card">
+      <h2><span class="section-icon">▦</span>Identidad de la empresa</h2>
+      <form method="post" novalidate>
+        <div class="form-field"><label for="titulo_sistema">Título del sistema <span>*</span></label>
+          <input id="titulo_sistema" name="titulo_sistema" value="{{ form.get('titulo_sistema') or '' }}" maxlength="80" required>
+          <small class="field-error">{{ errores.get('titulo_sistema', '') }}</small></div>
+        <div class="form-field"><label>Colores</label>
+          <div class="color-row">
+            <label><input type="color" id="color_primario" name="color_primario" value="{{ form.get('color_primario') or '#0077B6' }}"> Principal</label>
+            <label><input type="color" id="color_secundario" name="color_secundario" value="{{ form.get('color_secundario') or '#D6EEF8' }}"> Suave</label>
+          </div>
+          <small class="field-error">{{ errores.get('colores', '') }}</small></div>
+        <div class="form-field"><label for="logo_url">Logo (ruta del archivo)</label>
+          <input id="logo_url" name="logo_url" value="{{ form.get('logo_url') or '' }}" placeholder="/static/img/logos/{{ e.codigo }}.png">
+          <small class="field-error">{{ errores.get('logo_url', '') }}</small></div>
+        <span class="field-label" style="font-size:13px;color:#58749a;">Vista previa</span>
+        <div class="preview" aria-hidden="true">
+          <div class="preview-bar">
+            <img id="prev-logo" src="{{ form.get('logo_url') or '' }}" alt="" {% if not form.get('logo_url') %}hidden{% endif %}>
+            <div><strong>SOPORTE TI</strong><br><small id="prev-title">{{ form.get('titulo_sistema') or '' }}</small></div>
+            <span class="badge" id="prev-badge" style="background:{{ form.get('color_secundario') }};color:{{ form.get('color_primario') }}">{{ e.nombre }}</span>
+          </div>
+          <div class="preview-body"><span id="prev-button" style="background:{{ form.get('color_primario') }}">Botón principal</span></div>
+        </div>
+        <button class="btn-primary create-button" type="submit"><span>✓</span>Guardar configuración</button>
+      </form>
+    </section>
+  </div>
+
+  <aside class="right-column">
+    <section class="panel config-card" id="areas">
+      <h2><span class="section-icon">▥</span>Áreas</h2>
+      <form class="area-form" method="post" action="{{ url_for('cuenta.agregar_area') }}">
+        <input name="nombre" maxlength="60" placeholder="Nueva área, ej. Almacén" required>
+        <button class="btn-primary" type="submit" style="padding:0 14px">＋ Agregar</button>
+      </form>
+      <ul class="area-list">
+        {% for a in areas %}
+        <li>
+          <div><strong>{{ a.nombre }}</strong><small>{{ a.usuarios }} usuario(s) · {{ a.tickets }} ticket(s)</small></div>
+          <span class="status-badge {{ 'active' if a.activo else 'inactive' }}"><i></i>{{ 'Activa' if a.activo else 'Inactiva' }}</span>
+          <form method="post" action="{{ url_for('cuenta.cambiar_estado_area', area_id=a.id) }}" class="area-actions">
+            <button class="btn-small" type="submit">{{ 'Desactivar' if a.activo else 'Activar' }}</button>
+          </form>
+        </li>
+        {% else %}
+        <li><small>Sin áreas.</small></li>
+        {% endfor %}
+      </ul>
+      <p style="font-size:12px;color:#58749a;margin:12px 0 0">Un área inactiva ya no aparece al registrar usuarios o tickets, pero conserva su historial.</p>
+    </section>
+
+    <section class="panel config-card">
+      <h2><span class="section-icon">✉</span>Dominio de correo</h2>
+      <ul class="domain-list">{% for d in dominios %}<li>@{{ d.dominio }}</li>{% endfor %}</ul>
+      <p style="font-size:12px;color:#58749a;margin:10px 0 0">Los usuarios de la empresa deben usar este dominio. Solo el superusuario puede cambiarlo.</p>
+    </section>
+  </aside>
+</div>
+
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Configuración de la empresa</span></footer>
+
+<script>
+  (function () {
+    const c1 = document.getElementById('color_primario'), c2 = document.getElementById('color_secundario');
+    const titulo = document.getElementById('titulo_sistema'), logo = document.getElementById('logo_url');
+    const pintar = () => {
+      document.getElementById('prev-button').style.background = c1.value;
+      const badge = document.getElementById('prev-badge');
+      badge.style.background = c2.value; badge.style.color = c1.value;
+      document.getElementById('prev-title').textContent = titulo.value;
+      const img = document.getElementById('prev-logo');
+      img.hidden = !logo.value; if (logo.value) img.src = logo.value;
+    };
+    [c1, c2, titulo, logo].forEach((el) => el.addEventListener('input', pintar));
+  })();
+</script>
+{% endblock %}

@@ -19,16 +19,13 @@
     <section class="main-column">
         <section class="stats-grid">
             <article class="stat-card blue"><span class="stat-icon">●</span><strong
-                    id="total-count">12</strong><label>Total de tickets</label><small class="trend good">↑ 8%
-                    <em>vs. mes anterior</em></small></article>
+                    id="total-count">0</strong><label>Total de tickets</label><small class="trend good" data-tendencia="mios.total">… <em>vs. mes anterior</em></small></article>
             <article class="stat-card green"><span class="stat-icon">✓</span><strong
-                    id="resolved-count">4</strong><label>Resueltos</label><small class="trend good">↑ 33%
-                    <em>vs. mes anterior</em></small></article>
+                    id="resolved-count">0</strong><label>Resueltos</label><small class="trend good" data-tendencia="mios.resueltos">… <em>vs. mes anterior</em></small></article>
             <article class="stat-card amber"><span class="stat-icon">◷</span><strong
-                    id="progress-count">3</strong><label>En proceso</label><small class="trend good">↑ 25%
-                    <em>vs. mes anterior</em></small></article>
+                    id="progress-count">0</strong><label>En proceso</label><small class="trend good" data-tendencia="mios.en_proceso">… <em>vs. mes anterior</em></small></article>
             <article class="stat-card red"><span class="stat-icon">!</span><strong
-                    id="pending-count">3</strong><label>Pendientes</label><small class="trend bad">↓ 40% <em>vs.
+                    id="pending-count">0</strong><label>Pendientes</label><small class="trend bad" data-tendencia="mios.abiertos">… <em>vs.
                         mes anterior</em></small></article>
         </section>
         <section class="filter-panel">
@@ -36,9 +33,10 @@
                     placeholder="Buscar por código, asunto o descripción..."></label>
             <label class="filter-field"><span>Estado</span><select id="status-filter">
                     <option value="">Todos</option>
-                    <option>Pendiente</option>
+                    <option>Abierto</option>
                     <option>En proceso</option>
                     <option>Resuelto</option>
+                    <option>Cerrado</option>
                 </select></label>
             <label class="filter-field"><span>Prioridad</span><select id="priority-filter">
                     <option value="">Todas</option>
@@ -48,10 +46,6 @@
                 </select></label>
             <label class="filter-field"><span>Categoría</span><select id="category-filter">
                     <option value="">Todas</option>
-                    <option>Hardware</option>
-                    <option>Software</option>
-                    <option>Acceso</option>
-                    <option>Redes</option>
                 </select></label>
             <button class="btn-primary" id="apply-filters">▽ Aplicar filtros</button><button class="clear-button"
                 id="clear-filters">Limpiar</button>
@@ -73,114 +67,7 @@
                         </tr>
                     </thead>
                     <tbody id="tickets-tbody">
-                        <tr data-id="TK-2291" data-subject="La impresora no imprime"
-                            data-description="La impresora de mi área no responde al enviar documentos."
-                            data-category="Hardware" data-priority="Alta" data-status="En proceso"
-                            data-technician="Luis Ramos" data-date="18/08/2026 10:00">
-                            <td>1</td>
-                            <td><a class="ticket-code"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2291</a></td>
-                            <td>La impresora no imprime</td>
-                            <td>Hardware</td>
-                            <td><span class="priority high">● Alta</span></td>
-                            <td><span class="status progress">● En proceso</span></td>
-                            <td>Luis Ramos</td>
-                            <td>18/08/2026<br>10:00</td>
-                            <td><a class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2291"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">◉</a><button
-                                    class="icon-button more-action" title="Más acciones"
-                                    aria-label="Más acciones TK-2291">···</button></td>
-                        </tr>
-                        <tr data-id="TK-2290" data-subject="Mi computadora está muy lenta"
-                            data-description="El equipo tarda demasiado en abrir los programas de trabajo."
-                            data-category="Software" data-priority="Media" data-status="Pendiente"
-                            data-technician="Sin asignar" data-date="19/08/2026 14:00">
-                            <td>2</td>
-                            <td><a class="ticket-code"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2290</a></td>
-                            <td>Mi computadora está muy lenta</td>
-                            <td>Software</td>
-                            <td><span class="priority medium">● Media</span></td>
-                            <td><span class="status pending">● Pendiente</span></td>
-                            <td>—</td>
-                            <td>19/08/2026<br>14:00</td>
-                            <td><a class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2290"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">◉</a><button
-                                    class="icon-button more-action" title="Más acciones"
-                                    aria-label="Más acciones TK-2290">···</button></td>
-                        </tr>
-                        <tr data-id="TK-2289" data-subject="No tengo acceso a un sistema"
-                            data-description="Al ingresar al sistema interno aparece un mensaje de acceso denegado."
-                            data-category="Acceso" data-priority="Alta" data-status="En proceso"
-                            data-technician="Carla Mendoza" data-date="17/08/2026 16:30">
-                            <td>3</td>
-                            <td><a class="ticket-code"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2289</a></td>
-                            <td>No tengo acceso a un sistema</td>
-                            <td>Acceso</td>
-                            <td><span class="priority high">● Alta</span></td>
-                            <td><span class="status progress">● En proceso</span></td>
-                            <td>Carla Mendoza</td>
-                            <td>17/08/2026<br>16:30</td>
-                            <td><a class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2289"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">◉</a><button
-                                    class="icon-button more-action" title="Más acciones"
-                                    aria-label="Más acciones TK-2289">···</button></td>
-                        </tr>
-                        <tr data-id="TK-2288" data-subject="Error al enviar correos"
-                            data-description="Los correos salientes quedan en la bandeja de salida."
-                            data-category="Redes" data-priority="Media" data-status="Resuelto"
-                            data-technician="José García" data-date="20/08/2026 11:00">
-                            <td>4</td>
-                            <td><a class="ticket-code"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2288</a></td>
-                            <td>Error al enviar correos</td>
-                            <td>Redes</td>
-                            <td><span class="priority medium">● Media</span></td>
-                            <td><span class="status resolved">● Resuelto</span></td>
-                            <td>José García</td>
-                            <td>20/08/2026<br>11:00</td>
-                            <td><a class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2288"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">◉</a><button
-                                    class="icon-button more-action" title="Más acciones"
-                                    aria-label="Más acciones TK-2288">···</button></td>
-                        </tr>
-                        <tr data-id="TK-2287" data-subject="Instalación de software"
-                            data-description="Solicito instalar una aplicación autorizada para mis labores."
-                            data-category="Software" data-priority="Baja" data-status="Resuelto"
-                            data-technician="María Torres" data-date="21/08/2026 15:00">
-                            <td>5</td>
-                            <td><a class="ticket-code"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2287</a></td>
-                            <td>Instalación de software</td>
-                            <td>Software</td>
-                            <td><span class="priority low">● Baja</span></td>
-                            <td><span class="status resolved">● Resuelto</span></td>
-                            <td>María Torres</td>
-                            <td>21/08/2026<br>15:00</td>
-                            <td><a class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2287"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">◉</a><button
-                                    class="icon-button more-action" title="Más acciones"
-                                    aria-label="Más acciones TK-2287">···</button></td>
-                        </tr>
-                        <tr data-id="TK-2286" data-subject="Problemas con la red WiFi"
-                            data-description="La conexión WiFi se interrumpe varias veces durante el día."
-                            data-category="Redes" data-priority="Media" data-status="En proceso"
-                            data-technician="Rosa Villanueva" data-date="18/08/2026 12:00">
-                            <td>6</td>
-                            <td><a class="ticket-code"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">TK-2286</a></td>
-                            <td>Problemas con la red WiFi</td>
-                            <td>Redes</td>
-                            <td><span class="priority medium">● Media</span></td>
-                            <td><span class="status progress">● En proceso</span></td>
-                            <td>Rosa Villanueva</td>
-                            <td>18/08/2026<br>12:00</td>
-                            <td><a class="icon-button view-ticket" title="Ver detalle" aria-label="Ver TK-2286"
-                                    href="{{ url_for('pantalla', pagina='detalle_ticket') }}">◉</a><button
-                                    class="icon-button more-action" title="Más acciones"
-                                    aria-label="Más acciones TK-2286">···</button></td>
-                        </tr>
+                        <tr><td colspan="9" style="text-align:center;padding:24px;color:#58749a;">Cargando tus tickets...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -188,7 +75,7 @@
                 <p>Prueba con otra búsqueda o limpia los filtros.</p><button class="btn-secondary"
                     id="empty-clear">Limpiar filtros</button>
             </div>
-            <div class="table-footer"><span id="results-label">Mostrando 6 de 12 tickets</span>
+            <div class="table-footer"><span id="results-label">Cargando...</span>
                 <div class="pagination"><button id="prev-page" aria-label="Página anterior">‹</button><button
                         class="page-number active" data-page="1">1</button><button class="page-number"
                         data-page="2">2</button><button id="next-page" aria-label="Página siguiente">›</button>
@@ -205,15 +92,6 @@
         <section class="panel recent-panel">
             <h2><span class="section-icon">◷</span>Mis solicitudes recientes</h2>
             <div class="recent-list">
-                <a class="recent-item text-decoration-none" href="{{ url_for('pantalla', pagina='detalle_ticket') }}"
-                    data-ticket="TK-2291"><b>TK-2291</b><span>La impresora no
-                        imprime</span><small class="status progress">En proceso</small></a>
-                <a class="recent-item text-decoration-none" href="{{ url_for('pantalla', pagina='detalle_ticket') }}"
-                    data-ticket="TK-2290"><b>TK-2290</b><span>Mi computadora está muy
-                        lenta</span><small class="status pending">Pendiente</small></a>
-                <a class="recent-item text-decoration-none" href="{{ url_for('pantalla', pagina='detalle_ticket') }}"
-                    data-ticket="TK-2289"><b>TK-2289</b><span>No tengo acceso a un
-                        sistema</span><small class="status progress">En proceso</small></a>
             </div><button class="text-link" id="view-all-tickets">Ver todos mis tickets <span>→</span></button>
         </section>
         <section class="panel help-panel">
