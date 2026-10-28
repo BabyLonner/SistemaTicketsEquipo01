@@ -336,11 +336,15 @@ def api_insertar_historial():
         con = conexion()
         try:
             with con.cursor() as cur:
-                Ticket.actualizar_gestion(cur, ticket_id, cambios, g.usuario)
+                resultado = Ticket.actualizar_gestion(cur, ticket_id, cambios, g.usuario)
             con.commit()
         except ErrorRegla as e:
             con.rollback()
             return error(str(e))
+        if resultado and resultado.get("tecnico_avisar"):  # MÓDULO 4: aviso por WhatsApp
+            from avisos_whatsapp import avisar_asignacion
+            avisar_asignacion(ticket_id, resultado["tecnico_avisar"], resultado["reasignacion"],
+                              g.usuario["empresa_id"], g.usuario["id"])
         return ok({"ticket_id": ticket_id, "tipo": tipo}, "Historial registrado correctamente")
     return _registrar()
 

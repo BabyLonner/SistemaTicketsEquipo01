@@ -27,7 +27,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP VIEW IF EXISTS v_dashboard_responsables, v_dashboard_resumen, v_notificaciones_pendientes,
                     v_ticket_timeline, v_tickets, v_usuarios_sesion;
-DROP TABLE IF EXISTS reportes_generados, ticket_tareas, notificaciones, ticket_historial, ticket_evidencias, tickets,
+DROP TABLE IF EXISTS reportes_generados, mensajes_externos, ticket_tareas, notificaciones, ticket_historial, ticket_evidencias, tickets, equipos,
                      tokens_revocados, users, areas, categorias, prioridades,
                      empresa_dominios, empresas;
 
@@ -91,6 +91,7 @@ CREATE TABLE users (
   area_id        INT UNSIGNED  NULL,
   nombre         VARCHAR(100)  NOT NULL,
   correo         VARCHAR(120)  NOT NULL,
+  telefono       VARCHAR(15)   NULL,                          -- MÓDULO 4: WhatsApp del técnico (E.164 sin +, ej. 51987654321)
   password_hash  CHAR(60)      NOT NULL,                      -- bcrypt, nunca texto plano
   rol            ENUM('Superusuario','Administrador','Técnico','Solicitante') NOT NULL DEFAULT 'Solicitante',
   activo         TINYINT(1)    NOT NULL DEFAULT 1,
@@ -118,6 +119,36 @@ CREATE TABLE tokens_revocados (
   CONSTRAINT uq_tokens_jti UNIQUE (jti),
   CONSTRAINT fk_tokens_usuario FOREIGN KEY (usuario_id) REFERENCES users (id) ON DELETE CASCADE,
   INDEX idx_tokens_expira (expira_en)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- =====================================================================
+--  MODULO 3 (avance 2)  -  Inventario de equipos con etiqueta QR
+--  El QR solo lleva una URL con qr_token (aleatorio, no adivinable).
+--  Nunca se codifican datos del equipo ni datos personales en el QR.
+-- =====================================================================
+CREATE TABLE equipos (
+  id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  empresa_id  INT UNSIGNED  NOT NULL,
+  area_id     INT UNSIGNED  NULL,
+  codigo      VARCHAR(30)   NOT NULL,                     -- código patrimonial: AGF-PC-001
+  nombre      VARCHAR(100)  NOT NULL,                     -- "Laptop de contabilidad"
+  tipo        ENUM('Laptop','PC de escritorio','Impresora','Monitor','Proyector','Equipo de red','Teléfono','Otro') NOT NULL DEFAULT 'Otro',
+  marca       VARCHAR(50)   NULL,
+  modelo      VARCHAR(60)   NULL,
+  serie       VARCHAR(60)   NULL,
+  ubicacion   VARCHAR(120)  NOT NULL,                     -- "Oficina 2, piso 1"
+  qr_token    VARCHAR(24)   COLLATE utf8mb4_bin NOT NULL, -- lo genera Python con secrets.token_urlsafe
+  activo      TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT uq_equipos_token          UNIQUE (qr_token),
+  CONSTRAINT uq_equipos_empresa_codigo UNIQUE (empresa_id, codigo),
+  CONSTRAINT ck_equipos_nombre         CHECK (CHAR_LENGTH(TRIM(nombre)) >= 3),
+  CONSTRAINT fk_equipos_empresa FOREIGN KEY (empresa_id) REFERENCES empresas (id),
+  CONSTRAINT fk_equipos_area    FOREIGN KEY (area_id)    REFERENCES areas (id) ON DELETE SET NULL,
+  INDEX idx_equipos_empresa (empresa_id, activo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -152,6 +183,7 @@ CREATE TABLE tickets (
   area_id           INT UNSIGNED  NULL,
   solicitante_id    INT UNSIGNED  NOT NULL,         -- usuario en sesion (automatico)
   tecnico_id        INT UNSIGNED  NULL,
+  equipo_id         INT UNSIGNED  NULL,             -- MÓDULO 3 (avance 2): equipo escaneado con QR
   categoria_id      INT UNSIGNED  NOT NULL,
   prioridad_id      TINYINT UNSIGNED NOT NULL,
   asunto            VARCHAR(150)  NOT NULL,
@@ -170,6 +202,7 @@ CREATE TABLE tickets (
   CONSTRAINT fk_tickets_area        FOREIGN KEY (area_id)        REFERENCES areas (id),
   CONSTRAINT fk_tickets_solicitante FOREIGN KEY (solicitante_id) REFERENCES users (id),
   CONSTRAINT fk_tickets_tecnico     FOREIGN KEY (tecnico_id)     REFERENCES users (id),
+  CONSTRAINT fk_tickets_equipo      FOREIGN KEY (equipo_id)      REFERENCES equipos (id) ON DELETE SET NULL,
   CONSTRAINT fk_tickets_categoria   FOREIGN KEY (categoria_id)   REFERENCES categorias (id),
   CONSTRAINT fk_tickets_prioridad   FOREIGN KEY (prioridad_id)   REFERENCES prioridades (id),
   INDEX idx_tickets_empresa_estado (empresa_id, estado),
@@ -266,6 +299,36 @@ CREATE TABLE notificaciones (
   CONSTRAINT fk_notif_usuario FOREIGN KEY (usuario_id)        REFERENCES users (id)   ON DELETE CASCADE,
   CONSTRAINT fk_notif_ticket  FOREIGN KEY (referencia_ticket) REFERENCES tickets (id) ON DELETE CASCADE,
   INDEX idx_notif_usuario_leido (usuario_id, leido, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================================
+--  MODULO 4 (avance 2)  -  Aviso al técnico por WhatsApp / SMS (Vonage)
+--  Cada mensaje enviado queda registrado con su estado. El estado se
+--  actualiza con el webhook de Vonage (ENVIADO -> ENTREGADO -> LEIDO).
+-- =====================================================================
+CREATE TABLE mensajes_externos (
+  id               INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  empresa_id       INT UNSIGNED  NOT NULL,
+  ticket_id        INT UNSIGNED  NULL,                 -- NULL = mensaje de prueba desde Mi Perfil
+  tecnico_id       INT UNSIGNED  NOT NULL,             -- destinatario
+  enviado_por      INT UNSIGNED  NULL,                 -- quién asignó (NULL = sistema)
+  canal            ENUM('WHATSAPP','SMS') NOT NULL DEFAULT 'WHATSAPP',
+  motivo           ENUM('ASIGNACION','REASIGNACION','PRUEBA') NOT NULL DEFAULT 'ASIGNACION',
+  telefono         VARCHAR(15)   NULL,                 -- número al que se envió (NULL si el técnico no tenía)
+  mensaje          VARCHAR(600)  NOT NULL,
+  proveedor_id     VARCHAR(64)   NULL,                 -- message_uuid que devuelve Vonage
+  estado           ENUM('PENDIENTE','ENVIADO','ENTREGADO','LEIDO','FALLIDO') NOT NULL DEFAULT 'PENDIENTE',
+  error_detalle    VARCHAR(255)  NULL,
+  intentos         TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  created_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_msg_empresa FOREIGN KEY (empresa_id)  REFERENCES empresas (id),
+  CONSTRAINT fk_msg_ticket  FOREIGN KEY (ticket_id)   REFERENCES tickets (id) ON DELETE CASCADE,
+  CONSTRAINT fk_msg_tecnico FOREIGN KEY (tecnico_id)  REFERENCES users (id)   ON DELETE CASCADE,
+  CONSTRAINT fk_msg_autor   FOREIGN KEY (enviado_por) REFERENCES users (id)   ON DELETE SET NULL,
+  INDEX idx_msg_empresa_fecha (empresa_id, created_at),
+  INDEX idx_msg_proveedor (proveedor_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -393,6 +456,31 @@ INSERT INTO tickets (id, empresa_id, numero, area_id, solicitante_id, tecnico_id
       NOW() - INTERVAL 190 MINUTE, NOW() - INTERVAL 190 MINUTE + INTERVAL 4 HOUR, NULL, NULL),
   (12, 3, 2, 15, 11, NULL, 4, 3, 'Acceso a carpeta compartida', 'Necesito permiso de lectura a la carpeta compartida de Contabilidad.', 'Abierto',
       NOW() - INTERVAL 120 MINUTE, NOW() - INTERVAL 120 MINUTE + INTERVAL 72 HOUR, NULL, NULL);
+
+-- MÓDULO 3 (avance 2): equipos de ejemplo con su token de QR
+INSERT INTO equipos (id, empresa_id, area_id, codigo, nombre, tipo, marca, modelo, serie, ubicacion, qr_token) VALUES
+  (1,  1, 6,  'GMM-PC-001',  'PC de logística',              'PC de escritorio', 'Lenovo', 'ThinkCentre M70',  'MJ0GH21A', 'Almacén central, módulo 1',      'cA-f-GIxyxZPyrQX'),
+  (2,  1, 1,  'GMM-PRY-001', 'Proyector sala de reuniones',  'Proyector',        'Epson',  'PowerLite X49',    'X49K7731', 'Sala de reuniones principal',    'rt0wMkMUy-Lxezg3'),
+  (3,  2, 12, 'AGF-MON-001', 'Monitor de la caja 2',         'Monitor',          'LG',     '24MK430H',         '304NTAB55', 'Almacén, caja 2',               '0Ox4Wcj-TO3Jxhyx'),
+  (4,  2, 12, 'AGF-PC-001',  'PC del almacén',               'PC de escritorio', 'HP',     'ProDesk 400 G7',   'MXL1234ABC', 'Almacén, escritorio de recepción','kdJ8LIBx3sO0He6u'),
+  (5,  2, 9,  'AGF-IMP-001', 'Impresora de contabilidad',    'Impresora',        'Epson',  'EcoTank L4260',    'X8HW001122', 'Contabilidad, piso 2',          'sxBbe89tpLGk_hID'),
+  (6,  2, 7,  'AGF-LAP-001', 'Laptop de soporte TI',         'Laptop',           'Dell',   'Latitude 3420',    'DL3420TI01', 'Oficina de TI, piso 1',         'wMrp81NFUdfFE7_H'),
+  (7,  3, 15, 'EPS-PC-001',  'PC de contabilidad',           'PC de escritorio', 'Dell',   'OptiPlex 3080',    'OPX3080C1', 'Contabilidad, oficina 3',        'dsRFyzpw5mFbxgwh'),
+  (8,  3, 18, 'EPS-IMP-001', 'Impresora del área comercial', 'Impresora',        'HP',     'LaserJet M404',    'PHBCK4410', 'Comercial, mostrador',           'daf1XRTOcJ701obd'),
+  (9,  4, 23, 'CPV-LAP-001', 'Laptop de admisión',           'Laptop',           'Lenovo', 'IdeaPad 3',        'PF3ADM01',  'Admisión, ventanilla 1',         'wCm78zZ7HS5KiaSg'),
+  (10, 4, 24, 'CPV-PC-001',  'PC de farmacia',               'PC de escritorio', 'HP',     'EliteDesk 800',    'MXL77FAR1', 'Farmacia, caja',                 'j-xj0xkYh98SCeyx'),
+  (11, 5, 30, 'ATL-LAP-001', 'Laptop de ventas',             'Laptop',           'HP',     'ProBook 440',      '5CD1VEN01', 'Ventas, escritorio 4',           'eOQNEx5t3wNDIdtT'),
+  (12, 5, 25, 'ATL-RED-001', 'Switch principal',             'Equipo de red',    'Cisco',  'CBS250-24T',       'PSZ25VENT', 'Cuarto de comunicaciones',       'rgBmlL5fhCFkJKHh'),
+  (13, 6, 32, 'ADB-IMP-001', 'Impresora de despacho',        'Impresora',        'Brother','HL-L5100DN',       'U63891K0N', 'Despacho, oficina principal',    'zM7yEZEhTv3N74FB'),
+  (14, 6, 36, 'ADB-PC-001',  'PC de venta de pasajes',       'PC de escritorio', 'Lenovo', 'V50s',             'PC1VPAS01', 'Counter de venta de pasajes 1',  'sRj-aM7l5BZJeDkk');
+
+-- Tickets de ejemplo que ya estaban vinculados a un equipo (historial de incidencias)
+UPDATE tickets SET equipo_id = 2  WHERE id = 2;
+UPDATE tickets SET equipo_id = 3  WHERE id = 3;
+UPDATE tickets SET equipo_id = 11 WHERE id = 5;
+UPDATE tickets SET equipo_id = 13 WHERE id = 9;
+UPDATE tickets SET equipo_id = 4  WHERE id = 11;
+UPDATE tickets SET equipo_id = 7  WHERE id = 7;
 
 UPDATE empresas e SET e.ultimo_ticket = (SELECT COALESCE(MAX(t.numero), 0) FROM tickets t WHERE t.empresa_id = e.id);
 

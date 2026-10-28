@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nuevo_ticket.css') }}">
 <script src="{{ url_for('static', filename='js/tickets.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/nuevo_ticket.js') }}" defer></script>
+<!-- MÓDULO 3 (avance 2): escanear la etiqueta QR del equipo -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/qr_equipo.css') }}">
+<script src="{{ url_for('static', filename='vendor/html5-qrcode.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/nuevo_ticket_qr.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -35,6 +39,27 @@
     </div>
 
     <form id="new-ticket-form" novalidate>
+      <!-- MÓDULO 3 (avance 2): equipo afectado (se llena al escanear su QR) -->
+      <section class="qr-equipo" id="qr-seccion" data-url-publica="{{ url_publica_qr }}">
+        <input type="hidden" name="equipo" id="equipo-token">
+        <div class="qr-equipo__vacio" id="qr-vacio">
+          <span class="qr-equipo__icono" aria-hidden="true"><i data-lucide="scan-qr-code"></i></span>
+          <div>
+            <strong>¿El problema es de un equipo con etiqueta QR?</strong>
+            <small>Escanéala y el ticket quedará vinculado al equipo, con su ubicación e historial.</small>
+          </div>
+          <div class="qr-equipo__botones">
+            <button type="button" class="btn-primary" id="qr-escanear"><i data-lucide="camera"></i> Escanear QR</button>
+            <label class="btn-secondary qr-equipo__archivo" title="Si no tienes cámara, sube una foto de la etiqueta">
+              <input type="file" accept="image/*" id="qr-archivo" hidden> Subir foto del QR
+            </label>
+          </div>
+        </div>
+        <div class="qr-equipo__error" id="qr-error" role="alert" hidden></div>
+        <div class="qr-equipo__ficha" id="qr-ficha" hidden aria-live="polite"></div>
+        <div id="qr-lector-archivo" hidden></div>
+      </section>
+
       <div class="form-field">
         <label for="subject">Asunto <span class="required">*</span></label>
         <input id="subject" name="asunto" type="text" minlength="5" maxlength="150"
@@ -178,6 +203,20 @@
     evidencias</span></footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- MÓDULO 3 (avance 2): lector de QR con la cámara (html5-qrcode) -->
+<div class="modal" id="qr-modal" role="dialog" aria-modal="true" aria-labelledby="qr-modal-titulo" hidden>
+  <div class="modal-card qr-modal">
+    <button type="button" class="modal-close" id="qr-cerrar" aria-label="Cerrar">×</button>
+    <h2 id="qr-modal-titulo">Escanea la etiqueta del equipo</h2>
+    <div id="qr-lector" class="qr-modal__lector"></div>
+    <p class="qr-modal__estado" id="qr-estado">Abriendo la cámara…</p>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="qr-cancelar">Cancelar</button>
+      <button type="button" class="btn-secondary" id="qr-cambiar" hidden>Cambiar cámara</button>
+    </div>
+  </div>
+</div>
 
 <!-- Confirmación de ticket registrado -->
 <div class="modal" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" hidden>

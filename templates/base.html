@@ -169,8 +169,16 @@
             </a>
             {% endif %}
 
-            {% if session.rol in ['Administrador', 'Superusuario'] %}
+            {% if session.rol in ['Administrador', 'Técnico', 'Superusuario'] %}
             <div class="side-category">GESTIÓN</div>
+            <!-- MÓDULO 3 (avance 2): inventario de equipos y etiquetas QR -->
+            <a href="{{ url_for('pantalla', pagina='equipos') }}"
+                class="side-link {% if active_page == 'equipos' %}active{% endif %}">
+                <span class="side-icon"><i data-lucide="qr-code"></i></span>
+                <span>Equipos</span>
+            </a>
+            {% endif %}
+            {% if session.rol in ['Administrador', 'Superusuario'] %}
             <a href="{{ url_for('pantalla', pagina='sla') }}"
                 class="side-link {% if active_page == 'sla' %}active{% endif %}">
                 <span class="side-icon"><i data-lucide="clock"></i></span>

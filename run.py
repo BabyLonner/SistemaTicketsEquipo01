@@ -15,6 +15,8 @@ from flask import Flask, abort, flash, g, jsonify, make_response, redirect, rend
 from jinja2 import TemplateNotFound
 
 from api_postman import api_postman_bp
+from avisos_whatsapp import avisos_bp  # MÓDULO 4: avisos por WhatsApp (Vonage)
+from equipos import equipos_bp         # MÓDULO 3 (avance 2): etiquetas QR por equipo
 from cuenta import cuenta_bp
 from auth import (
     ROL_ADMIN, ROL_SOLICITANTE, ROL_SUPER, ROL_TECNICO, autenticar, crear_token, empresa_actual, es_super,
@@ -39,7 +41,8 @@ app.config.update(
 app.json.ensure_ascii = False
 app.json.sort_keys = False
 
-for bp in (tickets_bp, usuarios_bp, empresas_bp, reportes_bp, cuenta_bp, api_postman_bp, verificacion_bp):
+for bp in (tickets_bp, usuarios_bp, empresas_bp, reportes_bp, cuenta_bp, api_postman_bp, verificacion_bp,
+           avisos_bp, equipos_bp):
     app.register_blueprint(bp)
 
 app.before_request(validar_peticion)       # MÓDULO 1: el JWT se valida en CADA petición
@@ -58,9 +61,10 @@ PERMISOS_PAGINAS = {
     "sla": (ROL_SUPER, ROL_ADMIN),
     "asignacion": (ROL_SUPER, ROL_ADMIN),
     "usuarios": (ROL_SUPER, ROL_ADMIN),
+    "equipos": (ROL_SUPER, ROL_ADMIN, ROL_TECNICO),   # MÓDULO 3 (avance 2)
 }
 # Pantallas que trabajan dentro de una empresa: el superusuario primero debe elegirla
-NECESITAN_EMPRESA = {"tickets", "detalle_ticket", "dashboard", "reportes", "sla", "asignacion", "usuarios"}
+NECESITAN_EMPRESA = {"tickets", "detalle_ticket", "dashboard", "reportes", "sla", "asignacion", "usuarios", "equipos"}
 
 
 def _mezclar(color, otro, proporcion):

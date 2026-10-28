@@ -1,0 +1,124 @@
+{% set active_page = 'equipos' %}
+{% extends "base.html" %}
+
+{% block title %}Equipos y etiquetas QR | Soporte TI{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/equipos.css') }}">
+<!-- MÓDULO 3 (avance 2): qrcode.js dibuja el QR de cada equipo en el navegador -->
+<script src="{{ url_for('static', filename='vendor/qrcode.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/equipos.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-heading eq-heading">
+  <span class="heading-icon" aria-hidden="true"><i data-lucide="qr-code"></i></span>
+  <div>
+    <h1>Equipos y etiquetas QR</h1>
+    <p>Registra los equipos de la empresa e imprime su etiqueta. Al escanearla se abre un ticket ya vinculado al equipo.</p>
+  </div>
+  <div class="eq-heading__acciones">
+    <a class="btn-outline" href="{{ url_for('pantalla', pagina='nuevo_ticket') }}#escanear"><i data-lucide="scan-line"></i> Escanear un QR</a>
+    <button class="btn-primary" type="button" id="eq-nuevo" hidden><i data-lucide="plus"></i> Registrar equipo</button>
+  </div>
+</section>
+
+<section class="eq-metricas" aria-label="Resumen del inventario">
+  <article><strong id="eq-total">0</strong><span>Equipos registrados</span></article>
+  <article class="eq-metricas--alerta"><strong id="eq-pendientes">0</strong><span>Con tickets pendientes</span></article>
+  <article><strong id="eq-incidencias">0</strong><span>Incidencias registradas</span></article>
+  <article><strong id="eq-seleccionados">0</strong><span>Etiquetas seleccionadas</span></article>
+</section>
+
+<section class="eq-barra">
+  <label class="eq-buscar">
+    <i data-lucide="search" aria-hidden="true"></i>
+    <input type="search" id="eq-buscar" placeholder="Buscar por código, nombre, ubicación o serie" aria-label="Buscar equipos">
+  </label>
+  <select id="eq-tipo" aria-label="Filtrar por tipo">
+    <option value="">Todos los tipos</option>
+  </select>
+  <label class="eq-check-todos"><input type="checkbox" id="eq-todos"> Seleccionar todos</label>
+  <button class="btn-primary" type="button" id="eq-imprimir"><i data-lucide="printer"></i> <span>Imprimir etiquetas (PDF)</span></button>
+</section>
+
+<div class="eq-alerta" id="eq-alerta" role="alert" hidden></div>
+
+<section class="eq-grid" id="eq-lista" aria-live="polite">
+  <p class="eq-vacio">Cargando equipos…</p>
+</section>
+
+<details class="eq-info">
+  <summary><i data-lucide="shield-check"></i> ¿Qué guarda el QR y por qué es seguro?</summary>
+  <ul>
+    <li>El QR solo contiene un <b>enlace corto con un código aleatorio</b> (<code>/qr/kdJ8LIBx…</code>). No lleva el nombre,
+      la serie ni la ubicación del equipo, ni datos personales.</li>
+    <li>El código no es el número 1, 2, 3…: si alguien cambia una letra, no llega a "otro equipo", simplemente no existe.</li>
+    <li>El sistema solo acepta QR de <b>tu empresa</b> y pide iniciar sesión para ver el equipo.</li>
+    <li>Las etiquetas usan <b>corrección de errores nivel H</b>: se leen aunque estén rayadas o sucias (hasta 30 %).</li>
+    <li>Si una etiqueta se pierde o parece alterada, pulsa <b>Regenerar QR</b>: la etiqueta vieja deja de funcionar.</li>
+  </ul>
+</details>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Formulario: registrar / editar equipo (solo administrador) -->
+<div class="modal" id="eq-modal" role="dialog" aria-modal="true" aria-labelledby="eq-modal-titulo" hidden>
+  <form class="modal-card eq-form" id="eq-form" novalidate>
+    <button type="button" class="modal-close" data-cerrar aria-label="Cerrar">×</button>
+    <h2 id="eq-modal-titulo">Registrar equipo</h2>
+    <div class="eq-form__grid">
+      <label class="eq-campo">Código patrimonial <b>*</b>
+        <input name="codigo" maxlength="30" placeholder="AGF-PC-002" autocomplete="off">
+        <small class="eq-error" data-error="codigo"></small>
+      </label>
+      <label class="eq-campo">Tipo <b>*</b>
+        <select name="tipo"></select>
+        <small class="eq-error" data-error="tipo"></small>
+      </label>
+      <label class="eq-campo eq-campo--ancho">Nombre del equipo <b>*</b>
+        <input name="nombre" maxlength="100" placeholder="Laptop de recepción">
+        <small class="eq-error" data-error="nombre"></small>
+      </label>
+      <label class="eq-campo">Marca
+        <input name="marca" maxlength="50" placeholder="HP">
+        <small class="eq-error" data-error="marca"></small>
+      </label>
+      <label class="eq-campo">Modelo
+        <input name="modelo" maxlength="60" placeholder="ProBook 440">
+        <small class="eq-error" data-error="modelo"></small>
+      </label>
+      <label class="eq-campo">N.º de serie
+        <input name="serie" maxlength="60" placeholder="5CD12345">
+        <small class="eq-error" data-error="serie"></small>
+      </label>
+      <label class="eq-campo">Área
+        <select name="area_id"></select>
+        <small class="eq-error" data-error="area_id"></small>
+      </label>
+      <label class="eq-campo eq-campo--ancho">Ubicación <b>*</b>
+        <input name="ubicacion" maxlength="120" placeholder="Oficina de recepción, piso 1">
+        <small class="eq-error" data-error="ubicacion"></small>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" data-cerrar>Cancelar</button>
+      <button type="submit" class="btn-primary" id="eq-guardar">Guardar equipo</button>
+    </div>
+  </form>
+</div>
+
+<!-- Confirmación (regenerar QR / dar de baja) -->
+<div class="modal" id="eq-confirmar" role="dialog" aria-modal="true" aria-labelledby="eq-confirmar-titulo" hidden>
+  <div class="modal-card">
+    <span class="modal-icon" aria-hidden="true">!</span>
+    <h2 id="eq-confirmar-titulo">¿Seguro?</h2>
+    <p id="eq-confirmar-texto"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" data-cerrar>Cancelar</button>
+      <button type="button" class="btn-primary" id="eq-confirmar-si">Sí, continuar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

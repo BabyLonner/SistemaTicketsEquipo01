@@ -8,6 +8,9 @@
 <script src="{{ url_for('static', filename='js/detalle_ticket.js') }}" defer></script>
 <!-- tickets.js va después: muestra las fotos reales del ticket (?id=N) -->
 <script src="{{ url_for('static', filename='js/tickets.js') }}" defer></script>
+<!-- MÓDULO 3 (avance 2): equipo vinculado por QR -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/qr_equipo.css') }}">
+<script src="{{ url_for('static', filename='js/equipo_detalle.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -144,6 +147,12 @@
           </select></label>
         <button class="btn-primary save-button" type="submit"><span>▣</span>Guardar cambios</button>
       </form>
+    </section>
+
+    <!-- MÓDULO 3 (avance 2): se muestra solo si el ticket se registró escaneando un QR -->
+    <section class="panel side-panel qr-detalle" id="qr-detalle" hidden>
+      <h2><span class="section-icon">▦</span>Equipo afectado</h2>
+      <div id="qr-detalle-cuerpo"></div>
     </section>
 
     <section class="panel side-panel sla-panel">

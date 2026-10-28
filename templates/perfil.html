@@ -16,6 +16,11 @@
   .profile-data dd { margin:0; font-weight:600; color:#17375f; word-break:break-word; }
   .password-tips { margin:14px 0 0; padding-left:18px; color:#58749a; font-size:12px; line-height:1.7; }
 </style>
+{% if u.rol == 'Técnico' %}
+<!-- MÓDULO 4: número de WhatsApp del técnico para los avisos de asignación -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/perfil_whatsapp.css') }}">
+<script src="{{ url_for('static', filename='js/perfil_whatsapp.js') }}" defer></script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -66,6 +71,35 @@
   </div>
 
   <aside class="right-column">
+    {% if u.rol == 'Técnico' %}
+    <!-- MÓDULO 4: WhatsApp para avisos -->
+    <section class="panel create-panel wa-panel" id="wa-panel" aria-labelledby="wa-titulo">
+      <h2 id="wa-titulo"><span class="section-icon wa-icon" aria-hidden="true">✆</span>WhatsApp para avisos</h2>
+      <p class="wa-intro">Cuando te asignen un ticket te llegará un mensaje con el código, la prioridad y el enlace.</p>
+      <div class="wa-estado" id="wa-estado" data-estado="cargando"><i aria-hidden="true"></i><span>Cargando…</span></div>
+      <form id="wa-form" novalidate>
+        <div class="form-field"><label for="wa-telefono">Número de celular</label>
+          <div class="wa-input"><span class="wa-prefijo">+51</span>
+            <input id="wa-telefono" name="telefono" type="tel" inputmode="tel" maxlength="20"
+                   placeholder="987 654 321" autocomplete="tel"></div>
+          <small class="field-error" id="wa-error"></small></div>
+        <div class="wa-acciones">
+          <button class="btn-primary" type="submit" id="wa-guardar"><span>✓</span>Guardar número</button>
+          <button class="btn-secondary" type="button" id="wa-probar" disabled>Enviar prueba</button>
+        </div>
+      </form>
+      <details class="wa-ayuda">
+        <summary>¿No te llegan los mensajes? (Sandbox de Vonage)</summary>
+        <ol>
+          <li>Desde tu WhatsApp escribe al número <b id="wa-sandbox">+14157386102</b> la frase de tu cuenta
+            (por ejemplo <i>Join ebony nerd</i>). Lo haces una sola vez.</li>
+          <li>WhatsApp solo deja recibir mensajes si escribiste a ese número en las últimas <b>24 horas</b>.
+            Antes de probar, mándale un “hola”.</li>
+          <li>Pulsa <b>Enviar prueba</b> para comprobar que te llega.</li>
+        </ol>
+      </details>
+    </section>
+    {% endif %}
     <section class="panel create-panel">
       <h2><span class="section-icon">🔒</span>Cambiar contraseña</h2>
       <form method="post" novalidate>

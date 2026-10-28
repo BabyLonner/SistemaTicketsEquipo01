@@ -183,6 +183,7 @@ async function cargarDatosAsignacion() {
 
 		const msg = document.getElementById('page-message');
 		if (msg) msg.textContent = 'Conectado a la base de datos';
+		cargarAvisos(); // MÓDULO 4
 
 		// Si uno falla, los demás siguen funcionando
 		[actualizarFiltros, renderizarMetricas, renderizarCargaTrabajo, renderizarActividadReciente, aplicarFiltrosTabla].forEach(
@@ -465,7 +466,10 @@ window.abrirModalAsignacion = function (id) {
         <label class="option-card">
             <input type="radio" name="tech" value="${escaparHTML(tec.nombre)}" ${esActual ? 'checked' : ''}>
             <span class="tech-avatar">${iniciales(tec.nombre)}</span>
-            <span><strong>${escaparHTML(tec.nombre)} ${esActual ? '<span class="current-tag">· actual</span>' : ''}</strong></span>
+            <span><strong>${escaparHTML(tec.nombre)} ${esActual ? '<span class="current-tag">· actual</span>' : ''}</strong>
+                ${tec.tiene_whatsapp === undefined ? '' : tec.tiene_whatsapp
+					? '<small class="wa-tag wa-tag-ok" title="Recibirá el aviso por WhatsApp">✆ Recibirá aviso por WhatsApp</small>'
+					: '<small class="wa-tag wa-tag-no" title="No registró su número en Mi Perfil: el aviso fallará">✆ Sin WhatsApp en su perfil</small>'}</span>
             <span class="load ${carga >= 3 ? 'high' : ''}">${carga} activo${carga === 1 ? '' : 's'}</span>
         </label>`;
 	});
@@ -518,8 +522,10 @@ async function submitAsignacion(e) {
 			body: JSON.stringify(datos)
 		});
 		if (res.ok) {
+			const data = await res.json().catch(() => ({}));
 			mostrarToast(
-				`${ticketActivo.codigo} asignado a ${radio.value}${datos.estado ? ' y pasó a En proceso' : ''}.`
+				`${ticketActivo.codigo} asignado a ${radio.value}${datos.estado ? ' y pasó a En proceso' : ''}.` +
+					textoAviso(data.aviso_whatsapp)
 			);
 			document.getElementById('assign-modal').hidden = true;
 			cargarDatosAsignacion();
@@ -648,3 +654,93 @@ window.abrirModalHistorial = async function (id) {
 		mostrarToast('No se pudo cargar el historial.');
 	}
 };
+
+/* =========================================================================
+   MÓDULO 4 — AVISOS POR WHATSAPP (Vonage)
+   GET  /api/avisos                     → últimos mensajes y su estado
+   POST /api/avisos/<id>/reintentar     → reenviar un aviso fallido
+   ========================================================================= */
+const ESTADO_AVISO = {
+	PENDIENTE: { clase: 'wa-pendiente', texto: 'Pendiente' },
+	ENVIADO: { clase: 'wa-enviado', texto: 'Enviado' },
+	ENTREGADO: { clase: 'wa-entregado', texto: 'Entregado' },
+	LEIDO: { clase: 'wa-leido', texto: 'Leído' },
+	FALLIDO: { clase: 'wa-fallido', texto: 'Fallido' }
+};
+
+function textoAviso(aviso) {
+	if (!aviso) return '';
+	if (aviso.estado === 'FALLIDO') return ` ⚠ WhatsApp no enviado: ${aviso.error || 'error desconocido'}`;
+	return ` ✆ Aviso por WhatsApp enviado a ${aviso.tecnico || 'el técnico'}.`;
+}
+
+async function cargarAvisos() {
+	const lista = document.getElementById('wa-avisos-lista');
+	if (!lista) return;
+	try {
+		const res = await fetch('/api/avisos?limite=8', { headers: obtenerHeadersAuth() });
+		if (!res.ok) {
+			lista.innerHTML = `<li class="muted">${escaparHTML(await mensajeDeError(res, 'No se pudo cargar el registro.'))}</li>`;
+			return;
+		}
+		renderizarAvisos(await res.json());
+	} catch (e) {
+		console.error('Error al cargar avisos', e);
+	}
+}
+
+function renderizarAvisos(data) {
+	const lista = document.getElementById('wa-avisos-lista');
+	const resumen = document.getElementById('wa-avisos-resumen');
+	const alerta = document.getElementById('wa-config-alerta');
+	if (alerta) alerta.hidden = data.configurado;
+	if (resumen) {
+		const r = data.resumen || {};
+		resumen.textContent = `${r.enviados || 0} enviados · ${r.fallidos || 0} fallidos`;
+	}
+	const avisos = data.avisos || [];
+	if (!avisos.length) {
+		lista.innerHTML = '<li class="muted">Aún no se envió ningún aviso. Asigna un ticket para probar.</li>';
+		return;
+	}
+	lista.innerHTML = avisos
+		.map((a) => {
+			const est = ESTADO_AVISO[a.estado] || ESTADO_AVISO.PENDIENTE;
+			const ref = a.ticket_id
+				? `<a href="/detalle_ticket?id=${a.ticket_id}">${escaparHTML(a.codigo)}</a>`
+				: '<span>Prueba</span>';
+			const motivo = a.motivo === 'REASIGNACION' ? 'Reasignación' : a.motivo === 'PRUEBA' ? 'Prueba' : 'Asignación';
+			return `
+        <li class="wa-aviso">
+            <div class="wa-aviso-top">
+                <strong>${ref} · ${escaparHTML(a.tecnico)}</strong>
+                <span class="wa-badge ${est.clase}">${est.texto}</span>
+            </div>
+            <div class="wa-aviso-meta">
+                <span>${motivo} · ${a.canal === 'SMS' ? 'SMS' : 'WhatsApp'}${a.telefono ? ' · ' + escaparHTML(a.telefono) : ''}</span>
+                <time datetime="${escaparHTML(a.created_at)}" title="${fechaExacta(a.created_at)}">${tiempoRelativo(a.created_at)}</time>
+            </div>
+            ${a.error_detalle ? `<p class="wa-aviso-error">${escaparHTML(a.error_detalle)}</p>` : ''}
+            ${a.estado === 'FALLIDO'
+				? `<button type="button" class="row-btn wa-reintentar" onclick="reintentarAviso(${a.id}, this)">⟳ Reintentar${a.intentos > 1 ? ` (${a.intentos} intentos)` : ''}</button>`
+				: ''}
+        </li>`;
+		})
+		.join('');
+}
+
+window.reintentarAviso = async function (id, boton) {
+	if (boton) {
+		boton.disabled = true;
+		boton.textContent = 'Reenviando…';
+	}
+	try {
+		const res = await fetch(`/api/avisos/${id}/reintentar`, { method: 'POST', headers: obtenerHeadersAuth() });
+		const data = await res.json().catch(() => ({}));
+		mostrarToast(res.ok ? 'Aviso reenviado por WhatsApp.' : `No se pudo reenviar: ${data.error || 'error'}`);
+	} catch (e) {
+		mostrarToast('Error de conexión.');
+	}
+	cargarAvisos();
+};
+
