@@ -85,18 +85,25 @@ def autenticar(correo, clave):
     usuario = consultar(f"SELECT * FROM {V_USUARIOS_SESION} AS v WHERE v.correo = %s", (correo,), uno=True)
     if not usuario or not clave_correcta(clave, usuario["password_hash"]):
         return None, "Correo o contraseña incorrectos."
+    error = verificar_cuenta(usuario)
+    return (None, error) if error else (usuario, None)
+
+
+def verificar_cuenta(usuario):
+    """Reglas comunes al login con contraseña y al login facial. Devuelve el error o None."""
+    correo = usuario["correo"]
     if not usuario["activo"]:
-        return None, "Tu cuenta está desactivada. Pide al administrador de tu empresa que la active."
+        return "Tu cuenta está desactivada. Pide al administrador de tu empresa que la active."
     if usuario["rol"] != ROL_SUPER:
         if not usuario["empresa_activa"]:
-            return None, "Tu empresa está desactivada en el sistema."
+            return "Tu empresa está desactivada en el sistema."
         dominio_ok = consultar(
             "SELECT 1 FROM empresa_dominios WHERE empresa_id = %s AND dominio = %s",
             (usuario["empresa_id"], dominio_de(correo)), uno=True,
         )
         if not dominio_ok:
-            return None, "El dominio de tu correo no corresponde a tu empresa."
-    return usuario, None
+            return "El dominio de tu correo no corresponde a tu empresa."
+    return None
 
 
 def llenar_sesion(usuario):

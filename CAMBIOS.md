@@ -67,3 +67,11 @@ enlace en el menú para el superusuario.
 - Columna "Fecha de resolución" usa `fecha_resolucion` (antes la fecha de última modificación).
 - Rutas de Postman protegidas con JWT; `api_insertar_user` hashea la contraseña con bcrypt y valida el dominio;
   `api_insertar_ticket` toma el solicitante del token; `api_insertar_evidencia` sube la foto real.
+
+## Módulo 1 (investigación) — Inicio de sesión con reconocimiento facial
+- face-api.js 1.7.13 (TensorFlow.js) + cámara del navegador; librería y modelos en `static/vendor/face-api` y `static/models`.
+- Registro del rostro en **Mi Perfil** (pide la contraseña actual, 3 capturas, se guarda el promedio del descriptor).
+- Login facial como alternativa: antes de encender la cámara se verifica que la cuenta tenga rostro registrado.
+- Distancia euclidiana en el servidor (`facial.py`), umbral 0,5; 5 fallos en 15 min bloquean el login facial.
+- Tablas `usuario_rostros` y `login_facial_intentos`; `migrar_facial.py` las crea sin borrar datos.
+- Explicación para la sustentación: `docs/Investigacion_Login_Facial.pdf`.

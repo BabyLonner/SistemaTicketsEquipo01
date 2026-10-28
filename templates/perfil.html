@@ -6,6 +6,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/usuarios.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/facial.css') }}">
 <style>
   .profile-card { padding:24px; }
   .profile-top { display:flex; align-items:center; gap:16px; margin-bottom:18px; }
@@ -120,8 +121,41 @@
         <li>Si la olvidas, pide al administrador de tu empresa que la restablezca.</li>
       </ul>
     </section>
+    <section class="panel create-panel facial-perfil" id="panel-rostro">
+      <h2><span class="section-icon">☺</span>Reconocimiento facial</h2>
+      <div class="estado-rostro" id="estado-rostro">Consultando…</div>
+      <div class="acciones-rostro">
+        <button class="btn-primary create-button" type="button" id="btn-registrar-rostro"><span>＋</span>Registrar mi rostro</button>
+        <button class="btn-secondary" type="button" id="btn-eliminar-rostro" hidden>Eliminar rostro</button>
+      </div>
+      <ul class="password-tips">
+        <li>Se guarda solo una huella numérica de tu rostro (128 valores), nunca la foto.</li>
+        <li>Con tu rostro registrado podrás ingresar sin escribir tu contraseña.</li>
+        <li>Tras 5 intentos fallidos, el ingreso facial se bloquea 15 minutos.</li>
+      </ul>
+    </section>
   </aside>
 </div>
+
+<!-- Ventana de registro del rostro -->
+<div class="facial-modal" id="modal-registro-rostro" hidden role="dialog" aria-modal="true" aria-labelledby="registro-titulo">
+  <div class="facial-card">
+    <h3 id="registro-titulo">Registrar mi rostro</h3>
+    <p>Confirma tu contraseña y mira a la cámara. Se tomarán 3 capturas moviendo un poco la cabeza.</p>
+    <label class="facial-campo">Contraseña actual<input type="password" id="registro-clave" autocomplete="current-password"></label>
+    <div class="facial-video"><video id="registro-video" playsinline muted></video><div class="facial-guia" id="registro-guia"></div></div>
+    <div class="facial-pasos" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="facial-estado" id="registro-estado">Escribe tu contraseña y pulsa «Comenzar».</div>
+    <div class="facial-acciones">
+      <button type="button" class="facial-btn" id="registro-cancelar">Cancelar</button>
+      <button type="button" class="facial-btn primario" id="registro-comenzar">Comenzar</button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='vendor/face-api/face-api.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/rostro.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/perfil_facial.js') }}" defer></script>
 
 <footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span>Mi cuenta</span></footer>
 {% endblock %}

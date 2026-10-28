@@ -27,7 +27,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP VIEW IF EXISTS v_dashboard_responsables, v_dashboard_resumen, v_notificaciones_pendientes,
                     v_ticket_timeline, v_tickets, v_usuarios_sesion;
-DROP TABLE IF EXISTS reportes_generados, mensajes_externos, ticket_tareas, notificaciones, ticket_historial, ticket_evidencias, tickets, equipos,
+DROP TABLE IF EXISTS login_facial_intentos, usuario_rostros, reportes_generados, mensajes_externos, ticket_tareas, notificaciones, ticket_historial, ticket_evidencias, tickets, equipos,
                      tokens_revocados, users, areas, categorias, prioridades,
                      empresa_dominios, empresas;
 
@@ -126,6 +126,36 @@ CREATE TABLE tokens_revocados (
 --  MODULO 3 (avance 2)  -  Inventario de equipos con etiqueta QR
 --  El QR solo lleva una URL con qr_token (aleatorio, no adivinable).
 --  Nunca se codifican datos del equipo ni datos personales en el QR.
+-- Reconocimiento facial (Módulo 1, investigación):
+-- se guarda SOLO el descriptor facial (128 números que calcula face-api.js),
+-- nunca la fotografía. Un registro por usuario (promedio de 3 capturas).
+CREATE TABLE usuario_rostros (
+  usuario_id  INT UNSIGNED     NOT NULL,
+  descriptor  TEXT             NOT NULL,          -- JSON con 128 números decimales
+  muestras    TINYINT UNSIGNED NOT NULL DEFAULT 3,
+  created_at  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (usuario_id),
+  CONSTRAINT fk_rostros_usuario FOREIGN KEY (usuario_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bitácora de intentos de login facial: sirve para el límite de intentos fallidos
+CREATE TABLE login_facial_intentos (
+  id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  usuario_id  INT UNSIGNED  NULL,
+  correo      VARCHAR(120)  NOT NULL,
+  exito       TINYINT(1)    NOT NULL DEFAULT 0,
+  distancia   DECIMAL(6,4)  NULL,                -- distancia euclidiana obtenida
+  motivo      VARCHAR(80)   NULL,
+  ip          VARCHAR(45)   NULL,
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_intentos_usuario FOREIGN KEY (usuario_id) REFERENCES users (id) ON DELETE CASCADE,
+  INDEX idx_intentos_usuario (usuario_id, created_at),
+  INDEX idx_intentos_ip (ip, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- =====================================================================
 CREATE TABLE equipos (
   id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
