@@ -12,6 +12,7 @@
     rel="stylesheet">
   <link rel="stylesheet" href="../static/css/global.css">
   <link rel="stylesheet" href="../static/css/estilos.css">
+  <link rel="stylesheet" href="../static/css/facial.css">
 </head>
 
 <body class="pagina-acceso">
@@ -157,11 +158,22 @@
             <p class="campo__error" id="error-clave" aria-live="polite"></p>
           </div>
 
-          <label class="check"><input type="checkbox" id="recordar"> Mantener la sesión iniciada</label>
+          <label class="check"><input type="checkbox" id="recordar" name="recordar" value="1"> Mantener la sesión iniciada</label>
 
           <button type="submit" class="btn btn--primario btn--bloque btn--login" id="btn-ingresar">
             <span class="btn__texto">Ingresar</span>
             <span class="btn__carga" aria-hidden="true"></span>
+          </button>
+
+          <div class="separador-login">o</div>
+          <button type="button" class="btn-facial" id="btn-facial">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+              <circle cx="9" cy="10" r=".6" fill="currentColor" /><circle cx="15" cy="10" r=".6" fill="currentColor" />
+              <path d="M9 15c1.5 1.3 4.5 1.3 6 0" />
+            </svg>
+            Ingresar con reconocimiento facial
           </button>
 
           <div class="nota" id="nota-cuentas">
@@ -184,11 +196,29 @@
       <a href="#">Manual de usuario</a>
       <a href="#">Documentación API</a>
       <a href="#">Soporte: [correo de soporte]</a>
-      <span class="version">v1.0.0</span>
+      <span class="version">v{{ version }}</span>
     </nav>
   </footer>
 
+  <!-- Ventana de la cámara: login con reconocimiento facial -->
+  <div class="facial-modal" id="modal-facial" hidden role="dialog" aria-modal="true" aria-labelledby="facial-titulo">
+    <div class="facial-card">
+      <h3 id="facial-titulo">Ingresar con tu rostro</h3>
+      <p><strong>Mira de frente a la cámara</strong> con buena luz y sin moverte. La imagen no se guarda ni se envía:
+        solo se compara la huella numérica de tu rostro.</p>
+      <div class="facial-video"><video id="facial-video" playsinline muted></video><div class="facial-guia" id="facial-guia"></div></div>
+      <div class="facial-estado" id="facial-estado">Preparando…</div>
+      <div class="facial-acciones">
+        <button type="button" class="facial-btn" id="facial-cancelar">Cancelar</button>
+        <button type="button" class="facial-btn primario" id="facial-reintentar" hidden>Reintentar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../static/js/app.js"></script>
+  <script src="../static/vendor/face-api/face-api.js" defer></script>
+  <script src="../static/js/rostro.js" defer></script>
+  <script src="../static/js/login_facial.js" defer></script>
 </body>
 
 </html>

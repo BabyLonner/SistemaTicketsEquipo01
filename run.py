@@ -29,6 +29,7 @@ from tickets import tickets_bp
 from usuarios import usuarios_bp
 from utils import ordenar_por_urgencia
 from verificacion import verificacion_bp
+from facial import facial_bp            # MÓDULO 1: login con reconocimiento facial
 from vistas import V_TICKETS, aplicar_sla_lista
 
 app = Flask(__name__)
@@ -42,7 +43,7 @@ app.json.ensure_ascii = False
 app.json.sort_keys = False
 
 for bp in (tickets_bp, usuarios_bp, empresas_bp, reportes_bp, cuenta_bp, api_postman_bp, verificacion_bp,
-           avisos_bp, equipos_bp):
+           avisos_bp, equipos_bp, facial_bp):
     app.register_blueprint(bp)
 
 app.before_request(validar_peticion)       # MÓDULO 1: el JWT se valida en CADA petición
