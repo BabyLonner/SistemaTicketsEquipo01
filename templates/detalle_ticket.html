@@ -6,6 +6,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/detalle_ticket.css') }}">
 <script src="{{ url_for('static', filename='js/detalle_ticket.js') }}" defer></script>
+<!-- MÓDULO 5: Socket.IO para Chat en Tiempo Real -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
+<script src="{{ url_for('static', filename='js/chat_socket.js') }}" defer></script>
 <!-- tickets.js va después: muestra las fotos reales del ticket (?id=N) -->
 <script src="{{ url_for('static', filename='js/tickets.js') }}" defer></script>
 <!-- MÓDULO 3 (avance 2): equipo vinculado por QR -->
@@ -23,7 +26,7 @@
       <h1><span id="ticket-code">TK-0000</span> - <span id="ticket-subject">Cargando...</span></h1>
       <div class="ticket-tags"><span class="badge priority-high" id="ticket-priority-tag">▥ </span><span
           class="badge status-progress" id="ticket-status-tag">▤ </span><span class="badge category-tag">◉
-          </span><span class="badge category-tag">▦ </span></div>
+        </span><span class="badge category-tag">▦ </span></div>
     </div>
   </div>
   <a class="btn-outline" href="{{ url_for('pantalla', pagina='tickets') }}"><span aria-hidden="true">‹</span> Volver al
@@ -58,12 +61,13 @@
       <div class="evidence-grid" id="evidence-grid">
         <!-- Contenedor vacío donde detalle_ticket.js inyectará las fotos reales -->
         <div id="contenedor-evidencias" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-           <p class="text-muted">Cargando evidencias...</p>
+          <p class="text-muted">Cargando evidencias...</p>
         </div>
 
         <!-- Mantenemos el botón de subida por si lo usas más adelante -->
-        <label class="upload-zone"><input id="evidence-input" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple
-            hidden><span class="upload-icon">⇧</span><strong>Arrastra más archivos aquí</strong><span>o haz clic para
+        <label class="upload-zone"><input id="evidence-input" type="file"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple hidden><span
+            class="upload-icon">⇧</span><strong>Arrastra más archivos aquí</strong><span>o haz clic para
             seleccionar</span><small>Máx. 5 MB por foto · hasta 3 fotos<br>(JPG, PNG o WEBP)</small></label>
       </div>
     </section>
@@ -89,8 +93,9 @@
         <form class="reply-form" id="reply-form"><span class="comment-avatar avatar-admin">US</span><label
             class="reply-input"><span class="sr-only">Escribe un comentario</span><input id="reply-text" type="text"
               maxlength="1000" placeholder="Escribe un comentario..." required><label class="attach-button"
-              title="Adjuntar archivo">↗<input id="reply-file" type="file" accept="image/jpeg,image/png,image/webp" hidden></label></label><button
-            class="btn-primary send-button" type="submit"><span>➤</span>Enviar</button></form>
+              title="Adjuntar archivo">↗<input id="reply-file" type="file" accept="image/jpeg,image/png,image/webp"
+                hidden></label></label><button class="btn-primary send-button"
+            type="submit"><span>➤</span>Enviar</button></form>
       </div>
       <div class="tab-content alternate-content" id="tab-history" role="tabpanel" hidden>
         <!-- MÓDULO 3: línea de tiempo generada por detalle_ticket.js (tabla ticket_historial) -->
@@ -187,7 +192,8 @@
     </section>
   </aside>
 </div>
-<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span id="page-message">Conectando...</span></footer>
+<footer class="page-footer"><span>© 2026 Soporte TI · Sistema de Gestión de Tickets</span><span
+    id="page-message">Conectando...</span></footer>
 
 <!-- MÓDULO 3: cambio de estado con comentario obligatorio -->
 <div class="status-modal" id="status-modal" role="dialog" aria-modal="true" aria-labelledby="status-modal-title" hidden>
