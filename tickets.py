@@ -3,9 +3,11 @@ import os
 import shutil
 import uuid
 import warnings
+from datetime import datetime
 from functools import wraps
 
 import pymysql
+from chat_realtime import emitir_comentario_ticket
 from flask import (
     Blueprint,
     current_app,
@@ -249,7 +251,7 @@ class Ticket:
         "Abierto": ("En proceso",),
         "En proceso": ("Resuelto",),
         "Resuelto": ("Cerrado", "En proceso"),  # se puede reabrir
-        "Cerrado": (),                          # estado final
+        "Cerrado": (),  # estado final
     }
     MIN_COMENTARIO = 10
     MAX_COMENTARIO = 500
@@ -262,13 +264,17 @@ class Ticket:
         permitidos = Ticket.TRANSICIONES[estado_actual]
         if estado_nuevo not in permitidos:
             if not permitidos:
-                raise ErrorRegla("El ticket está cerrado; ya no admite cambios de estado.")
+                raise ErrorRegla(
+                    "El ticket está cerrado; ya no admite cambios de estado."
+                )
             raise ErrorRegla(
                 f"No se puede pasar de «{estado_actual}» a «{estado_nuevo}». "
                 f"Desde «{estado_actual}» solo se permite: {', '.join(permitidos)}."
             )
         if estado_nuevo == "En proceso" and not tecnico_id:
-            raise ErrorRegla("Primero asigna un técnico para pasar el ticket a «En proceso».")
+            raise ErrorRegla(
+                "Primero asigna un técnico para pasar el ticket a «En proceso»."
+            )
         if len(comentario) < Ticket.MIN_COMENTARIO:
             raise ErrorRegla(
                 f"El comentario es obligatorio (mínimo {Ticket.MIN_COMENTARIO} caracteres)."
@@ -328,7 +334,9 @@ class Ticket:
                 )
                 tec = cur.fetchone()
                 if not tec:
-                    raise ErrorRegla("El técnico elegido no existe o no está activo en tu empresa.")
+                    raise ErrorRegla(
+                        "El técnico elegido no existe o no está activo en tu empresa."
+                    )
                 tecnico_id_nuevo = tec["id"]
                 tecnico_nombre = tec["nombre"]
 
@@ -342,7 +350,8 @@ class Ticket:
         # El solicitante solo puede confirmar (Cerrado) o reabrir (En proceso) SU ticket resuelto.
         if usuario["rol"] == ROL_SOLICITANTE:
             confirma_o_reabre = (
-                cambia_estado and not cambia_tecnico
+                cambia_estado
+                and not cambia_tecnico
                 and actual["solicitante_id"] == usuario["id"]
                 and actual["estado"] == "Resuelto"
                 and estado_nuevo in ("Cerrado", "En proceso")
@@ -357,10 +366,14 @@ class Ticket:
             usuario["rol"] == ROL_ADMIN
             or (usuario["rol"] == ROL_TECNICO and actual["tecnico_id"] == usuario["id"])
         ):
-            raise ErrorRegla("Solo el administrador o el técnico asignado pueden cambiar la prioridad o la categoría.")
+            raise ErrorRegla(
+                "Solo el administrador o el técnico asignado pueden cambiar la prioridad o la categoría."
+            )
         if cambia_tecnico:
             if usuario["rol"] != ROL_ADMIN:
-                raise ErrorRegla("Solo el administrador puede asignar o reasignar técnicos.")
+                raise ErrorRegla(
+                    "Solo el administrador puede asignar o reasignar técnicos."
+                )
             if actual["estado"] in ("Resuelto", "Cerrado"):
                 raise ErrorRegla("No se puede reasignar un ticket resuelto o cerrado.")
         if (
@@ -368,7 +381,9 @@ class Ticket:
             and usuario["rol"] == ROL_TECNICO
             and actual["tecnico_id"] != usuario["id"]
         ):
-            raise ErrorRegla("Solo el técnico asignado puede cambiar el estado de este ticket.")
+            raise ErrorRegla(
+                "Solo el técnico asignado puede cambiar el estado de este ticket."
+            )
 
         # --- MÓDULO 3: transición válida + comentario obligatorio ---
         if cambia_estado:
@@ -399,12 +414,19 @@ class Ticket:
                           (SELECT nombre FROM prioridades WHERE id = %s) AS p_new,
                           (SELECT nombre FROM categorias WHERE id = %s) AS c_ant,
                           (SELECT nombre FROM categorias WHERE id = %s) AS c_new""",
-                (actual["prioridad_id"], prioridad_id_nueva, actual["categoria_id"], categoria_id_nueva),
+                (
+                    actual["prioridad_id"],
+                    prioridad_id_nueva,
+                    actual["categoria_id"],
+                    categoria_id_nueva,
+                ),
             )
             n = cur.fetchone()
             partes = []
             if cambia_prioridad:
-                partes.append(f"Prioridad: {n['p_ant']} → {n['p_new']} (el plazo SLA se recalculó)")
+                partes.append(
+                    f"Prioridad: {n['p_ant']} → {n['p_new']} (el plazo SLA se recalculó)"
+                )
             if cambia_categoria:
                 partes.append(f"Categoría: {n['c_ant']} → {n['c_new']}")
             cur.execute(
@@ -423,7 +445,8 @@ class Ticket:
         if cambia_estado:
             if estado_nuevo == "Resuelto":
                 cur.execute(
-                    "UPDATE tickets SET fecha_resolucion = NOW() WHERE id = %s", (ticket_id,)
+                    "UPDATE tickets SET fecha_resolucion = NOW() WHERE id = %s",
+                    (ticket_id,),
                 )
             elif estado_nuevo == "Cerrado":
                 cur.execute(
@@ -435,7 +458,8 @@ class Ticket:
             elif estado_nuevo == "En proceso" and actual["estado"] == "Resuelto":
                 # Reapertura: el ticket vuelve a contar tiempo
                 cur.execute(
-                    "UPDATE tickets SET fecha_resolucion = NULL WHERE id = %s", (ticket_id,)
+                    "UPDATE tickets SET fecha_resolucion = NULL WHERE id = %s",
+                    (ticket_id,),
                 )
 
         # 3. Registrar los movimientos en el historial (con el comentario del usuario)
@@ -487,7 +511,12 @@ class Ticket:
                         f"{info['asunto']} · asignado por {usuario['nombre']}"[:255],
                     ),
                 )
-            if cambia_estado and info["tecnico_id"] and info["tecnico_id"] != usuario["id"] and not cambia_tecnico:
+            if (
+                cambia_estado
+                and info["tecnico_id"]
+                and info["tecnico_id"] != usuario["id"]
+                and not cambia_tecnico
+            ):
                 cur.execute(
                     """INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje)
                        VALUES (%s, 'CAMBIO_ESTADO', %s, %s, %s)""",
@@ -645,10 +674,10 @@ def _entero(valor):
 # =====================================================================
 EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "png", "webp"}
 MIME_PERMITIDOS = {"image/jpeg", "image/png", "image/webp"}
-TAMANO_MAXIMO = 5 * 1024 * 1024  
-LADO_MAXIMO = 1920  
-TAMANO_MINIATURA = (240, 240)  
-Image.MAX_IMAGE_PIXELS = 40_000_000  
+TAMANO_MAXIMO = 5 * 1024 * 1024
+LADO_MAXIMO = 1920
+TAMANO_MINIATURA = (240, 240)
+Image.MAX_IMAGE_PIXELS = 40_000_000
 
 FORMATO_POR_MIME = {
     "image/jpeg": ("JPEG", "jpg"),
@@ -746,11 +775,11 @@ def guardar_foto(foto, empresa_codigo, ticket_id):
 
     mime = foto["mime_type"]
     formato, extension = FORMATO_POR_MIME[mime]
-    nombre_base = uuid.uuid4().hex  
+    nombre_base = uuid.uuid4().hex
 
     with Image.open(io.BytesIO(foto["contenido"])) as original:
-        img = ImageOps.exif_transpose(original)  
-        img.thumbnail((LADO_MAXIMO, LADO_MAXIMO))  
+        img = ImageOps.exif_transpose(original)
+        img.thumbnail((LADO_MAXIMO, LADO_MAXIMO))
 
         destino = os.path.join(carpeta, f"{nombre_base}.{extension}")
         if formato == "JPEG":
@@ -812,24 +841,37 @@ def login_requerido(vista):
 
     g.usuario es el usuario del token. El superusuario trabaja dentro de la
     empresa que eligió en /empresas y allí tiene permisos de administrador."""
+
     @wraps(vista)
     def envoltura(*args, **kwargs):
         usuario = g.get("usuario_token")
         if not usuario:
-            return jsonify(error=g.get("error_token") or "Tu sesión expiró. Vuelve a iniciar sesión."), 401
+            return jsonify(
+                error=g.get("error_token")
+                or "Tu sesión expiró. Vuelve a iniciar sesión."
+            ), 401
         usuario = dict(usuario)
         usuario["es_super"] = usuario["rol"] == ROL_SUPER
         if usuario["es_super"]:
             empresa_id = empresa_actual()
             if not empresa_id:
-                return jsonify(error="Elige primero la empresa que quieres administrar (menú Empresas)."), 403
+                return jsonify(
+                    error="Elige primero la empresa que quieres administrar (menú Empresas)."
+                ), 403
             with conexion().cursor() as cur:
-                cur.execute("SELECT id, codigo, nombre FROM empresas WHERE id = %s", (empresa_id,))
+                cur.execute(
+                    "SELECT id, codigo, nombre FROM empresas WHERE id = %s",
+                    (empresa_id,),
+                )
                 empresa = cur.fetchone()
             if not empresa:
                 return jsonify(error="La empresa elegida ya no existe."), 404
-            usuario.update(empresa_id=empresa["id"], empresa=empresa["nombre"],
-                           empresa_codigo=empresa["codigo"], rol=ROL_ADMIN)
+            usuario.update(
+                empresa_id=empresa["id"],
+                empresa=empresa["nombre"],
+                empresa_codigo=empresa["codigo"],
+                rol=ROL_ADMIN,
+            )
         g.usuario = usuario
         return vista(*args, **kwargs)
 
@@ -1036,7 +1078,9 @@ def sesion_actual():
 @login_requerido
 def crear_ticket():
     if g.usuario["es_super"]:
-        return jsonify(error="El superusuario no registra tickets: inicia sesión con un usuario de la empresa."), 403
+        return jsonify(
+            error="El superusuario no registra tickets: inicia sesión con un usuario de la empresa."
+        ), 403
     datos, errores = Ticket.validar(request.form, g.usuario)
     archivos = _fotos_de_la_peticion()
     if len(archivos) > Evidencia.MAX_POR_TICKET:
@@ -1062,12 +1106,15 @@ def crear_ticket():
             # MÓDULO 3 (avance 2): ticket registrado escaneando el QR de un equipo
             if (request.form.get("equipo") or "").strip():
                 from equipos import vincular_equipo
-                vincular_equipo(cur, ticket_id, request.form["equipo"], g.usuario["empresa_id"])
+
+                vincular_equipo(
+                    cur, ticket_id, request.form["equipo"], g.usuario["empresa_id"]
+                )
             _guardar_fotos(cur, ticket_id, fotos, [])
         con.commit()
     except Exception:
         con.rollback()
-        if ticket_id:  
+        if ticket_id:
             borrar_carpeta_ticket(g.usuario["empresa_codigo"], ticket_id)
         raise
 
@@ -1112,29 +1159,39 @@ def editar_ticket(ticket_id):
     ticket, error = _ticket_o_error(ticket_id)
     if error:
         return error
-        
+
     datos = request.get_json(silent=True) or request.form
     con = conexion()
     cambios = None
-    
+
     try:
         with con.cursor() as cur:
             # MÓDULO 3: la asignación también llega por aquí (sin "estado")
-            if any(k in datos for k in ("estado", "tecnico", "prioridad", "categoria")) and "asunto" not in datos:
-                if g.usuario["rol"] == ROL_SOLICITANTE and ticket["estado"] == "Cerrado":
+            if (
+                any(k in datos for k in ("estado", "tecnico", "prioridad", "categoria"))
+                and "asunto" not in datos
+            ):
+                if (
+                    g.usuario["rol"] == ROL_SOLICITANTE
+                    and ticket["estado"] == "Cerrado"
+                ):
                     return jsonify(error="No puedes modificar un ticket cerrado."), 403
                 cambios = Ticket.actualizar_gestion(cur, ticket_id, datos, g.usuario)
-                
+
             elif "asunto" in datos:
                 if not puede_editar(g.usuario, ticket):
-                    return jsonify(error="Solo puedes editar tus tickets mientras estén «Abierto»."), 403
-                    
+                    return jsonify(
+                        error="Solo puedes editar tus tickets mientras estén «Abierto»."
+                    ), 403
+
                 limpios, errores = Ticket.validar(datos, g.usuario)
                 if errores:
-                    return jsonify(error="Revisa los campos marcados.", errores=errores), 400
-                    
+                    return jsonify(
+                        error="Revisa los campos marcados.", errores=errores
+                    ), 400
+
                 Ticket.actualizar(cur, ticket_id, limpios, g.usuario["empresa_id"])
-                
+
         con.commit()
     except ErrorRegla as e:
         con.rollback()
@@ -1142,17 +1199,25 @@ def editar_ticket(ticket_id):
     except Exception:
         con.rollback()
         raise
-        
+
     # MÓDULO 4: aviso al técnico por WhatsApp (ya con la asignación guardada)
     aviso = None
     if cambios and cambios.get("tecnico_avisar"):
         from avisos_whatsapp import avisar_asignacion
-        aviso = avisar_asignacion(ticket_id, cambios["tecnico_avisar"], cambios["reasignacion"],
-                                  g.usuario["empresa_id"], g.usuario["id"])
+
+        aviso = avisar_asignacion(
+            ticket_id,
+            cambios["tecnico_avisar"],
+            cambios["reasignacion"],
+            g.usuario["empresa_id"],
+            g.usuario["id"],
+        )
 
     return jsonify(
         mensaje="Ticket actualizado correctamente.",
-        ticket=_ticket_detalle(Ticket.obtener(ticket_id, g.usuario["empresa_id"]), g.usuario),
+        ticket=_ticket_detalle(
+            Ticket.obtener(ticket_id, g.usuario["empresa_id"]), g.usuario
+        ),
         aviso_whatsapp=aviso,
     )
 
@@ -1289,7 +1354,9 @@ def comentar_ticket(ticket_id):
     if len(comentario) < 2:
         return jsonify(error="Escribe un comentario."), 400
     if len(comentario) > Ticket.MAX_COMENTARIO:
-        return jsonify(error=f"El comentario no puede superar los {Ticket.MAX_COMENTARIO} caracteres."), 400
+        return jsonify(
+            error=f"El comentario no puede superar los {Ticket.MAX_COMENTARIO} caracteres."
+        ), 400
     if ticket["estado"] == "Cerrado":
         return jsonify(error="El ticket está cerrado y ya no admite comentarios."), 400
     con = conexion()
@@ -1311,13 +1378,33 @@ def comentar_ticket(ticket_id):
                 cur.execute(
                     """INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje)
                        VALUES (%s, 'COMENTARIO', %s, %s, %s)""",
-                    (destino, ticket_id, f"Nuevo comentario en {ticket['codigo']}",
-                     f"{g.usuario['nombre']}: {comentario}"[:255]),
+                    (
+                        destino,
+                        ticket_id,
+                        f"Nuevo comentario en {ticket['codigo']}",
+                        f"{g.usuario['nombre']}: {comentario}"[:255],
+                    ),
                 )
         con.commit()
     except Exception:
         con.rollback()
         raise
+
+    try:
+        emitir_comentario_ticket(
+            ticket_id,
+            {
+                "ticket_id": ticket_id,
+                "tipo": "COMENTARIO",
+                "usuario": g.usuario["nombre"],
+                "usuario_rol": g.usuario["rol"],
+                "comentario": comentario,
+                "created_at": datetime.now().isoformat(timespec="seconds"),
+            },
+        )
+    except Exception as e:
+        current_app.logger.warning(f"SocketIO no disponible: {e}")
+
     return jsonify(mensaje="Comentario agregado."), 201
 
 
@@ -1328,7 +1415,8 @@ def comentar_ticket(ticket_id):
 # ---------------------------------------------------------------
 def _puede_gestionar_tareas(usuario, ticket):
     return ticket["estado"] != "Cerrado" and (
-        usuario["rol"] == ROL_ADMIN or (usuario["rol"] == ROL_TECNICO and ticket["tecnico_id"] == usuario["id"])
+        usuario["rol"] == ROL_ADMIN
+        or (usuario["rol"] == ROL_TECNICO and ticket["tecnico_id"] == usuario["id"])
     )
 
 
@@ -1354,7 +1442,10 @@ def _tareas_json(ticket_id):
 
 def _tarea_y_ticket(tarea_id):
     with conexion().cursor() as cur:
-        cur.execute("SELECT id, ticket_id, descripcion, completada FROM ticket_tareas WHERE id = %s", (tarea_id,))
+        cur.execute(
+            "SELECT id, ticket_id, descripcion, completada FROM ticket_tareas WHERE id = %s",
+            (tarea_id,),
+        )
         tarea = cur.fetchone()
     if not tarea:
         return None, None, (jsonify(error="La tarea no existe."), 404)
@@ -1362,7 +1453,16 @@ def _tarea_y_ticket(tarea_id):
     if error:
         return None, None, error
     if not _puede_gestionar_tareas(g.usuario, ticket):
-        return None, None, (jsonify(error="Solo el administrador o el técnico asignado pueden modificar las tareas."), 403)
+        return (
+            None,
+            None,
+            (
+                jsonify(
+                    error="Solo el administrador o el técnico asignado pueden modificar las tareas."
+                ),
+                403,
+            ),
+        )
     return tarea, ticket, None
 
 
@@ -1372,7 +1472,10 @@ def listar_tareas(ticket_id):
     ticket, error = _ticket_o_error(ticket_id)
     if error:
         return error
-    return jsonify(tareas=_tareas_json(ticket_id), puede_editar=_puede_gestionar_tareas(g.usuario, ticket))
+    return jsonify(
+        tareas=_tareas_json(ticket_id),
+        puede_editar=_puede_gestionar_tareas(g.usuario, ticket),
+    )
 
 
 @tickets_bp.post("/api/tickets/<int:ticket_id>/tareas")
@@ -1382,7 +1485,9 @@ def crear_tarea(ticket_id):
     if error:
         return error
     if not _puede_gestionar_tareas(g.usuario, ticket):
-        return jsonify(error="Solo el administrador o el técnico asignado pueden agregar tareas."), 403
+        return jsonify(
+            error="Solo el administrador o el técnico asignado pueden agregar tareas."
+        ), 403
     datos = request.get_json(silent=True) or request.form
     descripcion = " ".join((datos.get("descripcion") or "").split())
     if not 3 <= len(descripcion) <= 200:
@@ -1412,13 +1517,22 @@ def marcar_tarea(tarea_id):
                 """UPDATE ticket_tareas
                       SET completada = %s, completada_por = %s, completada_at = IF(%s, NOW(), NULL)
                     WHERE id = %s""",
-                (int(completada), g.usuario["id"] if completada else None, int(completada), tarea_id),
+                (
+                    int(completada),
+                    g.usuario["id"] if completada else None,
+                    int(completada),
+                    tarea_id,
+                ),
             )
             if completada and not tarea["completada"]:
                 cur.execute(
                     """INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, comentario, created_at)
                        VALUES (%s, %s, 'COMENTARIO', %s, NOW())""",
-                    (ticket["id"], g.usuario["id"], f"Tarea completada: {tarea['descripcion']}"),
+                    (
+                        ticket["id"],
+                        g.usuario["id"],
+                        f"Tarea completada: {tarea['descripcion']}",
+                    ),
                 )
         con.commit()
     except Exception:
