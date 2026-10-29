@@ -1,0 +1,259 @@
+/* =========================================================
+   nuevo_ticket_voz.css — MÓDULO 2 (avance 2): ticket por voz
+   Usa los colores de global.css (--navy, --blue, --red, etc.)
+   ========================================================= */
+
+.voz {
+  margin: 0 0 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--line, #dce9f9);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f7fbff 0%, #fff 100%);
+}
+
+.voz__fila {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.voz__icono {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--blue-light, #e8f2ff);
+  color: var(--blue, #2672c7);
+}
+
+.voz__textos {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.voz__textos strong {
+  display: block;
+  color: var(--ink, #102b50);
+  font-size: 14px;
+}
+
+.voz__textos small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted, #58749a);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* Botón principal */
+.voz__boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--blue-strong, #0875ed);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+
+.voz__boton:hover { background: var(--blue, #2672c7); }
+.voz__boton:focus-visible { outline: 3px solid rgba(8, 117, 237, .35); outline-offset: 2px; }
+
+.voz__boton:disabled {
+  background: #c5d3e4;
+  cursor: not-allowed;
+}
+
+.voz[data-estado="grabando"] .voz__boton {
+  background: var(--red, #e94d5b);
+  box-shadow: 0 0 0 4px rgba(233, 77, 91, .18);
+}
+
+.voz[data-estado="grabando"] {
+  border-color: rgba(233, 77, 91, .45);
+  background: #fff8f8;
+}
+
+/* Indicador de grabación */
+.voz__grabando {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  color: var(--red, #e94d5b);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.voz__grabando[hidden] { display: none; }
+
+.voz__punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red, #e94d5b);
+  animation: voz-pulso 1.1s ease-in-out infinite;
+}
+
+.voz__ondas {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 16px;
+}
+
+.voz__ondas i {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+  animation: voz-onda 0.9s ease-in-out infinite;
+}
+
+.voz__ondas i:nth-child(2) { animation-delay: .15s; }
+.voz__ondas i:nth-child(3) { animation-delay: .3s; }
+.voz__ondas i:nth-child(4) { animation-delay: .45s; }
+
+.voz__tiempo {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink, #102b50);
+}
+
+.voz__acciones {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.voz__mini {
+  padding: 6px 12px;
+  border: 1px solid var(--line, #dce9f9);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink, #102b50);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.voz__mini:hover { border-color: var(--blue, #2672c7); }
+
+/* Texto en vivo */
+.voz__vivo {
+  margin-top: 10px;
+  padding: 10px 12px;
+  min-height: 42px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px dashed rgba(233, 77, 91, .4);
+  color: var(--ink, #102b50);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.voz__vivo[hidden] { display: none; }
+.voz__vivo-interino { color: var(--muted, #58749a); font-style: italic; }
+.voz__vivo-guia { color: var(--muted, #58749a); }
+
+/* Avisos (sin soporte, permiso denegado, errores) */
+.voz__aviso {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  background: #fff1f2;
+  color: #9f1d2b;
+  border: 1px solid #f7c6cc;
+}
+
+.voz__aviso[data-tipo="info"] {
+  background: #fff8e8;
+  color: #7a5200;
+  border-color: #f6dca4;
+}
+
+.voz__aviso[hidden] { display: none; }
+
+.voz__privacidad {
+  margin: 10px 0 0;
+  color: var(--muted, #58749a);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Micrófono pequeño junto a Asunto y Descripción */
+.voz-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.voz-etiqueta > label { margin-bottom: 0 !important; }
+
+.voz-campo {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line, #dce9f9);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--blue, #2672c7);
+  cursor: pointer;
+}
+
+.voz-campo svg { width: 14px; height: 14px; }
+.voz-campo:hover { background: var(--blue-light, #e8f2ff); }
+
+.voz-campo--activo {
+  background: var(--red, #e94d5b);
+  border-color: var(--red, #e94d5b);
+  color: #fff;
+  animation: voz-pulso 1.1s ease-in-out infinite;
+}
+
+.voz[data-estado="no-soportado"] ~ .form-field .voz-campo,
+.voz[data-estado="inseguro"] ~ .form-field .voz-campo { display: none; }
+
+/* Resalta el campo que se llenó con la voz */
+.voz-dictado {
+  animation: voz-resalte 2.4s ease;
+}
+
+@keyframes voz-pulso {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.85); }
+}
+
+@keyframes voz-onda {
+  0%, 100% { transform: scaleY(.3); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes voz-resalte {
+  0% { box-shadow: 0 0 0 4px rgba(22, 168, 120, .35); border-color: var(--green, #16a878); }
+  100% { box-shadow: none; }
+}
+
+@media (max-width: 600px) {
+  .voz__boton { width: 100%; justify-content: center; }
+  .voz__acciones { margin-left: 0; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voz__punto, .voz__ondas i, .voz-campo--activo, .voz-dictado { animation: none; }
+}
