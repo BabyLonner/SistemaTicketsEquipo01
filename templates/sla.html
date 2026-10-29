@@ -7,13 +7,21 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/sla.css') }}">
 <script src="{{ url_for('static', filename='js/sla.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/push_sla.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
-<section class="page-heading"><span class="heading-icon">◷</span>
-  <div>
-    <h1>SLA - Acuerdos de Nivel de Servicio</h1>
-    <p>Monitorea y controla los tiempos de respuesta y resolución de los tickets.</p>
+<section class="page-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+  <div style="display: flex; align-items: center; gap: 15px;">
+    <span class="heading-icon">◷</span>
+    <div>
+      <h1>SLA - Acuerdos de Nivel de Servicio</h1>
+      <p>Monitorea, recibe alertas Push y ejecuta el escalamiento automático de tickets.</p>
+    </div>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <button type="button" class="btn-outline" id="btn-activar-push">🔔 Activar Alertas Push</button>
+    <button type="button" class="btn-primary" id="btn-verificar-sla">⚡ Verificar y Escalar SLA ahora</button>
   </div>
 </section>
 
@@ -38,7 +46,7 @@
       <article class="stat-card stat-overdue"><span class="stat-icon">!</span>
         <div class="stat-number" id="overdue-count">6</div>
         <div class="stat-label">Vencidos</div>
-        
+
       </article>
     </section>
 
@@ -111,50 +119,60 @@
           </thead>
           <tbody id="tickets-tbody">
             {% for t in tickets %}
-            <tr data-id="{{ t.codigo }}" data-subject="{{ t.asunto }}" data-priority="{{ t.prioridad }}" 
-                data-requester="{{ t.solicitante }}" data-category="{{ t.categoria }}" data-technician="{{ t.tecnico }}" 
-                data-status="{{ t.estado }}" data-sla="{{ t.semaforo | capitalize }}" 
-                data-elapsed="{{ t.minutos_transcurridos // 60 }}h {{ t.minutos_transcurridos % 60 }}m" data-limit="{{ t.sla_horas }}h">
+            <tr data-id="{{ t.codigo }}" data-subject="{{ t.asunto }}" data-priority="{{ t.prioridad }}"
+              data-requester="{{ t.solicitante }}" data-category="{{ t.categoria }}" data-technician="{{ t.tecnico }}"
+              data-status="{{ t.estado }}" data-sla="{{ t.semaforo | capitalize }}"
+              data-elapsed="{{ t.minutos_transcurridos // 60 }}h {{ t.minutos_transcurridos % 60 }}m"
+              data-limit="{{ t.sla_horas }}h">
               <td><input class="row-check" type="checkbox" aria-label="Seleccionar {{ t.codigo }}"></td>
               <td><span class="ticket-code">{{ t.codigo }}</span></td>
               <td>{{ t.asunto }}</td>
               <td>
-                <span class="priority-badge {{ 'high' if t.prioridad == 'Alta' else ('medium' if t.prioridad == 'Media' else 'low') }}">
+                <span
+                  class="priority-badge {{ 'high' if t.prioridad == 'Alta' else ('medium' if t.prioridad == 'Media' else 'low') }}">
                   <i></i>{{ t.prioridad }}
                 </span>
               </td>
               <td>
                 <div class="elapsed">
                   <span>{{ t.minutos_transcurridos // 60 }}h {{ t.minutos_transcurridos % 60 }}m</span>
-                  <div class="time-track {{ 'green' if t.semaforo in ('verde', 'cumplido') else ('amber' if t.semaforo == 'amarillo' else 'red') }}">
+                  <div
+                    class="time-track {{ 'green' if t.semaforo in ('verde', 'cumplido') else ('amber' if t.semaforo == 'amarillo' else 'red') }}">
                     <i style="width: {{ t.porcentaje_sla }}%"></i>
                   </div>
                 </div>
               </td>
               <td>{{ t.sla_horas }}h</td>
               <td>
-                <span class="sla-badge {{ 'ontime' if t.semaforo in ('verde', 'cumplido') else ('due' if t.semaforo == 'amarillo' else 'overdue') }}">
-                  <i></i>{{ {'verde': 'En tiempo', 'amarillo': 'Por vencer', 'rojo': 'Vencido', 'cumplido': 'Cumplido', 'incumplido': 'Fuera de plazo'}[t.semaforo] }}
+                <span
+                  class="sla-badge {{ 'ontime' if t.semaforo in ('verde', 'cumplido') else ('due' if t.semaforo == 'amarillo' else 'overdue') }}">
+                  <i></i>{{ {'verde': 'En tiempo', 'amarillo': 'Por vencer', 'rojo': 'Vencido', 'cumplido': 'Cumplido',
+                  'incumplido': 'Fuera de plazo'}[t.semaforo] }}
                 </span>
               </td>
               <td>
                 {% if t.tecnico and t.tecnico != 'Sin asignar' %}
-                  <span class="technician-chip"><i>{{ t.tecnico[:2] | upper }}</i>{{ t.tecnico }}</span>
+                <span class="technician-chip"><i>{{ t.tecnico[:2] | upper }}</i>{{ t.tecnico }}</span>
                 {% else %}
-                  <span class="unassigned">Sin asignar</span>
+                <span class="unassigned">Sin asignar</span>
                 {% endif %}
               </td>
-              <td><span class="status-badge {{ 'progress' if t.estado == 'En proceso' else ('pending' if t.estado == 'Abierto' else 'resolved') }}">{{ t.estado }}</span></td>
+              <td><span
+                  class="status-badge {{ 'progress' if t.estado == 'En proceso' else ('pending' if t.estado == 'Abierto' else 'resolved') }}">{{
+                  t.estado }}</span></td>
               <td>
                 <div class="row-actions">
-                  <button class="icon-button view-ticket" type="button" aria-label="Ver {{ t.codigo }}" title="Ver detalle">◉</button>
-                  <button class="icon-button more-action" type="button" aria-label="Más información {{ t.codigo }}" title="Más información">···</button>
+                  <button class="icon-button view-ticket" type="button" aria-label="Ver {{ t.codigo }}"
+                    title="Ver detalle">◉</button>
+                  <button class="icon-button more-action" type="button" aria-label="Más información {{ t.codigo }}"
+                    title="Más información">···</button>
                 </div>
               </td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="10" style="text-align: center; padding: 20px;">No hay tickets reales registrados para mostrar en esta empresa.</td>
+              <td colspan="10" style="text-align: center; padding: 20px;">No hay tickets reales registrados para mostrar
+                en esta empresa.</td>
             </tr>
             {% endfor %}
           </tbody>
