@@ -570,3 +570,24 @@ INSERT INTO ticket_tareas (ticket_id, descripcion, completada, creado_por, compl
 
 -- Las cuentas de ejemplo se dan por creadas hace mes y medio (para los indicadores "vs. mes anterior")
 UPDATE users SET created_at = NOW() - INTERVAL 45 DAY, updated_at = NOW() - INTERVAL 45 DAY;
+
+-- 1. Banderas de control SLA en la tabla tickets
+ALTER TABLE tickets
+ADD COLUMN IF NOT EXISTS alerta_sla_enviada TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Aviso preventivo enviado al técnico (amarillo)',
+ADD COLUMN IF NOT EXISTS escalado_sla TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Ticket vencido (rojo), escalado al supervisor',
+ADD COLUMN IF NOT EXISTS fecha_escalamiento DATETIME NULL;
+
+-- 2. Tabla para almacenar las suscripciones Web Push de cada usuario/navegador
+CREATE TABLE IF NOT EXISTS push_suscripciones (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    usuario_id INT UNSIGNED NOT NULL,
+    endpoint VARCHAR(500) NOT NULL,
+    p256dh VARCHAR(255) NOT NULL,
+    auth VARCHAR(255) NOT NULL,
+    user_agent VARCHAR(255) NULL,
+    activo TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_push_endpoint UNIQUE (endpoint),
+    CONSTRAINT fk_push_usuario FOREIGN KEY (usuario_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -11,3 +11,4 @@ reportlab>=4.0
 Flask-SocketIO>=5.3.6
 simple-websocket>=1.0.0
 pywebpush>=1.14.0
+py_vapid==1.9.1
