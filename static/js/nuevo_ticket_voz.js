@@ -236,8 +236,10 @@
 				escribir(ui.asunto, formatearAsunto(asunto), MAX_ASUNTO);
 				llenados.push(ui.asunto);
 			}
-			escribir(ui.descripcion, unir(ui.descripcion.value, formatearDescripcion(descripcion)), MAX_DESCRIPCION);
-			llenados.push(ui.descripcion);
+			if (descripcion) {
+				escribir(ui.descripcion, unir(ui.descripcion.value, formatearDescripcion(descripcion)), MAX_DESCRIPCION);
+				llenados.push(ui.descripcion);
+			}
 		}
 
 		llenados.forEach(resaltar);
@@ -255,8 +257,10 @@
 		// 2) Hubo pausas: la primera frase es el asunto
 		if (partes.length > 1) return { asunto: partes[0], descripcion: partes.slice(1).join(' ') };
 
-		// 3) Una sola frase: asunto = resumen corto, descripción = todo
-		return { asunto: resumir(completo, 80), descripcion: completo };
+		// 3) Una sola frase: va a un solo campo, sin repetirse.
+		//    Si el asunto está vacío va al asunto; si ya tiene texto, a la descripción.
+		if (ui.asunto.value.trim()) return { asunto: '', descripcion: completo };
+		return { asunto: completo, descripcion: '' };
 	}
 
 	/* Puntuación dicha en voz alta ("punto y aparte", "nueva línea") */
