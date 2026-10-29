@@ -12,6 +12,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/qr_equipo.css') }}">
 <script src="{{ url_for('static', filename='vendor/html5-qrcode.min.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/nuevo_ticket_qr.js') }}" defer></script>
+<!-- MÓDULO 2 (avance 2): crear el ticket dictando por voz (Web Speech API) -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/nuevo_ticket_voz.css') }}">
+<script src="{{ url_for('static', filename='js/nuevo_ticket_voz.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -58,6 +61,36 @@
         <div class="qr-equipo__error" id="qr-error" role="alert" hidden></div>
         <div class="qr-equipo__ficha" id="qr-ficha" hidden aria-live="polite"></div>
         <div id="qr-lector-archivo" hidden></div>
+      </section>
+
+      <!-- MÓDULO 2 (avance 2): dictado por voz del asunto y la descripción -->
+      <section class="voz" id="voz-panel" data-estado="cargando" aria-label="Dictado por voz">
+        <div class="voz__fila">
+          <span class="voz__icono" aria-hidden="true"><i data-lucide="mic"></i></span>
+          <div class="voz__textos">
+            <strong>¿Prefieres contarlo hablando?</strong>
+            <small id="voz-ayuda">Pulsa «Dictar incidencia» y explica el problema. La primera frase será el asunto y el resto la
+              descripción. También puedes decir «asunto…» y luego «descripción…».</small>
+          </div>
+          <button type="button" class="voz__boton" id="voz-boton" aria-pressed="false">
+            <i data-lucide="mic"></i> <span id="voz-boton-texto">Dictar incidencia</span>
+          </button>
+        </div>
+        <div class="voz__grabando" id="voz-grabando" role="status" hidden>
+          <span class="voz__punto" aria-hidden="true"></span>
+          <span>Grabando</span>
+          <span class="voz__ondas" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="voz__tiempo" id="voz-tiempo">0:00</span>
+          <div class="voz__acciones">
+            <button type="button" class="voz__mini" id="voz-detener">Listo</button>
+            <button type="button" class="voz__mini" id="voz-descartar">Descartar</button>
+          </div>
+        </div>
+        <div class="voz__vivo" id="voz-vivo" aria-live="polite" hidden></div>
+        <div class="voz__aviso" id="voz-aviso" role="alert" hidden></div>
+        <p class="voz__privacidad" id="voz-privacidad-texto">🔒 El navegador convierte tu voz en texto (en Chrome y Edge el
+          audio pasa por el servicio de voz de Google o Microsoft). El sistema no guarda audio: solo recibe el texto que tú
+          revisas y envías.</p>
       </section>
 
       <div class="form-field">
