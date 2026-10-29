@@ -48,6 +48,8 @@ const Rostro = (() => {
         if (video) video.srcObject = null;
     }
 
+    // inputSize 320: en la cámara web el rostro ocupa gran parte de la imagen y con 320 el
+    // detector lo encuentra mejor que con 416 o 512 (lo medimos).
     const opciones = () => new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
     const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -78,23 +80,21 @@ const Rostro = (() => {
         return muestras;
     }
 
-    /* Login: espera un rostro válido (uno solo, de frente, bien iluminado) en 2 cuadros
-       seguidos y devuelve el descriptor del de mejor calidad. La comparación la hace el servidor. */
+    /* Login: toma 3 cuadros válidos (un solo rostro, de frente, bien iluminado) y envía el
+       PROMEDIO de sus descriptores, igual que en el registro. Un promedio es más estable que
+       una sola imagen y reduce los errores. La comparación la hace el servidor. */
     async function capturarRostro(video, alAvanzar, tiempoMax = 20000) {
         const limite = Date.now() + tiempoMax;
-        let anterior = null;
-        while (Date.now() < limite) {
+        const descriptores = [];
+        while (descriptores.length < 3) {
+            if (Date.now() > limite) throw new Error('No se pudo detectar tu rostro. Mira de frente a la cámara con buena luz.');
             const r = await analizar(video);
-            if (!r.ok) { anterior = null; alAvanzar(r.motivo, false); await esperar(150); continue; }
-            if (anterior) {
-                const mejor = r.resultado.detection.score >= anterior.detection.score ? r.resultado : anterior;
-                return Array.from(mejor.descriptor);
-            }
-            anterior = r.resultado;
-            alAvanzar('Rostro detectado. No te muevas…', true);
-            await esperar(150);
+            if (!r.ok) { alAvanzar(r.motivo, false); await esperar(150); continue; }
+            descriptores.push(Array.from(r.resultado.descriptor));
+            alAvanzar(`Rostro detectado (${descriptores.length}/3). No te muevas…`, true);
+            await esperar(200);
         }
-        throw new Error('No se pudo detectar tu rostro. Mira de frente a la cámara con buena luz.');
+        return descriptores[0].map((_, i) => descriptores.reduce((s, d) => s + d[i], 0) / descriptores.length);
     }
 
     return { cargarModelos, encenderCamara, apagarCamara, capturarMuestras, capturarRostro };

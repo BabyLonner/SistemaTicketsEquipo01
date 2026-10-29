@@ -57,13 +57,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }),
             });
             const datos = await res.json().catch(() => ({}));
+            const detalle = typeof datos.distancia === 'number'
+                ? ` (distancia ${datos.distancia.toFixed(3)} · umbral ${datos.umbral})` : '';
             if (res.ok && datos.ok) {
-                mostrar(`${datos.mensaje} Ingresando…`, 'ok');
+                mostrar(`${datos.mensaje}${detalle} Ingresando…`, 'ok');
+                await new Promise((r) => setTimeout(r, 1200));
                 Rostro.apagarCamara(video);
                 window.location.href = datos.redirigir || '/';
                 return;
             }
-            mostrar(datos.error || 'No se pudo verificar tu rostro.', 'error');
+            mostrar((datos.error || 'No se pudo verificar tu rostro.') + detalle, 'error');
             reintentar.hidden = Boolean(datos.bloqueado || datos.sin_registro);
             if (datos.bloqueado || datos.sin_registro) Rostro.apagarCamara(video);
         } catch (e) {

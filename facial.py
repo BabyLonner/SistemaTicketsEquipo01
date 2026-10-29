@@ -17,10 +17,10 @@ Cómo funciona
 4. Límite de intentos: 5 fallos en 15 minutos bloquean el login facial de esa cuenta
    (el login con contraseña sigue disponible). Además, máx. 20 intentos por IP.
 
-Umbral: face-api.js recomienda 0.6. Usamos 0.5 (más estricto): baja la probabilidad
-de aceptar a otra persona parecida (falso positivo) a cambio de que, con mala luz,
-a veces haya que intentarlo otra vez (falso negativo). Se puede cambiar con
-UMBRAL_FACIAL en el .env.
+Umbral: face-api.js recomienda 0.6. Usamos 0.45 (más estricto): con la cámara web, la misma
+luz y el mismo fondo, dos personas distintas pueden quedar más cerca que en fotos distintas,
+y con 0.5 llegó a entrar otra persona. Un umbral bajo reduce los falsos positivos a cambio
+de que, con mala luz, a veces haya que intentarlo otra vez. Se cambia con UMBRAL_FACIAL en el .env.
 """
 import json
 import math
@@ -37,7 +37,7 @@ from vistas import V_USUARIOS_SESION
 
 facial_bp = Blueprint("facial", __name__)
 
-UMBRAL = float(os.getenv("UMBRAL_FACIAL", "0.5"))
+UMBRAL = float(os.getenv("UMBRAL_FACIAL", "0.45"))
 UMBRAL_MISMA_PERSONA_REGISTRO = 0.45   # las 3 capturas del registro deben parecerse entre sí
 MAX_INTENTOS = 5
 MINUTOS_BLOQUEO = 15
