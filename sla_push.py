@@ -16,11 +16,11 @@ from db import conexion
 
 sla_push_bp = Blueprint("sla_push", __name__)
 
-VAPID_PUBLIC_KEY = os.getenv(
-    "VAPID_PUBLIC_KEY",
-    "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgKnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
-)
-VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+# Llaves VAPID propias del sistema (se generan con: python generar_vapid.py y van en el .env).
+# La pública la usa el navegador al suscribirse; la privada firma cada envío.
+# Deben ser un PAR: si la pública no corresponde a la privada, el servicio push rechaza el envío.
+VAPID_PUBLIC_KEY = (os.getenv("VAPID_PUBLIC_KEY") or "").strip()
+VAPID_PRIVATE_KEY = (os.getenv("VAPID_PRIVATE_KEY") or "").strip()
 VAPID_CLAIMS = {"sub": "mailto:soporte@mesadeayuda.pe"}
 
 
@@ -43,6 +43,12 @@ def service_worker():
 @sla_push_bp.get("/api/push/vapid-public-key")
 @login_requerido
 def obtener_vapid_key():
+    if not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        return jsonify(
+            publicKey=None,
+            error="El servidor no tiene las llaves VAPID. Ejecuta 'python generar_vapid.py' y "
+                  "copia VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en el archivo .env.",
+        ), 503
     return jsonify(publicKey=VAPID_PUBLIC_KEY)
 
 
@@ -109,7 +115,9 @@ def _enviar_webpush_usuario(cur, usuario_id, titulo, cuerpo, url="/sla"):
                     },
                     data=payload,
                     vapid_private_key=VAPID_PRIVATE_KEY,
-                    vapid_claims=VAPID_CLAIMS,
+                    # Copia nueva en cada envío: pywebpush agrega "aud" y "exp" al diccionario;
+                    # si se reutiliza, el siguiente envío sale con datos de otro servidor o vencidos.
+                    vapid_claims=dict(VAPID_CLAIMS),
                 )
                 enviados += 1
             except WebPushException:

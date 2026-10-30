@@ -111,122 +111,101 @@ async function inicializarBotonPush() {
     const btnPush = document.getElementById('btn-activar-push');
     if (!btnPush) return;
 
+    // 1) El navegador debe soportar Service Worker + Push y estar en HTTPS o localhost
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        btnPush.textContent = '🔕 Este navegador no admite alertas push';
+        btnPush.disabled = true;
+        return;
+    }
+    if (!window.isSecureContext) {
+        btnPush.textContent = '🔕 Las alertas push necesitan HTTPS o localhost';
+        btnPush.disabled = true;
+        return;
+    }
+
+    const actualizarUI = (activo) => {
+        if (activo) {
+            btnPush.textContent = '✅ Alertas Push Activas (Clic para desactivar)';
+            btnPush.style.backgroundColor = '#198754';
+        } else {
+            btnPush.textContent = '🔔 Activar Alertas Push';
+            btnPush.style.backgroundColor = '#0d6efd';
+        }
+        btnPush.style.color = '#fff';
+    };
+
+    let registration;
     try {
-        const registration = await navigator.serviceWorker.ready;
-        let subscription = await registration.pushManager.getSubscription();
-
-        const actualizarUI = (activo) => {
-            if (activo) {
-                btnPush.textContent = '✅ Alertas Push Activas (Clic para desactivar)';
-                btnPush.style.backgroundColor = '#198754';
-                btnPush.style.color = '#fff';
-            } else {
-                btnPush.textContent = '🔔 Activar Alertas Push';
-                btnPush.style.backgroundColor = '#0d6efd';
-                btnPush.style.color = '#fff';
-            }
-        };
-
-        actualizarUI(subscription !== null && Notification.permission === 'granted');
-
-        btnPush.onclick = async () => {
-            try {
-                const currentSub = await registration.pushManager.getSubscription();
-
-                if (currentSub) {
-                    // DESACTIVAR
-                    const endpoint = currentSub.endpoint;
-                    await currentSub.unsubscribe();
-
-                    await fetch('/api/push/desactivar', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ endpoint })
-                    });
-
-                    actualizarUI(false);
-                    console.log('Notificaciones Push desactivadas correctamente.');
-                } else {
-                    // ACTIVAR
-                    const permission = await Notification.requestPermission();
-                    if (permission === 'granted') {
-                        const resKey = await fetch('/api/push/vapid-public-key');
-                        const dataKey = await resKey.json();
-
-                        if (!dataKey.publicKey) {
-                            alert('No se pudo obtener la llave VAPID del servidor.');
-                            return;
-                        }
-
-                        const newSub = await registration.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: urlBase64ToUint8Array(dataKey.publicKey)
-                        });
-
-                        const resSub = await fetch('/api/push/suscribir', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(newSub)
-                        });
-
-                        const dataSub = await resSub.json();
-                        if (resSub.ok && dataSub.ok) {
-                            actualizarUI(true);
-                            console.log('Notificaciones Push activadas y guardadas correctamente.');
-                        } else {
-                            alert('Error en el servidor al registrar: ' + (dataSub.error || 'Desconocido'));
-                        }
-                    } else {
-                        alert('El permiso de notificaciones fue denegado en el navegador.');
-                    }
-                }
-            } catch (err) {
-                // AQUÍ VEREMOS EL ERROR EXACTO EN PANTALLA Y CONSOLA
-                console.error('Detalle del error push:', err);
-                alert('Error técnico: ' + err.message);
-            }
-        };
+        // 2) ANTES faltaba este paso: sin registrar el Service Worker, "serviceWorker.ready"
+        //    se queda esperando para siempre y el botón nunca recibe su acción.
+        await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        registration = await navigator.serviceWorker.ready;
     } catch (e) {
-        console.error('Error inicializando el botón push:', e);
+        console.error('No se pudo registrar el Service Worker:', e);
+        btnPush.textContent = '🔕 No se pudo registrar el Service Worker';
+        btnPush.disabled = true;
+        return;
     }
+
+    const actual = await registration.pushManager.getSubscription();
+    actualizarUI(actual !== null && Notification.permission === 'granted');
+
+    btnPush.onclick = async () => {
+        btnPush.disabled = true;
+        try {
+            const currentSub = await registration.pushManager.getSubscription();
+            if (currentSub) {
+                // DESACTIVAR
+                const endpoint = currentSub.endpoint;
+                await currentSub.unsubscribe();
+                await fetch('/api/push/desactivar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ endpoint })
+                });
+                actualizarUI(false);
+                return;
+            }
+            // ACTIVAR
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert('Permiso de notificaciones denegado. Actívalo en el candado de la barra de direcciones.');
+                return;
+            }
+            const resKey = await fetch('/api/push/vapid-public-key');
+            const dataKey = await resKey.json();
+            if (!resKey.ok || !dataKey.publicKey) {
+                alert(dataKey.error || 'No se pudo obtener la llave VAPID del servidor.');
+                return;
+            }
+            const newSub = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(dataKey.publicKey)
+            });
+            const resSub = await fetch('/api/push/suscribir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSub)
+            });
+            const dataSub = await resSub.json();
+            if (resSub.ok && dataSub.ok) {
+                actualizarUI(true);
+            } else {
+                alert('Error en el servidor al registrar: ' + (dataSub.error || 'Desconocido'));
+            }
+        } catch (err) {
+            console.error('Detalle del error push:', err);
+            alert('Error técnico: ' + err.message);
+        } finally {
+            btnPush.disabled = false;
+        }
+    };
 }
 
-// Función auxiliar indispensable para convertir la llave VAPID
+// Convierte la llave VAPID (base64url) al formato que pide pushManager.subscribe
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + base64String).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
-async function registrarSuscripcionPushServidor() {
-    const resKey = await fetch('/api/push/vapid-public-key');
-    const { publicKey } = await resKey.json();
-    
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-    });
-
-    await fetch('/api/push/suscribir', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(subscription)
-    });
-}
-
-// Función auxiliar corregida para la llave VAPID
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/-/g, '+')
-        .replace(/_/g, '/');
-
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
     const rawData = window.atob(base64);
     const outputArray = new Uint8Array(rawData.length);
     for (let i = 0; i < rawData.length; ++i) {
