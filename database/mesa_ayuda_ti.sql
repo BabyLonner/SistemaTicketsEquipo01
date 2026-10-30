@@ -27,7 +27,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP VIEW IF EXISTS v_dashboard_responsables, v_dashboard_resumen, v_notificaciones_pendientes,
                     v_ticket_timeline, v_tickets, v_usuarios_sesion;
-DROP TABLE IF EXISTS login_facial_intentos, usuario_rostros, reportes_generados, mensajes_externos, ticket_tareas, notificaciones, ticket_historial, ticket_evidencias, tickets, equipos,
+DROP TABLE IF EXISTS push_suscripciones, login_facial_intentos, usuario_rostros, reportes_generados, mensajes_externos, ticket_tareas, notificaciones, ticket_historial, ticket_evidencias, tickets, equipos,
                      tokens_revocados, users, areas, categorias, prioridades,
                      empresa_dominios, empresas;
 
@@ -570,3 +570,26 @@ INSERT INTO ticket_tareas (ticket_id, descripcion, completada, creado_por, compl
 
 -- Las cuentas de ejemplo se dan por creadas hace mes y medio (para los indicadores "vs. mes anterior")
 UPDATE users SET created_at = NOW() - INTERVAL 45 DAY, updated_at = NOW() - INTERVAL 45 DAY;
+
+-- 1. Banderas de control SLA en la tabla tickets
+-- (MySQL 8 de PythonAnywhere NO acepta "ADD COLUMN IF NOT EXISTS"; aquí la tabla se acaba de crear,
+--  así que basta un ALTER normal. Para una base con datos usa migrar_modulo7.py)
+ALTER TABLE tickets
+ADD COLUMN alerta_sla_enviada TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Aviso preventivo enviado al técnico (amarillo)',
+ADD COLUMN escalado_sla TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = Ticket vencido (rojo), escalado al supervisor',
+ADD COLUMN fecha_escalamiento DATETIME NULL;
+
+-- 2. Tabla para almacenar las suscripciones Web Push de cada usuario/navegador
+CREATE TABLE IF NOT EXISTS push_suscripciones (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    usuario_id INT UNSIGNED NOT NULL,
+    endpoint VARCHAR(500) NOT NULL,
+    p256dh VARCHAR(255) NOT NULL,
+    auth VARCHAR(255) NOT NULL,
+    user_agent VARCHAR(255) NULL,
+    activo TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_push_endpoint UNIQUE (endpoint),
+    CONSTRAINT fk_push_usuario FOREIGN KEY (usuario_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
