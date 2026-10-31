@@ -14,7 +14,6 @@ from flask import (
     jsonify,
     request,
     send_from_directory,
-    session,
     url_for,
 )
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -22,18 +21,13 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 from auth import ROL_SUPER, empresa_actual
 from chat_realtime import emitir_comentario_ticket
-from db import conexion  # una conexión por petición (se cierra en run.py)
+from db import conexion
 from vistas import V_TICKET_TIMELINE, V_TICKETS, aplicar_sla, aplicar_sla_lista
 
 tickets_bp = Blueprint("tickets", __name__)
 
-
-# =====================================================================
-# 2. MODELO: Catalogo, Ticket, Evidencia
-# =====================================================================
 class Catalogo:
-    """Listas para el formulario (categorías, prioridades y áreas de la empresa)."""
-
+    
     @staticmethod
     def categorias():
         with conexion().cursor() as cur:
@@ -61,8 +55,7 @@ class Catalogo:
 
 
 class ErrorRegla(Exception):
-    """Regla de negocio no cumplida (reemplaza a los SIGNAL de los triggers).
-    El mensaje se muestra tal cual al usuario con código 400."""
+    pass
 
 
 class Ticket:
@@ -70,10 +63,7 @@ class Ticket:
 
     @staticmethod
     def validar(datos, usuario):
-        """Limpia y valida el formulario. Devuelve (limpios, errores).
 
-        El solicitante y la empresa NO vienen del formulario: salen de la sesión.
-        """
         errores = {}
         asunto = (datos.get("asunto") or "").strip()
         descripcion = (datos.get("descripcion") or "").strip()
@@ -92,7 +82,6 @@ class Ticket:
         if categoria_id not in categorias:
             errores["categoria_id"] = "Selecciona una categoría válida."
 
-        # La prioridad puede llegar como nombre ("Alta") o como id
         prioridades = Catalogo.prioridades()
         valor = str(datos.get("prioridad") or datos.get("prioridad_id") or "").strip()
         prioridad_id = next(
@@ -101,7 +90,6 @@ class Ticket:
         if prioridad_id is None:
             errores["prioridad"] = "La prioridad debe ser Alta, Media o Baja."
 
-        # Área: debe ser de la empresa del usuario; si no se envía, se usa la del usuario
         area_id = _entero(datos.get("area_id")) or usuario["area_id"]
         if area_id is not None and area_id not in {
             a["id"] for a in Catalogo.areas(usuario["empresa_id"])
@@ -127,11 +115,6 @@ class Ticket:
 
     @staticmethod
     def crear(cur, datos, solicitante_id, empresa_id):
-        """Registra el ticket haciendo lo que antes hacían los triggers
-        trg_tickets_antes_insertar, trg_tickets_despues_insertar y
-        trg_historial_notificar (CREACION). Todo dentro de la misma transacción.
-        """
-        # 1) Empresa y área salen del solicitante (nunca del formulario)
         cur.execute(
             "SELECT empresa_id, area_id, activo, nombre FROM users WHERE id = %s",
             (solicitante_id,),
@@ -144,9 +127,6 @@ class Ticket:
         empresa_id = solicitante["empresa_id"]
         area_id = datos["area_id"] or solicitante["area_id"]
 
-        # 2) Correlativo propio de la empresa (EPS-0001, EPS-0002...).
-        #    FOR UPDATE bloquea la fila de la empresa hasta el commit, así dos
-        #    tickets registrados a la vez nunca reciben el mismo número.
         cur.execute(
             "SELECT ultimo_ticket, prefijo_ticket FROM empresas WHERE id = %s FOR UPDATE",
             (empresa_id,),
@@ -157,10 +137,8 @@ class Ticket:
             "UPDATE empresas SET ultimo_ticket = %s WHERE id = %s", (numero, empresa_id)
         )
 
-        # 3) Fecha límite = ahora + horas SLA de la prioridad (Módulo 4)
         horas = Ticket._horas_sla(cur, datos["prioridad_id"])
 
-        # 4) INSERT con todas las columnas ya calculadas
         cur.execute(
             """INSERT INTO tickets
                  (empresa_id, numero, area_id, solicitante_id, categoria_id, prioridad_id,
@@ -180,7 +158,6 @@ class Ticket:
         )
         ticket_id = cur.lastrowid
 
-        # 5) Primer registro del historial
         cur.execute(
             """INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, estado_nuevo, comentario, created_at)
                SELECT id, solicitante_id, 'CREACION', 'Abierto', 'Ticket registrado.', created_at
@@ -188,7 +165,6 @@ class Ticket:
             (ticket_id,),
         )
 
-        # 6) Notificación a los administradores de ESA empresa para que lo asignen
         codigo = f"{empresa['prefijo_ticket']}-{numero:04d}"
         cur.execute(
             """INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje)
@@ -207,10 +183,7 @@ class Ticket:
 
     @staticmethod
     def actualizar(cur, ticket_id, datos, empresa_id):
-        """Edita asunto, descripción, categoría, prioridad y área.
-        Reglas de trg_tickets_antes_actualizar: un ticket cerrado no se modifica
-        y, si cambia la prioridad, se recalcula la fecha límite.
-        """
+
         cur.execute(
             "SELECT estado, prioridad_id FROM tickets WHERE id = %s AND empresa_id = %s FOR UPDATE",
             (ticket_id, empresa_id),
@@ -241,24 +214,18 @@ class Ticket:
                 "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR WHERE id = %s",
                 (horas, ticket_id),
             )
-
-    # ---------------------------------------------------------------
-    # MÓDULO 3 — Asignación, estados e historial
-    # Reglas que valida el servidor (la misma regla está en el JS,
-    # pero aquí es donde se garantiza: "UPDATE validado").
-    # ---------------------------------------------------------------
-    TRANSICIONES = {
+            
+    TRANSICIONES = {  # noqa: RUF012
         "Abierto": ("En proceso",),
         "En proceso": ("Resuelto",),
-        "Resuelto": ("Cerrado", "En proceso"),  # se puede reabrir
-        "Cerrado": (),  # estado final
+        "Resuelto": ("Cerrado", "En proceso"),
+        "Cerrado": (),
     }
     MIN_COMENTARIO = 10
     MAX_COMENTARIO = 500
 
     @staticmethod
     def validar_cambio_estado(estado_actual, estado_nuevo, tecnico_id, comentario):
-        """Lanza ErrorRegla si el cambio de estado no está permitido."""
         if estado_nuevo not in Ticket.ESTADOS:
             raise ErrorRegla("El estado indicado no existe.")
         permitidos = Ticket.TRANSICIONES[estado_actual]
@@ -282,7 +249,6 @@ class Ticket:
 
     @staticmethod
     def actualizar_gestion(cur, ticket_id, datos, usuario):
-        """Procesa los cambios del panel derecho, recalcula SLA y guarda en el historial."""
         empresa_id = usuario["empresa_id"]
 
         cur.execute(
@@ -317,7 +283,6 @@ class Ticket:
         cat = cur.fetchone()
         categoria_id_nueva = cat["id"] if cat else actual["categoria_id"]
 
-        # --- MÓDULO 3: técnico (solo técnicos activos de la misma empresa) ---
         tecnico_id_nuevo = actual["tecnico_id"]
         tecnico_nombre = None
         if "tecnico" in datos:
@@ -346,8 +311,6 @@ class Ticket:
         cambia_prioridad = prioridad_id_nueva != actual["prioridad_id"]
         cambia_categoria = categoria_id_nueva != actual["categoria_id"]
 
-        # --- MÓDULO 3: permisos por rol ---
-        # El solicitante solo puede confirmar (Cerrado) o reabrir (En proceso) SU ticket resuelto.
         if usuario["rol"] == ROL_SOLICITANTE:
             confirma_o_reabre = (
                 cambia_estado
@@ -361,7 +324,7 @@ class Ticket:
                     "Solo el administrador o el técnico asignado pueden cambiar el estado o el técnico. "
                     "Tú puedes cerrar o reabrir tu ticket cuando esté «Resuelto»."
                 )
-        # Prioridad y categoría: administrador o técnico asignado (cambian el plazo SLA)
+
         if (cambia_prioridad or cambia_categoria) and not (
             usuario["rol"] == ROL_ADMIN
             or (usuario["rol"] == ROL_TECNICO and actual["tecnico_id"] == usuario["id"])
@@ -385,7 +348,6 @@ class Ticket:
                 "Solo el técnico asignado puede cambiar el estado de este ticket."
             )
 
-        # --- MÓDULO 3: transición válida + comentario obligatorio ---
         if cambia_estado:
             Ticket.validar_cambio_estado(
                 actual["estado"], estado_nuevo, tecnico_id_nuevo, comentario
@@ -407,7 +369,6 @@ class Ticket:
             ),
         )
 
-        # 2. Recalcular SLA automáticamente si cambia la prioridad
         if cambia_prioridad or cambia_categoria:
             cur.execute(
                 """SELECT (SELECT nombre FROM prioridades WHERE id = %s) AS p_ant,
@@ -441,7 +402,6 @@ class Ticket:
                 (horas, ticket_id),
             )
 
-        # --- MÓDULO 3: fechas de resolución y cierre (las usa el semáforo SLA) ---
         if cambia_estado:
             if estado_nuevo == "Resuelto":
                 cur.execute(
@@ -456,13 +416,11 @@ class Ticket:
                     (ticket_id,),
                 )
             elif estado_nuevo == "En proceso" and actual["estado"] == "Resuelto":
-                # Reapertura: el ticket vuelve a contar tiempo
                 cur.execute(
                     "UPDATE tickets SET fecha_resolucion = NULL WHERE id = %s",
                     (ticket_id,),
                 )
 
-        # 3. Registrar los movimientos en el historial (con el comentario del usuario)
         if cambia_tecnico:
             cur.execute(
                 """
@@ -493,7 +451,6 @@ class Ticket:
                 ),
             )
 
-        # --- MÓDULO 3: avisos internos al asignar y al cambiar estado ---
         if cambia_tecnico or cambia_estado:
             cur.execute(
                 f"SELECT codigo, asunto, solicitante_id, tecnico_id FROM {V_TICKETS} AS v WHERE v.id = %s",
@@ -539,7 +496,6 @@ class Ticket:
                     ),
                 )
 
-        # --- MÓDULO 4: quién debe recibir el aviso por WhatsApp (se envía después del commit) ---
         return {
             "tecnico_avisar": tecnico_id_nuevo if cambia_tecnico else None,
             "reasignacion": bool(cambia_tecnico and actual["tecnico_id"]),
@@ -547,18 +503,15 @@ class Ticket:
 
     @staticmethod
     def eliminar(cur, ticket_id):
-        # evidencias, historial y notificaciones se borran en cascada
         cur.execute("DELETE FROM tickets WHERE id = %s", (ticket_id,))
 
     @staticmethod
     def bloquear(cur, ticket_id):
-        """SELECT ... FOR UPDATE: evita que dos subidas simultáneas pasen de 3 fotos."""
         cur.execute("SELECT id FROM tickets WHERE id = %s FOR UPDATE", (ticket_id,))
         return cur.fetchone() is not None
 
     @staticmethod
     def obtener(ticket_id, empresa_id):
-        """Siempre filtrado por la empresa del usuario en sesión."""
         with conexion().cursor() as cur:
             cur.execute(
                 f"SELECT * FROM {V_TICKETS} AS v WHERE v.id = %s AND v.empresa_id = %s",
@@ -668,10 +621,6 @@ def _entero(valor):
     except (TypeError, ValueError):
         return None
 
-
-# =====================================================================
-# 3. FOTOS DE EVIDENCIA
-# =====================================================================
 EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "png", "webp"}
 MIME_PERMITIDOS = {"image/jpeg", "image/png", "image/webp"}
 TAMANO_MAXIMO = 5 * 1024 * 1024
@@ -687,7 +636,7 @@ FORMATO_POR_MIME = {
 
 
 class ErrorEvidencia(ValueError):
-    """Error de validación de una foto (se muestra tal cual al usuario)."""
+    pass
 
 
 def detectar_mime_real(cabecera: bytes):
@@ -827,20 +776,12 @@ def borrar_carpeta_ticket(empresa_codigo, ticket_id):
         ignore_errors=True,
     )
 
-
-# =====================================================================
-# 4. SEGURIDAD: usuario de la sesión y permisos
-# =====================================================================
 ROL_ADMIN = "Administrador"
 ROL_TECNICO = "Técnico"
 ROL_SOLICITANTE = "Solicitante"
 
 
 def login_requerido(vista):
-    """API de tickets: exige JWT válido (lo valida auth.validar_peticion en cada petición).
-
-    g.usuario es el usuario del token. El superusuario trabaja dentro de la
-    empresa que eligió en /empresas y allí tiene permisos de administrador."""
 
     @wraps(vista)
     def envoltura(*args, **kwargs):
@@ -879,9 +820,22 @@ def login_requerido(vista):
 
 
 def puede_ver(usuario, ticket):
-    return (
-        usuario["rol"] != ROL_SOLICITANTE or ticket["solicitante_id"] == usuario["id"]
-    )
+    if usuario["rol"] in (ROL_SUPER, ROL_ADMIN):
+        return True
+    if usuario["rol"] == ROL_SOLICITANTE:
+        return ticket["solicitante_id"] == usuario["id"]
+    if usuario["rol"] == ROL_TECNICO:
+        return ticket["tecnico_id"] is None or ticket["tecnico_id"] == usuario["id"]
+    return False
+
+def _ticket_o_error(ticket_id):
+    ticket = Ticket.obtener(ticket_id, g.usuario["empresa_id"])
+    if ticket is None or not puede_ver(g.usuario, ticket):
+        return None, (
+            jsonify(error="Usted no tiene acceso a este ticket o no existe en esta empresa."),
+            403,
+        )
+    return ticket, None
 
 
 def puede_editar(usuario, ticket):
@@ -914,10 +868,6 @@ def puede_eliminar(usuario, ticket):
         and ticket["tecnico_id"] is None
     )
 
-
-# =====================================================================
-# 5. CONTROLADOR: API JSON
-# =====================================================================
 @tickets_bp.record_once
 def _configurar(state):
     app = state.app
@@ -1029,15 +979,6 @@ def _fotos_de_la_peticion():
     return [a for a in request.files.getlist("fotos") if a and a.filename]
 
 
-def _ticket_o_error(ticket_id):
-    ticket = Ticket.obtener(ticket_id, g.usuario["empresa_id"])
-    if ticket is None:
-        return None, (jsonify(error="El ticket no existe."), 404)
-    if not puede_ver(g.usuario, ticket):
-        return None, (jsonify(error="No tienes acceso a este ticket."), 403)
-    return ticket, None
-
-
 def _guardar_fotos(cur, ticket_id, fotos, guardadas):
     libres = [
         n
@@ -1103,7 +1044,6 @@ def crear_ticket():
             ticket_id = Ticket.crear(
                 cur, datos, g.usuario["id"], g.usuario["empresa_id"]
             )
-            # MÓDULO 3 (avance 2): ticket registrado escaneando el QR de un equipo
             if (request.form.get("equipo") or "").strip():
                 from equipos import vincular_equipo
 
@@ -1166,7 +1106,6 @@ def editar_ticket(ticket_id):
 
     try:
         with con.cursor() as cur:
-            # MÓDULO 3: la asignación también llega por aquí (sin "estado")
             if (
                 any(k in datos for k in ("estado", "tecnico", "prioridad", "categoria"))
                 and "asunto" not in datos
@@ -1200,7 +1139,6 @@ def editar_ticket(ticket_id):
         con.rollback()
         raise
 
-    # MÓDULO 4: aviso al técnico por WhatsApp (ya con la asignación guardada)
     aviso = None
     if cambios and cambios.get("tecnico_avisar"):
         from avisos_whatsapp import avisar_asignacion
@@ -1345,7 +1283,6 @@ def obtener_historial_ticket(ticket_id):
 @tickets_bp.post("/api/tickets/<int:ticket_id>/comentarios")
 @login_requerido
 def comentar_ticket(ticket_id):
-    """Pestaña Conversación: agrega un comentario al historial y avisa a los involucrados."""
     ticket, error = _ticket_o_error(ticket_id)
     if error:
         return error
@@ -1375,7 +1312,6 @@ def comentar_ticket(ticket_id):
                 )
                 destinatarios |= {f["id"] for f in cur.fetchall()}
 
-            # Filtramos al remitente
             destinos_finales = destinatarios - {None, g.usuario["id"]}
 
             for destino in destinos_finales:
@@ -1408,16 +1344,11 @@ def comentar_ticket(ticket_id):
             destinatarios_ids=list(destinos_finales),
         )
     except Exception as e:
-        current_app.logger.warning(f"SocketIO no disponible: {e}")
+        current_app.logger.warning(f"Error al emitir comentario SSE: {e}")
 
     return jsonify(mensaje="Comentario agregado."), 201
 
 
-# ---------------------------------------------------------------
-# MÓDULO 3 — Tareas del ticket (pestaña "Tareas" del detalle)
-# Las agrega y marca el administrador o el técnico asignado; el
-# solicitante solo las ve. Completar una tarea queda en el historial.
-# ---------------------------------------------------------------
 def _puede_gestionar_tareas(usuario, ticket):
     return ticket["estado"] != "Cerrado" and (
         usuario["rol"] == ROL_ADMIN
@@ -1559,13 +1490,9 @@ def borrar_tarea(tarea_id):
     return jsonify(mensaje="Tarea eliminada.", tareas=_tareas_json(ticket["id"]))
 
 
-# ---------------------------------------------------------------
-# MÓDULO 3 — Datos para la pantalla de Asignación
-# ---------------------------------------------------------------
 @tickets_bp.get("/api/tecnicos")
 @login_requerido
 def listar_tecnicos():
-    """Técnicos activos de la empresa del usuario (para asignar tickets)."""
     if g.usuario["rol"] == ROL_SOLICITANTE:
         return jsonify(error="No tienes acceso a esta información."), 403
     with conexion().cursor() as cur:
@@ -1585,7 +1512,6 @@ def listar_tecnicos():
 @tickets_bp.get("/api/historial/reciente")
 @login_requerido
 def historial_reciente():
-    """Últimos movimientos de ticket_historial de la empresa (actividad reciente)."""
     if g.usuario["rol"] == ROL_SOLICITANTE:
         return jsonify(error="No tienes acceso a esta información."), 403
     try:

@@ -2,7 +2,6 @@
    DETALLE DE TICKET — Estilos específicos de la vista
    ========================================================= */
 
-/* Migas de pan y Cabecera */
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -1496,6 +1495,28 @@
   font-style: italic;
   color: #2672c7;
   font-weight: 600;
+}
+
+.animated-dots::after {
+  content: "";
+  animation: typing-dots 1.5s infinite step-start;
+}
+@keyframes typing-dots {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
+  }
+  100% {
+    content: "";
+  }
 }
 
 /* =========================================================

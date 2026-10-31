@@ -1,17 +1,4 @@
-"""
-MESA DE AYUDA TI — Sistema de gestión de tickets para las 6 empresas del grupo.
-Local:  python run.py     |     PythonAnywhere: lo importa el archivo WSGI.
 
-Módulos
-  1  auth.py, usuarios.py, empresas.py   JWT, roles, usuarios y empresas (superusuario)
-  2-4 tickets.py                         Tickets + fotos, asignación/estados/historial, SLA
-  5  (este archivo)                      Notificaciones internas (campana)
-  6  (este archivo) + reportes.py        Dashboard, SLA, reportes y exportación Excel/PDF
-  8  verificacion.py                     Verificación del PDF con QR + hash SHA-256 (página pública)
-     api_postman.py                      Rutas de la colección de Postman (piden JWT)
-"""
-
-from chat_realtime import inicializar_socketio  # MÓDULO 5: Chat en tiempo real
 from flask import (
     Flask,
     abort,
@@ -42,19 +29,19 @@ from auth import (
     login_requerido,
     registrar_acceso,
     revocar_token_actual,
-    roles_requeridos,
     validar_peticion,
 )
-from avisos_whatsapp import avisos_bp  # MÓDULO 4: avisos por WhatsApp (Vonage)
-from base_conocimiento import kb_bp  # MÓDULO 6: base de conocimiento + asistente con IA
+from avisos_whatsapp import avisos_bp
+from base_conocimiento import kb_bp
+from chat_realtime import chat_rt_bp
 from cuenta import cuenta_bp
 from db import cerrar_conexion, conexion, consultar
 from empresas import empresas_bp
-from equipos import equipos_bp  # MÓDULO 3 (avance 2): etiquetas QR por equipo
-from facial import facial_bp  # MÓDULO 1: login con reconocimiento facial
+from equipos import equipos_bp
+from facial import facial_bp
 from reportes import reportes_bp
-from sla_push import sla_push_bp  # MÓDULO 7: Web Push API y Escalamiento SLA
-from tickets import tickets_bp
+from sla_push import sla_push_bp
+from tickets import Ticket, puede_ver, tickets_bp
 from usuarios import usuarios_bp
 from utils import ordenar_por_urgencia
 from verificacion import verificacion_bp
@@ -82,16 +69,15 @@ for bp in (
     equipos_bp,
     facial_bp,
     sla_push_bp,
-    kb_bp,  # MÓDULO 6
+    kb_bp,
 ):
     app.register_blueprint(bp)
+    
+app.register_blueprint(chat_rt_bp)
 
-socketio = inicializar_socketio(app)  # <-- 2. Se inicializa aquí Socket.IO (Módulo 5)
-
-app.before_request(validar_peticion)  # MÓDULO 1: el JWT se valida en CADA petición
+app.before_request(validar_peticion)
 app.teardown_appcontext(cerrar_conexion)
 
-# Quién puede abrir cada pantalla (el menú lo oculta, pero aquí se impide de verdad)
 TODOS = (ROL_SUPER, ROL_ADMIN, ROL_TECNICO, ROL_SOLICITANTE)
 PERMISOS_PAGINAS = {
     "tickets": TODOS,
@@ -104,9 +90,9 @@ PERMISOS_PAGINAS = {
     "sla": (ROL_SUPER, ROL_ADMIN),
     "asignacion": (ROL_SUPER, ROL_ADMIN),
     "usuarios": (ROL_SUPER, ROL_ADMIN),
-    "equipos": (ROL_SUPER, ROL_ADMIN, ROL_TECNICO),  # MÓDULO 3 (avance 2)
+    "equipos": (ROL_SUPER, ROL_ADMIN, ROL_TECNICO),
 }
-# Pantallas que trabajan dentro de una empresa: el superusuario primero debe elegirla
+
 NECESITAN_EMPRESA = {
     "tickets",
     "detalle_ticket",
@@ -120,26 +106,23 @@ NECESITAN_EMPRESA = {
 
 
 def _mezclar(color, otro, proporcion):
-    """Mezcla dos colores #RRGGBB (proporcion 0 = color, 1 = otro)."""
     a = [int(color[i : i + 2], 16) for i in (1, 3, 5)]
     b = [int(otro[i : i + 2], 16) for i in (1, 3, 5)]
     return "#" + "".join(f"{round(x + (y - x) * proporcion):02X}" for x, y in zip(a, b))
 
 
 def paleta_empresa():
-    """Identidad visual de la empresa activa (colores de la tabla empresas).
-    Sin empresa (superusuario o login) se usan los colores originales del sistema."""
     primario = session.get("empresa_color")
     if not primario or len(primario) != 7:
         return None
     secundario = session.get("empresa_color2") or _mezclar(primario, "#FFFFFF", 0.85)
     return {
         "primario": primario,
-        "oscuro": _mezclar(primario, "#000000", 0.35),  # cabecera
+        "oscuro": _mezclar(primario, "#000000", 0.35),
         "profundo": _mezclar(primario, "#000000", 0.5),
         "medio": _mezclar(primario, "#FFFFFF", 0.15),
-        "claro": _mezclar(primario, "#FFFFFF", 0.9),  # fondos suaves
-        "lienzo": _mezclar(secundario, "#FFFFFF", 0.6),  # fondo de la página
+        "claro": _mezclar(primario, "#FFFFFF", 0.9),
+        "lienzo": _mezclar(secundario, "#FFFFFF", 0.6),
         "secundario": secundario,
     }
 
@@ -154,7 +137,6 @@ def datos_globales():
 
 
 def pagina_permitida(pagina):
-    """Devuelve una respuesta de error/redirección si el usuario no puede ver la página."""
     if not g.get("usuario_token"):
         return redirect(url_for("inicio"))
     roles = PERMISOS_PAGINAS.get(pagina)
@@ -234,7 +216,7 @@ def inicio():
 
 @app.route("/cerrar-sesion")
 def cerrar_sesion():
-    revocar_token_actual()  # el jti pasa a tokens_revocados: el token ya no sirve
+    revocar_token_actual()
     session.clear()
     respuesta = make_response(redirect(url_for("inicio")))
     respuesta.delete_cookie(config.COOKIE_TOKEN)
@@ -243,7 +225,6 @@ def cerrar_sesion():
 
 @app.post("/api/login")
 def api_login():
-    """Postman: {"correo": "...", "password": "..."} -> token JWT (Authorization: Bearer)."""
     datos = request.get_json(silent=True) or request.form
     usuario, error = autenticar(
         datos.get("correo"), datos.get("password") or datos.get("clave", "")
@@ -331,11 +312,6 @@ def api_marcar_todas_leidas():
     con.commit()
     return jsonify({"ok": True, "marcadas": total})
 
-
-# =====================================================================
-#  Indicadores "vs. mes anterior" de las tarjetas (datos reales)
-#  Compara lo REGISTRADO este mes contra lo registrado el mes anterior.
-# =====================================================================
 def _comparar(sql, params):
     """sql debe devolver columnas mes_actual_<x> y mes_anterior_<x>."""
     fila = consultar(sql, params, uno=True) or {}
@@ -497,7 +473,7 @@ def sla():
     )
     tickets = ordenar_por_urgencia(
         aplicar_sla_lista(tickets)
-    )  # semáforo calculado en Python
+    )
     prioridades = consultar(
         "SELECT id, nombre, sla_horas FROM prioridades ORDER BY nivel DESC"
     )
@@ -560,8 +536,6 @@ def reportes():
         tecnicos=tecnicos,
     )
 
-
-# Acepta la ruta con o sin .html, pero SOLO las pantallas de la lista y según el rol
 @app.route("/<pagina>")
 @app.route("/<pagina>.html")
 def pantalla(pagina):
@@ -569,9 +543,28 @@ def pantalla(pagina):
         return redirect(url_for("cerrar_sesion"))
     if pagina in ("dashboard", "reportes", "sla"):
         return redirect(url_for(pagina))
+    
     error = pagina_permitida(pagina)
     if error:
         return error
+
+    if pagina == "detalle_ticket":        
+        ticket_id = request.args.get("id", type=int)
+        emp_id = empresa_actual()
+        
+        ticket = Ticket.obtener(ticket_id, emp_id) if (ticket_id and emp_id) else None
+            
+        usuario_eval = dict(g.usuario_token) if g.get("usuario_token") else {}
+        if es_super():
+            usuario_eval["rol"] = "Administrador"
+
+        if not ticket or not puede_ver(usuario_eval, ticket):
+            return render_template(
+                "error.html",
+                codigo=403,
+                mensaje="Usted no tiene acceso a este ticket o no existe en esta empresa."
+            ), 403
+
     try:
         return render_template(f"{pagina}.html")
     except TemplateNotFound:
@@ -580,7 +573,6 @@ def pantalla(pagina):
 
 @app.get("/salud")
 def salud():
-    """Comprueba que la app y la base de datos respondan (útil en PythonAnywhere)."""
     try:
         consultar("SELECT 1 AS ok", uno=True)
         return jsonify(ok=True, base_de_datos="conectada", version=config.VERSION)
@@ -605,6 +597,5 @@ def no_encontrado(_e):
 def error_interno(_e):
     return _error(500, "Ocurrió un error inesperado. Inténtalo de nuevo en un momento.")
 
-
 if __name__ == "__main__":
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    app.run(debug=True)
