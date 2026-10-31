@@ -7,7 +7,6 @@ from datetime import datetime
 from functools import wraps
 
 import pymysql
-from chat_realtime import emitir_comentario_ticket
 from flask import (
     Blueprint,
     current_app,
@@ -22,6 +21,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from auth import ROL_SUPER, empresa_actual
+from chat_realtime import emitir_comentario_ticket
 from db import conexion  # una conexión por petición (se cierra en run.py)
 from vistas import V_TICKET_TIMELINE, V_TICKETS, aplicar_sla, aplicar_sla_lista
 
@@ -1374,7 +1374,11 @@ def comentar_ticket(ticket_id):
                     (ticket["empresa_id"], ROL_ADMIN),
                 )
                 destinatarios |= {f["id"] for f in cur.fetchall()}
-            for destino in destinatarios - {None, g.usuario["id"]}:
+
+            # Filtramos al remitente
+            destinos_finales = destinatarios - {None, g.usuario["id"]}
+
+            for destino in destinos_finales:
                 cur.execute(
                     """INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje)
                        VALUES (%s, 'COMENTARIO', %s, %s, %s)""",
@@ -1401,6 +1405,7 @@ def comentar_ticket(ticket_id):
                 "comentario": comentario,
                 "created_at": datetime.now().isoformat(timespec="seconds"),
             },
+            destinatarios_ids=list(destinos_finales),
         )
     except Exception as e:
         current_app.logger.warning(f"SocketIO no disponible: {e}")
