@@ -15,6 +15,9 @@
 <!-- MÓDULO 2 (avance 2): crear el ticket dictando por voz (Web Speech API) -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nuevo_ticket_voz.css') }}">
 <script src="{{ url_for('static', filename='js/nuevo_ticket_voz.js') }}" defer></script>
+<!-- MÓDULO 6: asistente con IA que sugiere soluciones antes de crear el ticket -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/nuevo_ticket_asistente.css') }}">
+<script src="{{ url_for('static', filename='js/nuevo_ticket_asistente.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -40,6 +43,72 @@
           default('Verificando sesión…') }}</strong></div>
       <span class="m2-solicitante__candado" title="Se toma de tu sesión; no se puede cambiar">🔒</span>
     </div>
+
+    <!-- MÓDULO 6: asistente con IA. Aparece ANTES del formulario; si no resuelve, se pasa al ticket -->
+    <section class="kb-asistente" id="kb-asistente" aria-labelledby="kb-titulo" hidden>
+      <div class="kb-cabecera">
+        <span class="kb-cabecera__icono" aria-hidden="true"><i data-lucide="sparkles"></i></span>
+        <div>
+          <h3 id="kb-titulo">Antes de crear tu ticket, cuéntanos qué pasa</h3>
+          <p>El asistente busca la solución en la base de conocimiento de TI. Si no te sirve, creas el ticket con un clic
+            y no tendrás que escribir todo de nuevo.</p>
+        </div>
+      </div>
+
+      <form class="kb-consulta" id="kb-form" novalidate>
+        <label for="kb-pregunta" class="sr-only">Describe tu problema</label>
+        <textarea id="kb-pregunta" maxlength="600" rows="3"
+          placeholder="Ej. La impresora del segundo piso no imprime, los documentos se quedan en espera"></textarea>
+        <div class="kb-consulta__pie">
+          <small class="kb-error" id="kb-error" role="alert"></small>
+          <span id="kb-contador">0/600</span>
+        </div>
+        <div class="kb-consulta__botones">
+          <button type="button" class="kb-saltar" id="kb-saltar">Prefiero crear el ticket directamente</button>
+          <button type="submit" class="btn-primary" id="kb-buscar"><i data-lucide="search"></i> Buscar solución</button>
+        </div>
+      </form>
+
+      <div class="kb-cargando" id="kb-cargando" role="status" hidden>
+        <span class="kb-cargando__punto"></span><span class="kb-cargando__punto"></span><span
+          class="kb-cargando__punto"></span>
+        El asistente está revisando los artículos…
+      </div>
+
+      <div class="kb-resultado" id="kb-resultado" aria-live="polite" hidden>
+        <div class="kb-respuesta">
+          <div class="kb-respuesta__cabecera">
+            <strong>Respuesta del asistente</strong>
+            <span class="kb-modo" id="kb-modo"></span>
+          </div>
+          <div class="kb-respuesta__texto" id="kb-texto"></div>
+          <p class="kb-aviso" id="kb-aviso" hidden></p>
+        </div>
+        <div class="kb-fuentes" id="kb-fuentes-caja">
+          <h4>Artículos de origen</h4>
+          <ul id="kb-fuentes"></ul>
+        </div>
+        <div class="kb-acciones">
+          <button type="button" class="kb-btn-ok" id="kb-resuelto"><i data-lucide="check"></i> Sí, se resolvió mi
+            problema</button>
+          <button type="button" class="btn-primary" id="kb-crear"><i data-lucide="ticket-plus"></i> No resolvió mi
+            problema, crear ticket</button>
+        </div>
+      </div>
+
+      <div class="kb-gracias" id="kb-gracias" hidden>
+        <span aria-hidden="true">✓</span>
+        <div>
+          <strong>¡Qué bueno que se resolvió!</strong>
+          <p>No se creó ningún ticket. Si el problema vuelve a aparecer, puedes consultar otra vez.</p>
+        </div>
+        <button type="button" class="btn-secondary" id="kb-otra">Hacer otra consulta</button>
+      </div>
+
+      <p class="kb-privacidad">🔒 Tu consulta y los artículos se envían al servicio de IA para redactar la respuesta. No
+        escribas contraseñas ni datos personales.</p>
+    </section>
+
 
     <form id="new-ticket-form" novalidate>
       <!-- MÓDULO 3 (avance 2): equipo afectado (se llena al escanear su QR) -->
@@ -69,8 +138,9 @@
           <span class="voz__icono" aria-hidden="true"><i data-lucide="mic"></i></span>
           <div class="voz__textos">
             <strong>¿Prefieres contarlo hablando?</strong>
-            <small id="voz-ayuda">Pulsa «Dictar incidencia» y explica el problema. La primera frase será el asunto y el resto la
-              descripción. También puedes decir «asunto…» y luego «descripción…».</small>
+            <small id="voz-ayuda">Pulsa «Dictar incidencia» y, en una sola grabación, di <b>«asunto»</b> y el título del
+              problema, y luego <b>«descripción»</b> y los detalles. Ej.: «Asunto: la impresora no imprime. Descripción: desde
+              la mañana los documentos se quedan en cola».</small>
           </div>
           <button type="button" class="voz__boton" id="voz-boton" aria-pressed="false">
             <i data-lucide="mic"></i> <span id="voz-boton-texto">Dictar incidencia</span>
@@ -134,8 +204,8 @@
             <span class="priority-copy"><strong>Alta</strong><small>Impide trabajar o afecta un sistema
                 crítico.</small><em>Atención en 4 h</em></span>
           </label>
-          <label class="priority-option priority-option-medium selected">
-            <input type="radio" name="prioridad" value="Media" checked>
+          <label class="priority-option priority-option-medium">
+            <input type="radio" name="prioridad" value="Media">
             <span class="radio-look"></span><span class="priority-symbol">▮</span>
             <span class="priority-copy"><strong>Media</strong><small>Afecta parcialmente el trabajo.</small><em>Atención
                 en 24 h</em></span>

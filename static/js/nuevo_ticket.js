@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	let ticketEditando = null;
 	let fotosNuevas = [];
 	let enviando = false;
-	let areaUsuario = '';
 
 	const avisar = (msg) => (Evidencias?.avisar ? Evidencias.avisar(msg) : alert(msg));
 	const escapar = (t) =>
@@ -58,10 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			llenarSelect(campos.categoria_id, catalogos.categorias, 'Selecciona una categoría');
 			llenarSelect(campos.area_id, catalogos.areas, 'Selecciona tu área');
 
-			areaUsuario = usuario.area_id || '';
-			setTimeout(() => {
-				if (areaUsuario && campos.area_id) campos.area_id.value = areaUsuario;
-			}, 100);
+			// Área y prioridad empiezan sin seleccionar: el usuario las elige
 
 			if ($('solicitante-nombre')) {
 				$('solicitante-nombre').textContent =
@@ -288,14 +284,19 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 
+	const pintarPrioridad = () => {
+		document.querySelectorAll('.priority-option').forEach((op) => {
+			op.classList.toggle('selected', op.querySelector('input').checked);
+		});
+	};
 	document.querySelectorAll('input[name="prioridad"]').forEach((radio) => {
 		radio.addEventListener('change', () => {
-			document.querySelectorAll('.priority-option').forEach((op) => {
-				op.classList.toggle('selected', op.querySelector('input').checked);
-			});
+			pintarPrioridad();
 			if ($('priority-error')) $('priority-error').textContent = '';
 		});
 	});
+	// Al limpiar el formulario (ticket enviado), ninguna tarjeta de prioridad queda marcada
+	form?.addEventListener('reset', () => setTimeout(pintarPrioridad));
 
 	/* =======================================================
        ENVÍO AL BACKEND
@@ -345,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				);
 				form.reset();
+				cargarRecientes(); // el ticket nuevo aparece en "Mis tickets recientes"
 				window.EquipoQR?.limpiar(); // MÓDULO 3 (avance 2)
 				fotosNuevas.forEach((f) => URL.revokeObjectURL(f.url));
 				fotosNuevas = [];
@@ -380,8 +382,65 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	/* =======================================================
+       CANCELAR: deja el formulario como al entrar
+       ======================================================= */
+	$('cancel-button')?.addEventListener('click', () => {
+		if (enviando) return;
+		form.reset();                                   // asunto, descripción, categoría, área y prioridad
+		pintarErrores({});                              // quita los mensajes de error
+		fotosNuevas.forEach((f) => URL.revokeObjectURL(f.url));
+		fotosNuevas = [];
+		renderFotos();
+		window.EquipoQR?.limpiar();                     // MÓDULO 3: quita el equipo escaneado
+		mostrarAlerta('');
+		if ($('description-count')) $('description-count').textContent = '0/1000';
+		avisar('Se limpió el formulario.');
+	});
+
+	/* =======================================================
+       MIS TICKETS RECIENTES (panel lateral)
+       ======================================================= */
+	const CLASE_ESTADO = { 'Abierto': 'abierto', 'En proceso': 'proceso', 'Resuelto': 'resuelto', 'Cerrado': 'cerrado' };
+
+	function fechaCorta(iso) {
+		const f = iso ? new Date(iso) : null;
+		if (!f || isNaN(f)) return '';
+		return f.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) + ' ' +
+			f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+	}
+
+	async function cargarRecientes() {
+		const lista = $('recent-tickets');
+		if (!lista) return;
+		try {
+			const { tickets = [] } = await TicketsAPI.listar({ mios: 1, limite: 5 });
+			if (!tickets.length) {
+				lista.innerHTML = '<li class="m2-recientes__vacio">Aún no tienes tickets registrados.</li>';
+				return;
+			}
+			lista.innerHTML = tickets.map((t) => `
+				<li class="m2-recientes__item">
+					<div class="m2-recientes__texto">
+						<strong title="${escapar(t.asunto)}">${escapar(t.asunto)}</strong>
+						<small>
+							<span>${escapar(t.codigo)}</span>
+							<span class="m2-estado m2-estado--${CLASE_ESTADO[t.estado] || 'cerrado'}">${escapar(t.estado)}</span>
+							<span>${fechaCorta(t.created_at)}</span>
+						</small>
+					</div>
+					<a class="m2-recientes__editar" href="/detalle_ticket?id=${t.id}" title="Ver el ticket ${escapar(t.codigo)}"
+						aria-label="Ver el ticket ${escapar(t.codigo)}">›</a>
+				</li>`).join('');
+		} catch (e) {
+			if (e.estado === 401) return;
+			lista.innerHTML = '<li class="m2-recientes__vacio">No se pudieron cargar tus tickets.</li>';
+		}
+	}
+
+	/* =======================================================
        INICIALIZACIÓN
        ======================================================= */
 	renderFotos();
 	cargarSesion();
+	cargarRecientes();
 });

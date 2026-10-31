@@ -46,6 +46,7 @@ from auth import (
     validar_peticion,
 )
 from avisos_whatsapp import avisos_bp  # MÓDULO 4: avisos por WhatsApp (Vonage)
+from base_conocimiento import kb_bp  # MÓDULO 6: base de conocimiento + asistente con IA
 from cuenta import cuenta_bp
 from db import cerrar_conexion, conexion, consultar
 from empresas import empresas_bp
@@ -81,6 +82,7 @@ for bp in (
     equipos_bp,
     facial_bp,
     sla_push_bp,
+    kb_bp,  # MÓDULO 6
 ):
     app.register_blueprint(bp)
 
