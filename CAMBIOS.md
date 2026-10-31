@@ -72,6 +72,6 @@ enlace en el menú para el superusuario.
 - face-api.js 1.7.13 (TensorFlow.js) + cámara del navegador; librería y modelos en `static/vendor/face-api` y `static/models`.
 - Registro del rostro en **Mi Perfil** (pide la contraseña actual, 3 capturas, se guarda el promedio del descriptor).
 - Login facial como alternativa: antes de encender la cámara se verifica que la cuenta tenga rostro registrado.
-- Distancia euclidiana en el servidor (`facial.py`), umbral 0,5; 5 fallos en 15 min bloquean el login facial.
+- Distancia euclidiana en el servidor (`facial.py`), umbral 0,45 (promedio de 3 cuadros); 5 fallos en 15 min bloquean el login facial.
 - Tablas `usuario_rostros` y `login_facial_intentos`; `migrar_facial.py` las crea sin borrar datos.
 - Explicación para la sustentación: `docs/Investigacion_Login_Facial.pdf`.

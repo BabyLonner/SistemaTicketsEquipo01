@@ -4,7 +4,7 @@ MÓDULO 7 — Alertas Web Push de SLA y Escalamiento Automático.
 
 import json
 import os
-from flask import Blueprint, g, jsonify, request, send_from_directory
+from flask import Blueprint, g, jsonify, request, send_from_directory, session
 from auth import (
     ROL_ADMIN,
     ROL_TECNICO,
@@ -16,12 +16,22 @@ from db import conexion
 
 sla_push_bp = Blueprint("sla_push", __name__)
 
-VAPID_PUBLIC_KEY = os.getenv(
-    "VAPID_PUBLIC_KEY",
-    "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
-)
-VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+# Llaves VAPID propias del sistema (se generan con: python generar_vapid.py y van en el .env).
+# La pública la usa el navegador al suscribirse; la privada firma cada envío.
+# Deben ser un PAR: si la pública no corresponde a la privada, el servicio push rechaza el envío.
+VAPID_PUBLIC_KEY = (os.getenv("VAPID_PUBLIC_KEY") or "").strip()
+VAPID_PRIVATE_KEY = (os.getenv("VAPID_PRIVATE_KEY") or "").strip()
 VAPID_CLAIMS = {"sub": "mailto:soporte@mesadeayuda.pe"}
+
+
+def _obtener_usuario_id():
+    """Obtiene de forma segura el ID del usuario actual desde g o session."""
+    usuario = getattr(g, "usuario", None) or getattr(g, "user", None)
+    if usuario:
+        if isinstance(usuario, dict):
+            return usuario.get("id")
+        return getattr(usuario, "id", None)
+    return session.get("usuario_id") or session.get("id") or session.get("user_id")
 
 
 @sla_push_bp.get("/sw.js")
@@ -33,6 +43,12 @@ def service_worker():
 @sla_push_bp.get("/api/push/vapid-public-key")
 @login_requerido
 def obtener_vapid_key():
+    if not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        return jsonify(
+            publicKey=None,
+            error="El servidor no tiene las llaves VAPID. Ejecuta 'python generar_vapid.py' y "
+                  "copia VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en el archivo .env.",
+        ), 503
     return jsonify(publicKey=VAPID_PUBLIC_KEY)
 
 
@@ -49,6 +65,10 @@ def suscribir_push():
     if not endpoint or not p256dh or not auth_key:
         return jsonify(ok=False, error="Datos de suscripción incompletos."), 400
 
+    usuario_id = _obtener_usuario_id()
+    if not usuario_id:
+        return jsonify(ok=False, error="Usuario no autenticado."), 401
+
     con = conexion()
     with con.cursor() as cur:
         cur.execute(
@@ -60,7 +80,7 @@ def suscribir_push():
                    auth = VALUES(auth),
                    activo = 1""",
             (
-                g.usuario["id"],
+                usuario_id,
                 endpoint,
                 p256dh,
                 auth_key,
@@ -95,7 +115,9 @@ def _enviar_webpush_usuario(cur, usuario_id, titulo, cuerpo, url="/sla"):
                     },
                     data=payload,
                     vapid_private_key=VAPID_PRIVATE_KEY,
-                    vapid_claims=VAPID_CLAIMS,
+                    # Copia nueva en cada envío: pywebpush agrega "aud" y "exp" al diccionario;
+                    # si se reutiliza, el siguiente envío sale con datos de otro servidor o vencidos.
+                    vapid_claims=dict(VAPID_CLAIMS),
                 )
                 enviados += 1
             except WebPushException:
@@ -107,6 +129,21 @@ def _enviar_webpush_usuario(cur, usuario_id, titulo, cuerpo, url="/sla"):
         pass
     return enviados
 
+@sla_push_bp.post("/api/push/desactivar")
+@login_requerido
+def desactivar_push():
+    """Marca la suscripción push como inactiva en la base de datos."""
+    datos = request.get_json(silent=True) or {}
+    endpoint = datos.get("endpoint")
+    if endpoint:
+        con = conexion()
+        with con.cursor() as cur:
+            cur.execute(
+                "UPDATE push_suscripciones SET activo = 0 WHERE endpoint = %s",
+                (endpoint,),
+            )
+        con.commit()
+    return jsonify(ok=True, mensaje="Notificaciones Push desactivadas.")
 
 @sla_push_bp.post("/api/sla/verificar-alertas")
 @roles_requeridos(ROL_ADMIN, ROL_TECNICO)
@@ -122,6 +159,7 @@ def verificar_y_escalar_sla():
     con = conexion()
     alertados = []
     escalados = []
+    usuario_actual_id = _obtener_usuario_id()
 
     with con.cursor() as cur:
         cur.execute(
@@ -180,7 +218,7 @@ def verificar_y_escalar_sla():
                 cur.execute(
                     """INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, comentario, created_at)
                        VALUES (%s, %s, 'COMENTARIO', %s, NOW())""",
-                    (t["id"], g.usuario["id"], comentario_esc),
+                    (t["id"], usuario_actual_id, comentario_esc),
                 )
                 titulo = f"🚨 SLA Vencido y Escalado: {codigo}"
                 mensaje = f"{t['asunto']} superó el tiempo límite. {comentario_esc}"
