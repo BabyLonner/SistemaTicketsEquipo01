@@ -1,14 +1,4 @@
-"""
-Rutas de la colección de Postman (mismas URL y respuesta {status, data, message}).
 
-AHORA PIDEN TOKEN JWT:
-  1) POST /api/login   body JSON {"correo": "...", "password": "Clave123"}
-  2) En cada petición: header  Authorization: Bearer <token>
-
-Respetan la empresa del token: un administrador solo ve y crea datos de su
-empresa. Las tablas globales (empresas, dominios, categorías, prioridades,
-tokens) solo las modifica el superusuario.
-"""
 import uuid
 
 from flask import Blueprint, g, jsonify, request
@@ -71,7 +61,6 @@ def _cualquier_error(e):
     return error(repr(e), 500)
 
 
-# ------------------------------------------------------------------ empresas
 @api_postman_bp.post("/api_insertar_empresa")
 @roles_requeridos(ROL_SUPER)
 def api_insertar_empresa():
@@ -112,7 +101,6 @@ def api_obtener_empresa_dominios():
     return ok(filas, "Dominios obtenidos correctamente")
 
 
-# ------------------------------------------------------------------ áreas
 @api_postman_bp.post("/api_insertar_area")
 @roles_requeridos(ROL_SUPER, ROL_ADMIN)
 def api_insertar_area():
@@ -134,7 +122,6 @@ def api_obtener_areas():
     return ok(filas, "Areas obtenidas correctamente")
 
 
-# ------------------------------------------------------------------ usuarios
 @api_postman_bp.post("/api_insertar_user")
 @roles_requeridos(ROL_SUPER, ROL_ADMIN)
 def api_insertar_user():
@@ -175,7 +162,6 @@ def api_obtener_users():
     return ok(serializar(filas), "Usuarios obtenidos correctamente")
 
 
-# ------------------------------------------------------------------ tokens
 @api_postman_bp.post("/api_insertar_token_revocado")
 @roles_requeridos(ROL_SUPER)
 def api_insertar_token_revocado():
@@ -193,7 +179,6 @@ def api_obtener_tokens_revocados():
               "Tokens revocados obtenidos correctamente")
 
 
-# ------------------------------------------------------------------ catálogos
 @api_postman_bp.post("/api_insertar_categoria")
 @roles_requeridos(ROL_SUPER)
 def api_insertar_categoria():
@@ -225,7 +210,6 @@ def api_obtener_prioridades():
               "Prioridades obtenidas correctamente")
 
 
-# ------------------------------------------------------------------ tickets (usa el modelo de tickets.py)
 def _con_usuario_de_tickets(vista):
     """Reutiliza el decorador de tickets.py (g.usuario con la empresa correcta)."""
     from tickets import login_requerido as login_tickets
@@ -366,7 +350,6 @@ def api_obtener_historial():
     return _ver()
 
 
-# ------------------------------------------------------------------ notificaciones
 @api_postman_bp.post("/api_insertar_notificacion")
 @roles_requeridos(ROL_SUPER, ROL_ADMIN)
 def api_insertar_notificacion():

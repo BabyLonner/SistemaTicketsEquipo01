@@ -1,14 +1,4 @@
-/* =========================================================
-   rostro.js — utilidades de reconocimiento facial con face-api.js
-   (TensorFlow.js). Todo el análisis ocurre en el navegador:
-   la imagen de la cámara NUNCA se envía al servidor, solo el
-   descriptor facial (128 números).
 
-   Modelos (carpeta /static/models):
-     - tinyFaceDetector : encuentra el rostro en la imagen
-     - faceLandmark68   : 68 puntos del rostro (alinea la cara antes de calcular el descriptor)
-     - faceRecognition  : red ResNet-34 que produce el descriptor de 128 valores
-   ========================================================= */
 const Rostro = (() => {
     const RUTA_MODELOS = '/static/models';
     let modelosListos = false;
@@ -48,8 +38,6 @@ const Rostro = (() => {
         if (video) video.srcObject = null;
     }
 
-    // inputSize 320: en la cámara web el rostro ocupa gran parte de la imagen y con 320 el
-    // detector lo encuentra mejor que con 416 o 512 (lo medimos).
     const opciones = () => new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
     const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -65,7 +53,6 @@ const Rostro = (() => {
         return { ok: true, resultado: cara };
     }
 
-    /* Registro: toma N capturas válidas (un solo rostro, de frente y bien iluminado) */
     async function capturarMuestras(video, n, alAvanzar) {
         const muestras = [];
         const limite = Date.now() + 30000;
@@ -80,9 +67,7 @@ const Rostro = (() => {
         return muestras;
     }
 
-    /* Login: toma 3 cuadros válidos (un solo rostro, de frente, bien iluminado) y envía el
-       PROMEDIO de sus descriptores, igual que en el registro. Un promedio es más estable que
-       una sola imagen y reduce los errores. La comparación la hace el servidor. */
+
     async function capturarRostro(video, alAvanzar, tiempoMax = 20000) {
         const limite = Date.now() + tiempoMax;
         const descriptores = [];

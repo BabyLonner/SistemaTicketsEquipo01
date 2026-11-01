@@ -1,8 +1,4 @@
-"""Agrega las tablas del login facial a una base que YA tiene datos (no borra nada).
 
-Úsalo si ya cargaste la versión 2.1 y no quieres volver a ejecutar inicializar_bd.py:
-    python migrar_facial.py        (en PythonAnywhere: python3.13 migrar_facial.py)
-"""
 from db import obtener_conexion
 
 SENTENCIAS = [

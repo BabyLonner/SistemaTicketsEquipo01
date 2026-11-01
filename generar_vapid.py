@@ -1,10 +1,4 @@
-"""MÓDULO 7 — Genera el par de llaves VAPID para las alertas Web Push.
 
-Ejecútalo UNA sola vez y copia las dos líneas que imprime en el archivo .env
-(en tu PC y en PythonAnywhere usa el MISMO par):
-    python generar_vapid.py
-Si cambias las llaves, cada usuario debe volver a pulsar "Activar Alertas Push".
-"""
 import base64
 
 from cryptography.hazmat.primitives import serialization
