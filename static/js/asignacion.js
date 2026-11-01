@@ -424,6 +424,7 @@ function configurarEventosUI() {
 	document.getElementById('auto-progress')?.addEventListener('change', actualizarReglaComentarioAsignacion);
 	document.getElementById('tech-options')?.addEventListener('change', () => {
 		document.getElementById('assign-tech-error').textContent = '';
+		revisarWhatsAppElegido();
 	});
 
 	document.getElementById('assign-form')?.addEventListener('submit', submitAsignacion);
@@ -462,14 +463,15 @@ window.abrirModalAsignacion = function (id) {
 	tecnicosDisponibles.forEach((tec) => {
 		const esActual = tec.nombre === ticketActivo.tecnico;
 		const carga = cargaDe(tec.nombre);
+		const sinWhatsApp = tec.tiene_whatsapp === 0 || tec.tiene_whatsapp === false;
 		radiosHTML += `
-        <label class="option-card">
-            <input type="radio" name="tech" value="${escaparHTML(tec.nombre)}" ${esActual ? 'checked' : ''}>
+        <label class="option-card ${sinWhatsApp && !esActual ? 'option-card--sin-wa' : ''}">
+            <input type="radio" name="tech" value="${escaparHTML(tec.nombre)}" data-sin-wa="${sinWhatsApp ? '1' : ''}" ${esActual ? 'checked' : ''}>
             <span class="tech-avatar">${iniciales(tec.nombre)}</span>
             <span><strong>${escaparHTML(tec.nombre)} ${esActual ? '<span class="current-tag">· actual</span>' : ''}</strong>
                 ${tec.tiene_whatsapp === undefined ? '' : tec.tiene_whatsapp
 					? '<small class="wa-tag wa-tag-ok" title="Recibirá el aviso por WhatsApp">✆ Recibirá aviso por WhatsApp</small>'
-					: '<small class="wa-tag wa-tag-no" title="No registró su número en Mi Perfil: el aviso fallará">✆ Sin WhatsApp en su perfil</small>'}</span>
+					: '<small class="wa-tag wa-tag-no" title="No registró su número en Mi Perfil: no se le puede asignar">✆ Sin WhatsApp · no se puede asignar</small>'}</span>
             <span class="load ${carga >= 3 ? 'high' : ''}">${carga} activo${carga === 1 ? '' : 's'}</span>
         </label>`;
 	});
@@ -482,8 +484,34 @@ window.abrirModalAsignacion = function (id) {
 	document.getElementById('assign-tech-error').textContent = '';
 	document.getElementById('assign-comment-error').textContent = '';
 	actualizarReglaComentarioAsignacion();
+	revisarWhatsAppElegido();
 	document.getElementById('assign-modal').hidden = false;
 };
+
+/* MÓDULO 4: un técnico sin WhatsApp registrado no puede recibir el aviso,
+   por eso no se le asigna el ticket. Se muestra el motivo y se bloquea el botón.
+   (El servidor vuelve a comprobarlo: tickets.py no guarda la asignación.) */
+function mostrarBloqueoWhatsApp(texto) {
+	const caja = document.getElementById('assign-wa-aviso');
+	const boton = document.getElementById('assign-confirmar');
+	if (!caja) return;
+	document.getElementById('assign-wa-texto').textContent = texto || '';
+	caja.hidden = !texto;
+	if (boton) boton.disabled = Boolean(texto);
+}
+
+function revisarWhatsAppElegido() {
+	const radio = document.querySelector('input[name="tech"]:checked');
+	const esNuevo = radio && radio.value !== ticketActivo?.tecnico;
+	if (esNuevo && radio.dataset.sinWa) {
+		mostrarBloqueoWhatsApp(
+			`${radio.value} no ha registrado su número de WhatsApp en «Mi Perfil», por eso no recibiría el aviso ` +
+				'y el ticket no se registra a su nombre. Pídele que registre su celular o elige otro técnico.'
+		);
+	} else {
+		mostrarBloqueoWhatsApp('');
+	}
+}
 
 async function submitAsignacion(e) {
 	e.preventDefault();
@@ -530,7 +558,12 @@ async function submitAsignacion(e) {
 			document.getElementById('assign-modal').hidden = true;
 			cargarDatosAsignacion();
 		} else {
-			errTec.textContent = await mensajeDeError(res, 'No se pudo asignar el ticket.');
+			const data = await res.json().catch(() => ({}));
+			if (data.codigo === 'SIN_WHATSAPP') {
+				mostrarBloqueoWhatsApp(data.error); // aviso, no error: la asignación no se guardó
+			} else {
+				errTec.textContent = data.error || data.msg || 'No se pudo asignar el ticket.';
+			}
 		}
 	} catch (err) {
 		mostrarToast('Error de conexión.');

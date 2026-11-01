@@ -1143,3 +1143,14 @@ legend {
 .wa-entregado { background: #d9f6e9; color: #087b55; }
 .wa-leido { background: #cdf1df; color: #05603f; }
 .wa-fallido { background: #ffe4e7; color: #c62f3c; }
+
+/* MÓDULO 4: técnico sin WhatsApp → no se puede asignar */
+.option-card--sin-wa { opacity: 0.8; border-style: dashed !important; }
+.wa-bloqueo { display: flex; gap: 12px; align-items: flex-start; margin: 4px 0 12px; padding: 12px 14px;
+  border-radius: 10px; background: #fff7e6; border: 1px solid #f6d58b; border-left: 4px solid #f5a623; color: #7a4d00; text-align: left; }
+.wa-bloqueo[hidden] { display: none; }
+.wa-bloqueo__icono { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: #f5a623; color: #fff; font-weight: 800; }
+.wa-bloqueo strong { display: block; font-size: 13.5px; margin-bottom: 2px; color: #6b4300; }
+.wa-bloqueo p { margin: 0; font-size: 12.5px; line-height: 1.5; }
+#assign-confirmar:disabled { opacity: 0.5; cursor: not-allowed; }

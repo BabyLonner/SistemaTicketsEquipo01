@@ -169,6 +169,14 @@
       <legend>Selecciona el técnico responsable <span class="req">*</span></legend><!-- Generado por asignacion.js -->
     </fieldset>
     <p class="field-error" id="assign-tech-error"></p>
+    <!-- MÓDULO 4: aviso cuando el técnico elegido no registró su WhatsApp (no se asigna) -->
+    <div class="wa-bloqueo" id="assign-wa-aviso" role="alert" hidden>
+      <span class="wa-bloqueo__icono" aria-hidden="true">✆</span>
+      <div>
+        <strong>No se puede asignar este ticket</strong>
+        <p id="assign-wa-texto"></p>
+      </div>
+    </div>
     <label class="check-row" id="auto-progress-row"><input type="checkbox" id="auto-progress" checked> Pasar el ticket a
       <b>En proceso</b> al asignarlo</label>
     <label class="form-field"><span>Comentario <span class="req" id="assign-comment-req">*</span></span>
@@ -178,7 +186,7 @@
     </label>
     <p class="field-error" id="assign-comment-error"></p>
     <div class="modal-actions"><button type="button" class="btn-secondary" data-close>Cancelar</button><button
-        type="submit" class="btn-primary"><span>✓</span>Confirmar asignación</button></div>
+        type="submit" class="btn-primary" id="assign-confirmar"><span>✓</span>Confirmar asignación</button></div>
   </form>
 </div>
 

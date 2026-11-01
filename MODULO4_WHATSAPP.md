@@ -106,7 +106,7 @@ Pulsar **Save webhooks**. Sin webhook los mensajes igual se envían; solo se que
 ### Casos de error (para el video)
 | Caso | Qué muestra el sistema |
 |---|---|
-| Técnico sin número en su perfil | Etiqueta "Sin WhatsApp en su perfil" y aviso `FALLIDO`: "El técnico no tiene número…" |
+| Técnico sin número en su perfil | **No se asigna el ticket.** La etiqueta dice "Sin WhatsApp · no se puede asignar"; al elegirlo aparece el aviso "No se puede asignar este ticket…" y el botón se bloquea. El servidor también lo impide (`tickets.py`), incluso desde Postman. |
 | Número no unido al Sandbox | `FALLIDO` con el mensaje de Vonage; luego **Reintentar** |
 | Claves incorrectas | `FALLIDO`: "Credenciales de Vonage incorrectas" |
 | Número mal escrito | Mi Perfil no deja guardar: "Un celular de Perú tiene 9 dígitos y empieza con 9" |

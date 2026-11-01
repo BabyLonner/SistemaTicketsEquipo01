@@ -293,7 +293,7 @@ class Ticket:
                     )
             else:
                 cur.execute(
-                    """SELECT id, nombre FROM users
+                    """SELECT id, nombre, telefono FROM users
                         WHERE nombre = %s AND empresa_id = %s AND rol = %s AND activo = 1""",
                     (datos["tecnico"], empresa_id, ROL_TECNICO),
                 )
@@ -302,6 +302,16 @@ class Ticket:
                     raise ErrorRegla(
                         "El técnico elegido no existe o no está activo en tu empresa."
                     )
+                # MÓDULO 4: no se asigna a un técnico que no registró su WhatsApp,
+                # porque no recibiría el aviso. No se guarda ningún cambio.
+                if tec["id"] != actual["tecnico_id"] and not (tec["telefono"] or "").strip():
+                    aviso = ErrorRegla(
+                        f"No se asignó el ticket: {tec['nombre']} no ha registrado su número de "
+                        "WhatsApp en «Mi Perfil», por eso no recibiría el aviso. Pídele que lo "
+                        "registre o elige otro técnico."
+                    )
+                    aviso.codigo = "SIN_WHATSAPP"  # la pantalla lo muestra como aviso, no como error
+                    raise aviso
                 tecnico_id_nuevo = tec["id"]
                 tecnico_nombre = tec["nombre"]
 
@@ -1134,7 +1144,7 @@ def editar_ticket(ticket_id):
         con.commit()
     except ErrorRegla as e:
         con.rollback()
-        return jsonify(error=str(e)), 400
+        return jsonify(error=str(e), codigo=getattr(e, "codigo", None)), 400
     except Exception:
         con.rollback()
         raise
@@ -1497,7 +1507,7 @@ def listar_tecnicos():
         return jsonify(error="No tienes acceso a esta información."), 403
     with conexion().cursor() as cur:
         cur.execute(
-            """SELECT u.id, u.nombre, (u.telefono IS NOT NULL) AS tiene_whatsapp,
+            """SELECT u.id, u.nombre, (u.telefono IS NOT NULL AND u.telefono <> '') AS tiene_whatsapp,
                       (SELECT COUNT(*) FROM tickets t
                         WHERE t.tecnico_id = u.id AND t.estado IN ('Abierto', 'En proceso')) AS activos
                  FROM users u

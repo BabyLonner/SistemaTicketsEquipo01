@@ -363,7 +363,11 @@ async function cargarTecnicosDetalle(tecnicoActual) {
         const tecnicos = (await res.json()).tecnicos || [];
         selTec.innerHTML = '';
         if (!tecnicoActual) selTec.add(new Option('Sin asignar', 'Sin asignar'));
-        tecnicos.forEach((t) => selTec.add(new Option(t.nombre, t.nombre)));
+        // MÓDULO 4: se indica quién no registró su WhatsApp (el servidor no permite asignarle)
+        tecnicos.forEach((t) => {
+            const sinWa = (t.tiene_whatsapp === 0 || t.tiene_whatsapp === false) && t.nombre !== tecnicoActual;
+            selTec.add(new Option(sinWa ? `${t.nombre} · sin WhatsApp (no se puede asignar)` : t.nombre, t.nombre));
+        });
         selTec.value = tecnicoActual || 'Sin asignar';
     } catch (e) {
         console.error('No se pudieron cargar los técnicos', e);
