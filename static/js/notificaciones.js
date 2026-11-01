@@ -1,11 +1,7 @@
-/* Escapa el texto antes de insertarlo con innerHTML (evita XSS con asuntos de tickets). */
+
 function escaparNotif(texto) {
 	return String(texto ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
-
-/* =========================================================
-   notificaciones.js — Gestión global, filtros y paginación
-   ========================================================= */
 
 let notificacionesGlobales = [];
 let notificacionesFiltradas = [];
@@ -15,7 +11,6 @@ const itemsPorPagina = 8;
 let pestanaActual = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
-	// 1. Lógica de acciones de la Campana (El abrir/cerrar lo controla base.html)
 	const btnLeerTodas = document.getElementById('btnLeerTodas');
 
 	if (btnLeerTodas) {
@@ -25,12 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 
-	// 2. Lógica de la página completa (Tabs, Búsqueda, Filtros)
 	configurarEventosPagina();
 
-	// 3. Inicializar carga de datos
 	cargarNotificaciones();
-	setInterval(cargarNotificaciones, 30000);
+	setInterval(cargarNotificaciones, 10000);
 });
 
 function obtenerHeadersAuth() {
@@ -57,9 +50,6 @@ function obtenerEstiloIcono(tipo) {
 	return { icono: '▤', clase: 'notice-blue', inicial: 'T' };
 }
 
-/* =========================================================================
-   CARGA DE DATOS DESDE LA API
-   ========================================================================= */
 async function cargarNotificaciones() {
 	try {
 		const res = await fetch('/api/notificaciones', {
@@ -84,13 +74,11 @@ async function cargarNotificaciones() {
 			}
 		}
 
-		// Renderizar Campana
 		const contenedorDropdown = document.getElementById('listaNotificacionesDropdown');
 		if (contenedorDropdown) {
 			renderizarDropdown(contenedorDropdown, notificacionesGlobales.slice(0, 5));
 		}
 
-		// Actualizar página completa si está abierta
 		if (document.getElementById('contenedorPaginaNotificaciones')) {
 			actualizarMetricas();
 			aplicarFiltros();
@@ -118,9 +106,6 @@ function actualizarMetricas() {
 		document.getElementById('system-count').textContent = sistema;
 }
 
-/* =========================================================================
-   SISTEMA DE FILTRADO Y ORDENAMIENTO
-   ========================================================================= */
 function aplicarFiltros() {
 	const searchInput = document.getElementById('notification-search');
 	const query = searchInput
@@ -163,9 +148,6 @@ function aplicarFiltros() {
 	renderizarPaginacion();
 }
 
-/* =========================================================================
-   SISTEMA DE PAGINACIÓN Y RENDER
-   ========================================================================= */
 function renderizarPaginacion() {
 	const contenedorPagina = document.getElementById('contenedorPaginaNotificaciones');
 	if (!contenedorPagina) return;
@@ -313,9 +295,6 @@ function actualizarBarraSeleccion() {
 	}
 }
 
-/* =========================================================================
-   ACCIONES A LA API (Comunes)
-   ========================================================================= */
 function renderizarDropdown(contenedor, notificaciones) {
 	if (!notificaciones || notificaciones.length === 0) {
 		contenedor.innerHTML = `<div class="notif-dropdown__empty">No tienes notificaciones recientes.</div>`;

@@ -1,8 +1,4 @@
-/* =========================================================
-   login_facial.js — "Ingresar con reconocimiento facial"
-   1) pide el correo  2) verifica que la cuenta tenga rostro registrado  3) cámara  3) envía SOLO el descriptor
-   4) el servidor compara con la distancia euclidiana y crea la sesión (JWT)
-   ========================================================= */
+
 document.addEventListener('DOMContentLoaded', () => {
     const boton = document.getElementById('btn-facial');
     const modal = document.getElementById('modal-facial');
@@ -84,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         errorCorreo('');
-        // Antes de encender la cámara: ¿esta cuenta tiene un rostro registrado? ¿está bloqueada?
+
         try {
             const res = await fetch('/api/login-facial/estado?correo=' + encodeURIComponent(valor), { credentials: 'same-origin' });
             const estadoCuenta = await res.json();

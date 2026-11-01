@@ -1,8 +1,4 @@
-/* =========================================================
-   USUARIOS — Estilos específicos de la vista
-   ========================================================= */
 
-/* Estructura Principal */
 .users-layout {
   display: grid;
   grid-template-columns: minmax(0, 2.15fr) minmax(300px, 0.88fr);
@@ -23,7 +19,7 @@
   min-width: 0;
 }
 
-/* Tarjetas de Estadísticas */
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -111,7 +107,6 @@
   border-color: #d4c3ff;
 }
 
-/* Barra de Filtros */
 .filters-panel {
   padding: 12px;
   display: flex;
@@ -182,7 +177,6 @@
   padding: 4px 7px;
 }
 
-/* Tabla de Usuarios */
 .table-panel {
   overflow: hidden;
 }
@@ -241,7 +235,6 @@ tbody td:first-child {
   text-align: center;
 }
 
-/* Celdas y Etiquetas (Badges) */
 .user-cell {
   display: flex;
   align-items: center;
@@ -318,7 +311,6 @@ tbody td:first-child {
   color: #dc3345;
 }
 
-/* Acciones y Paginación */
 .row-actions {
   display: flex;
   align-items: center;
@@ -374,7 +366,6 @@ tbody td:first-child {
   cursor: not-allowed;
 }
 
-/* Columna Derecha: Paneles */
 .create-panel,
 .roles-panel,
 .important-panel {
@@ -403,7 +394,6 @@ tbody td:first-child {
   background: #fff;
 }
 
-/* Formulario Nuevo Usuario */
 .create-panel form {
   display: grid;
   gap: 12px;
@@ -457,7 +447,6 @@ tbody td:first-child {
   font-size: 21px;
 }
 
-/* Roles Info */
 .roles-panel {
   padding: 15px;
 }
@@ -519,7 +508,6 @@ tbody td:first-child {
   margin: 3px 0 0;
 }
 
-/* Panel de Información */
 .important-panel {
   padding: 15px;
 }
@@ -569,7 +557,6 @@ tbody td:first-child {
   font-size: 11px;
 }
 
-/* Pie de Página específico */
 .page-footer {
   display: flex;
   justify-content: space-between;
@@ -582,9 +569,6 @@ tbody td:first-child {
   color: #56779c;
 }
 
-/* =========================================================
-   MEDIA QUERIES - Ajustes Responsivos Específicos
-   ========================================================= */
 @media (max-width: 1500px) {
   .users-layout {
     grid-template-columns: minmax(0, 1.8fr) minmax(285px, 0.9fr);

@@ -1,57 +1,76 @@
-/* =========================================================
-   MÓDULO 5 — Cliente WebSocket (Socket.IO) para detalle_ticket
-   ========================================================= */
 document.addEventListener('DOMContentLoaded', () => {
 	const idTicket = new URLSearchParams(window.location.search).get('id');
-	const chatContainer = document.getElementById('contenedor-chat');
+	const replyForm = document.getElementById('reply-form');
 	const inputComentario = document.getElementById('reply-text');
-	if (!idTicket || !chatContainer || typeof io === 'undefined') return;
+	if (!idTicket || !replyForm) return;
 
-	const socket = io({ transports: ['websocket', 'polling'] });
+	fetch('/api/tickets/sesion', {
+		headers: typeof obtenerHeadersAuth === 'function' ? obtenerHeadersAuth() : {}
+	})
+		.then((r) => r.json())
+		.then((data) => {
+			if (data.usuario && data.usuario.nombre) {
+				const iniciales = data.usuario.nombre
+					.split(/\s+/)
+					.slice(0, 2)
+					.map((p) => p[0])
+					.join('')
+					.toUpperCase();
+				const avatarSpan = document.querySelector('.reply-form .comment-avatar');
+				if (avatarSpan) avatarSpan.textContent = iniciales;
+			}
+		})
+		.catch(() => {});
 
-	// Indicador visual de conexión y de "escribiendo..."
-	const barraEstado = document.createElement('div');
-	barraEstado.className = 'chat-live-bar';
-	barraEstado.innerHTML = `
-        <span class="live-dot"></span>
-        <span class="live-text">Chat en tiempo real activo</span>
-        <span id="typing-indicator" class="typing-indicator" hidden></span>
-    `;
-	chatContainer.parentElement.insertBefore(barraEstado, chatContainer);
+	const typingDiv = document.createElement('div');
+	typingDiv.style.padding = '5px 15px';
+	typingDiv.style.marginBottom = '12px';
+	typingDiv.style.color = '#58749a';
+	typingDiv.style.fontSize = '13.5px';
+	typingDiv.style.display = 'none';
+	replyForm.parentElement.insertBefore(typingDiv, replyForm);
 
-	socket.on('connect', () => {
-		socket.emit('unirse_ticket', { ticket_id: idTicket });
-	});
-
-	// Emitir evento cuando el usuario escribe
 	let typingTimeout = null;
-	if (inputComentario) {
-		inputComentario.addEventListener('input', () => {
-			socket.emit('escribiendo_ticket', { ticket_id: idTicket });
-		});
-	}
+	let ultimoEnvio = 0;
 
-	// Mostrar cuando otro usuario está escribiendo
-	socket.on('usuario_escribiendo', (data) => {
-		const indicator = document.getElementById('typing-indicator');
-		if (!indicator) return;
-		indicator.textContent = `✍️ ${data.usuario} está escribiendo...`;
-		indicator.hidden = false;
+	function animarEscribiendo(usuario) {
+		typingDiv.innerHTML = `✍️ <b>${usuario}</b> está escribiendo<span class="animated-dots"></span>`;
+		typingDiv.style.display = 'block';
 		clearTimeout(typingTimeout);
 		typingTimeout = setTimeout(() => {
-			indicator.hidden = true;
-		}, 2200);
+			typingDiv.style.display = 'none';
+		}, 2800);
+	}
+
+	const evtSource = new EventSource(`/api/tickets/${idTicket}/stream`);
+
+	evtSource.addEventListener('usuario_escribiendo', (e) => {
+		try {
+			const data = JSON.parse(e.data);
+			animarEscribiendo(data.usuario);
+		} catch (err) {}
 	});
 
-	// Recibir nuevo comentario en vivo sin recargar toda la página
-	socket.on('nuevo_comentario', (m) => {
-		if (String(m.ticket_id) !== String(idTicket)) return;
-		if (typeof cargarHistorial === 'function') {
-			cargarHistorial(idTicket);
-		}
+	evtSource.addEventListener('nuevo_comentario', () => {
+		typingDiv.style.display = 'none';
+		if (typeof cargarHistorial === 'function') cargarHistorial(idTicket);
 	});
 
-	window.addEventListener('beforeunload', () => {
-		socket.emit('salir_ticket', { ticket_id: idTicket });
-	});
+	evtSource.onerror = () => {
+		console.log('Reconectando EventSource...');
+	};
+
+	if (inputComentario) {
+		inputComentario.addEventListener('input', () => {
+			if (!inputComentario.value.trim()) return;
+			const ahora = Date.now();
+			if (ahora - ultimoEnvio < 1500) return;
+			ultimoEnvio = ahora;
+
+			fetch(`/api/tickets/${idTicket}/escribiendo`, {
+				method: 'POST',
+				headers: typeof obtenerHeadersAuth === 'function' ? obtenerHeadersAuth() : {}
+			}).catch(() => {});
+		});
+	}
 });

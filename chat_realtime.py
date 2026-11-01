@@ -1,60 +1,60 @@
-"""
-MÓDULO 5 — Chat y Comentarios en Tiempo Real con Flask-SocketIO.
-"""
+import json
+import queue
 
-from flask import session
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask import Blueprint, Response, g, jsonify
 
-socketio = SocketIO(cors_allowed_origins="*", async_mode="threading")
+chat_rt_bp = Blueprint("chat_rt", __name__)
 
+_suscriptores_sse = {}
 
-def inicializar_socketio(app):
-    socketio.init_app(app)
-    return socketio
+def emitir_comentario_ticket(ticket_id, payload, destinatarios_ids=None):
+    t_id = str(ticket_id)
+    if t_id in _suscriptores_sse:
+        evento = f"event: nuevo_comentario\ndata: {json.dumps(payload)}\n\n"
+        for q in _suscriptores_sse[t_id]:
+            try:
+                q.put_nowait(evento)
+            except queue.Full:
+                pass
 
+@chat_rt_bp.post("/api/tickets/<int:ticket_id>/escribiendo")
+def api_marcar_escribiendo(ticket_id):
+    from auth import validar_peticion
+    validar_peticion()
+    u = g.get("usuario_token")
+    if not u:
+        return jsonify(error="No autorizado"), 401
 
-def emitir_comentario_ticket(ticket_id, payload):
-    """Emite un nuevo comentario en tiempo real a todos los que estén viendo el ticket."""
-    socketio.emit("nuevo_comentario", payload, to=f"ticket_{ticket_id}")
+    t_id = str(ticket_id)
+    if t_id in _suscriptores_sse:
+        payload = {"usuario": u["nombre"], "ticket_id": ticket_id}
+        evento = f"event: usuario_escribiendo\ndata: {json.dumps(payload)}\n\n"
+        for q in _suscriptores_sse[t_id]:
+            try:
+                q.put_nowait(evento)
+            except queue.Full:
+                pass
+    return jsonify(ok=True)
 
+@chat_rt_bp.get("/api/tickets/<int:ticket_id>/stream")
+def sse_stream(ticket_id):
+    t_id = str(ticket_id)
+    
+    def generar_eventos():
+        q = queue.Queue(maxsize=20)
+        _suscriptores_sse.setdefault(t_id, []).append(q)
+        try:
+            yield "data: conectado\n\n"
+            while True:
+                try:
+                    mensaje = q.get(timeout=15)
+                    yield mensaje
+                except queue.Empty:
+                    yield ": keep-alive\n\n"
+        except GeneratorExit:
+            pass
+        finally:
+            if t_id in _suscriptores_sse and q in _suscriptores_sse[t_id]:
+                _suscriptores_sse[t_id].remove(q)
 
-@socketio.on("unirse_ticket")
-def handle_unirse_ticket(data):
-    ticket_id = data.get("ticket_id")
-    if not ticket_id:
-        return
-    room = f"ticket_{ticket_id}"
-    join_room(room)
-    emit(
-        "estado_sala",
-        {
-            "ticket_id": ticket_id,
-            "usuario": session.get("nombre", "Usuario"),
-            "mensaje": "Conectado al canal en tiempo real",
-        },
-        to=room,
-    )
-
-
-@socketio.on("salir_ticket")
-def handle_salir_ticket(data):
-    ticket_id = data.get("ticket_id")
-    if ticket_id:
-        leave_room(f"ticket_{ticket_id}")
-
-
-@socketio.on("escribiendo_ticket")
-def handle_escribiendo(data):
-    ticket_id = data.get("ticket_id")
-    if not ticket_id:
-        return
-    emit(
-        "usuario_escribiendo",
-        {
-            "ticket_id": ticket_id,
-            "usuario": session.get("nombre", "Alguien"),
-            "rol": session.get("rol", ""),
-        },
-        to=f"ticket_{ticket_id}",
-        include_self=False,
-    )
+    return Response(generar_eventos(), mimetype="text/event-stream")

@@ -1,19 +1,4 @@
-"""
-MÓDULO 8 — Verificación de autenticidad de los reportes PDF.
 
-Cómo funciona:
-  1. Al generar el PDF (reportes.py) se crea un código aleatorio que va dentro
-     del código QR:  URL_BASE/verificar/<codigo>
-  2. Con el PDF ya terminado se calcula su huella SHA-256 y se guarda en la
-     tabla reportes_generados junto al código.
-  3. Quien recibe el PDF escanea el QR, sube el archivo y el servidor vuelve a
-     calcular el SHA-256: si cambió un solo byte, la huella es otra.
-
-El hash no se imprime dentro del PDF: hacerlo cambiaría el propio archivo y su hash.
-
-  GET  /verificar/<codigo>   datos del reporte (página pública, sin login)
-  POST /verificar/<codigo>   compara el PDF subido con la huella guardada
-"""
 import hashlib
 import hmac
 import re

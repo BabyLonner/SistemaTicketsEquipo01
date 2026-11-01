@@ -1,15 +1,4 @@
-"""
-MÓDULO 1 — Gestión de usuarios (Administrador de la empresa o Superusuario).
 
-API que usa static/js/usuarios.js:
-  GET  /api/usuarios                lista de la empresa + áreas + contadores
-  POST /api/usuarios                registrar (contraseña temporal hasheada con bcrypt)
-  PUT  /api/usuarios/<id>           editar nombre, correo, rol, área y restablecer contraseña
-  POST /api/usuarios/<id>/estado    activar / desactivar
-
-Reglas (antes eran triggers): el correo debe usar el dominio de la empresa,
-nadie se desactiva a sí mismo y la empresa conserva al menos un administrador activo.
-"""
 from flask import Blueprint, g, jsonify, request
 
 from auth import ROL_ADMIN, ROL_SUPER, empresa_actual, hashear, roles_requeridos, validar_clave_nueva

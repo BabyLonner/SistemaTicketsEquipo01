@@ -1,27 +1,4 @@
-"""
-MÓDULO 1 (investigación) — Inicio de sesión con reconocimiento facial.
 
-Cómo funciona
--------------
-1. En el navegador, face-api.js (TensorFlow.js) detecta el rostro en la cámara y
-   calcula su DESCRIPTOR FACIAL: un vector de 128 números que resume la forma del
-   rostro (distancias y proporciones aprendidas por una red neuronal ResNet-34).
-   La foto nunca sale del navegador.
-2. Registro (Mi Perfil): se toman 3 capturas, el servidor comprueba que sean de la
-   misma persona, guarda el PROMEDIO de los 3 descriptores en usuario_rostros y
-   pide la contraseña actual para confirmar que es el dueño de la cuenta.
-3. Login facial: el usuario escribe su correo y mira la cámara (1:1, se compara
-   solo con el rostro de esa cuenta). El servidor calcula la DISTANCIA EUCLIDIANA
-       d(a, b) = raíz( Σ (a_i − b_i)²  para i = 1..128 )
-   entre el descriptor recibido y el guardado. Si d <= UMBRAL, es la misma persona.
-4. Límite de intentos: 5 fallos en 15 minutos bloquean el login facial de esa cuenta
-   (el login con contraseña sigue disponible). Además, máx. 20 intentos por IP.
-
-Umbral: face-api.js recomienda 0.6. Usamos 0.45 (más estricto): con la cámara web, la misma
-luz y el mismo fondo, dos personas distintas pueden quedar más cerca que en fotos distintas,
-y con 0.5 llegó a entrar otra persona. Un umbral bajo reduce los falsos positivos a cambio
-de que, con mala luz, a veces haya que intentarlo otra vez. Se cambia con UMBRAL_FACIAL en el .env.
-"""
 import json
 import math
 import os
@@ -46,7 +23,6 @@ LARGO_DESCRIPTOR = 128
 MUESTRAS_REGISTRO = 3
 
 
-# ------------------------------------------------------------------ matemática
 def distancia_euclidiana(a, b):
     """d = sqrt( sum((a_i - b_i)^2) ). 0 = idénticos; mientras más grande, más distintos."""
     return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
@@ -77,7 +53,6 @@ def descriptor_guardado(usuario_id):
     return json.loads(fila["descriptor"]), fila
 
 
-# ------------------------------------------------------------------ registro desde Mi Perfil
 @facial_bp.get("/api/rostro")
 @login_requerido
 def estado_rostro():
@@ -98,7 +73,7 @@ def registrar_rostro():
     descriptores = [validar_descriptor(d) for d in (datos.get("descriptores") or [])]
     if len(descriptores) != MUESTRAS_REGISTRO or any(d is None for d in descriptores):
         return jsonify(error=f"Se necesitan {MUESTRAS_REGISTRO} capturas válidas del rostro."), 400
-    # Las 3 capturas deben ser de la misma persona (evita mezclar rostros)
+
     maxima = max(distancia_euclidiana(a, b) for i, a in enumerate(descriptores) for b in descriptores[i + 1:])
     if maxima > UMBRAL_MISMA_PERSONA_REGISTRO:
         return jsonify(error="Las capturas no coinciden entre sí. Mantén solo tu rostro frente a la cámara e inténtalo otra vez.",
@@ -112,7 +87,7 @@ def registrar_rostro():
                ON DUPLICATE KEY UPDATE descriptor = VALUES(descriptor), muestras = VALUES(muestras), updated_at = NOW()""",
             (usuario_id, json.dumps(descriptor), MUESTRAS_REGISTRO),
         )
-        # Un rostro nuevo reinicia el contador de intentos fallidos
+
         cur.execute("""INSERT INTO login_facial_intentos (usuario_id, correo, exito, motivo, ip, created_at)
                        VALUES (%s, %s, 1, 'rostro registrado', %s, NOW())""",
                     (usuario_id, g.usuario_token["correo"], _ip()))
@@ -131,7 +106,6 @@ def eliminar_rostro():
     return jsonify(mensaje="Se eliminó tu rostro. Solo podrás ingresar con tu contraseña.")
 
 
-# ------------------------------------------------------------------ login facial
 def _ip():
     return (request.headers.get("X-Forwarded-For") or request.remote_addr or "")[:45].split(",")[0].strip()
 
@@ -229,7 +203,6 @@ def login_facial():
         return jsonify(error=mensaje, intentos_restantes=max(quedan, 0), distancia=round(distancia, 4),
                        umbral=UMBRAL), 401
 
-    # Coincide: mismo inicio de sesión que con contraseña (JWT en cookie HttpOnly)
     _registrar_intento(usuario["id"], correo, True, round(distancia, 4), "acceso concedido")
     recordar = bool(datos.get("recordar"))
     token, duracion = crear_token(usuario, recordar)
