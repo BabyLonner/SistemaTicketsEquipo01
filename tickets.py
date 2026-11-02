@@ -84,7 +84,8 @@ class Ticket:
 
         categorias_db = {c["id"]: c for c in Catalogo.categorias(usuario["empresa_id"])}
         categoria_id = _entero(datos.get("categoria_id"))
-        
+        prioridad_id = None
+
         if categoria_id not in categorias_db:
             errores["categoria_id"] = "Selecciona una categoría válida."
         else:
