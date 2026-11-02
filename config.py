@@ -26,4 +26,13 @@ CORREO_SOPORTE = os.getenv("CORREO_SOPORTE", "soporte@mesadeayuda.com.pe")
 
 # Módulo 8: dirección pública del sistema (el QR del PDF apunta a URL_BASE/verificar/<codigo>)
 URL_BASE = os.getenv("URL_BASE", "http://127.0.0.1:5000").rstrip("/")
+
+# Módulo 8: correo saliente por SMTP (Gmail, puerto 587 con STARTTLS)
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+# Google muestra la contraseña de aplicación con espacios: se quitan para aceptar ambas formas
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").replace(" ", "")
+SMTP_REMITENTE = os.getenv("SMTP_REMITENTE", "").strip() or SMTP_USER
+
 VERSION = "2.1.0"
