@@ -236,8 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			asunto: campos.asunto.value.trim(),
 			descripcion: campos.descripcion.value.trim(),
 			categoria_id: campos.categoria_id.value,
-			area_id: campos.area_id.value,
-			prioridad: form.querySelector('input[name="prioridad"]:checked')?.value || ''
+			area_id: campos.area_id.value
 		};
 	}
 
@@ -248,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			errores.descripcion = 'Describe el problema (mínimo 10 caracteres).';
 		if (!v.categoria_id) errores.categoria_id = 'Selecciona una categoría.';
 		if (!v.area_id) errores.area_id = 'Selecciona tu área.';
-		if (!v.prioridad) errores.prioridad = 'Selecciona una prioridad.';
 		return errores;
 	}
 

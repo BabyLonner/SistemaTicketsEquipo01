@@ -89,7 +89,6 @@ class Ticket:
         if categoria_id not in categorias_db:
             errores["categoria_id"] = "Selecciona una categoría válida."
         else:
-            # Asignación automática de la prioridad configurada para esta empresa
             prioridad_id = categorias_db[categoria_id]["prioridad_id"]
 
         area_id = _entero(datos.get("area_id")) or usuario["area_id"]
@@ -108,12 +107,23 @@ class Ticket:
         return limpios, errores
 
     @staticmethod
-    def _horas_sla(cur, prioridad_id):
+    def _horas_sla(cur, prioridad_id, categoria_id=None, empresa_id=None):
+        if categoria_id and empresa_id:
+            cur.execute(
+                """SELECT tiempo_horas, tiempo_minutos 
+                   FROM empresa_categoria_prioridad 
+                   WHERE empresa_id = %s AND categoria_id = %s""",
+                (empresa_id, categoria_id)
+            )
+            personalizado = cur.fetchone()
+            if personalizado and (personalizado["tiempo_horas"] > 0 or personalizado["tiempo_minutos"] > 0):
+                return personalizado["tiempo_horas"], personalizado["tiempo_minutos"]
+        
         cur.execute("SELECT sla_horas FROM prioridades WHERE id = %s", (prioridad_id,))
         fila = cur.fetchone()
         if fila is None:
             raise ErrorRegla("La prioridad no existe.")
-        return fila["sla_horas"]
+        return fila["sla_horas"], 0
 
     @staticmethod
     def crear(cur, datos, solicitante_id, empresa_id):
@@ -139,13 +149,13 @@ class Ticket:
             "UPDATE empresas SET ultimo_ticket = %s WHERE id = %s", (numero, empresa_id)
         )
 
-        horas = Ticket._horas_sla(cur, datos["prioridad_id"])
+        horas, minutos = Ticket._horas_sla(cur, datos["prioridad_id"], datos["categoria_id"], empresa_id)
 
         cur.execute(
             """INSERT INTO tickets
                  (empresa_id, numero, area_id, solicitante_id, categoria_id, prioridad_id,
                   asunto, descripcion, estado, created_at, fecha_limite)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Abierto', NOW(), NOW() + INTERVAL %s HOUR)""",
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Abierto', NOW(), NOW() + INTERVAL %s HOUR + INTERVAL %s MINUTE)""",
             (
                 empresa_id,
                 numero,
@@ -156,6 +166,7 @@ class Ticket:
                 datos["asunto"],
                 datos["descripcion"],
                 horas,
+                minutos,
             ),
         )
         ticket_id = cur.lastrowid
@@ -211,10 +222,10 @@ class Ticket:
             ),
         )
         if datos["prioridad_id"] != actual["prioridad_id"]:
-            horas = Ticket._horas_sla(cur, datos["prioridad_id"])
+            horas, minutos = Ticket._horas_sla(cur, datos["prioridad_id"])
             cur.execute(
-                "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR WHERE id = %s",
-                (horas, ticket_id),
+                "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR + INTERVAL %s MINUTE WHERE id = %s",
+                (horas, minutos, ticket_id),
             )
             
     TRANSICIONES = {  # noqa: RUF012
@@ -304,15 +315,13 @@ class Ticket:
                     raise ErrorRegla(
                         "El técnico elegido no existe o no está activo en tu empresa."
                     )
-                # MÓDULO 4: no se asigna a un técnico que no registró su WhatsApp,
-                # porque no recibiría el aviso. No se guarda ningún cambio.
                 if tec["id"] != actual["tecnico_id"] and not (tec["telefono"] or "").strip():
                     aviso = ErrorRegla(
                         f"No se asignó el ticket: {tec['nombre']} no ha registrado su número de "
                         "WhatsApp en «Mi Perfil», por eso no recibiría el aviso. Pídele que lo "
                         "registre o elige otro técnico."
                     )
-                    aviso.codigo = "SIN_WHATSAPP"  # la pantalla lo muestra como aviso, no como error
+                    aviso.codigo = "SIN_WHATSAPP"
                     raise aviso
                 tecnico_id_nuevo = tec["id"]
                 tecnico_nombre = tec["nombre"]
@@ -407,11 +416,11 @@ class Ticket:
                    VALUES (%s, %s, 'COMENTARIO', %s, NOW())""",
                 (ticket_id, usuario["id"], ". ".join(partes) + "."),
             )
-        if cambia_prioridad:
-            horas = Ticket._horas_sla(cur, prioridad_id_nueva)
+        if cambia_prioridad or cambia_categoria:
+            horas, minutos = Ticket._horas_sla(cur, prioridad_id_nueva, categoria_id_nueva, empresa_id)
             cur.execute(
-                "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR WHERE id = %s",
-                (horas, ticket_id),
+                "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR + INTERVAL %s MINUTE WHERE id = %s",
+                (horas, minutos, ticket_id),
             )
 
         if cambia_estado:
@@ -1581,14 +1590,12 @@ def obtener_categorias_prioridad():
     con = conexion()
     try:
         with con.cursor() as cur:
-            # Truco seguro: crear las columnas de tiempo personalizado si aún no existen
             try:
                 cur.execute("ALTER TABLE empresa_categoria_prioridad ADD COLUMN tiempo_horas INT DEFAULT 0")
                 cur.execute("ALTER TABLE empresa_categoria_prioridad ADD COLUMN tiempo_minutos INT DEFAULT 0")
             except:
-                pass # Si ya existen, ignora el error
+                pass
             
-            # Obtener las categorías con sus prioridades y tiempos
             cur.execute("""
                 SELECT c.id AS categoria_id, c.nombre AS categoria_nombre, 
                        COALESCE(ec.prioridad_id, 2) AS prioridad_id,
@@ -1629,23 +1636,18 @@ def guardar_categoria_individual():
     try:
         with con.cursor() as cur:
             if not cat_id:
-                # Verificar si ya existe una categoría con el mismo nombre (activa o inactiva)
                 cur.execute("SELECT id FROM categorias WHERE nombre = %s", (nombre,))
                 existente = cur.fetchone()
                 
                 if existente:
                     cat_id = existente["id"]
-                    # Asegurarse de que esté activa
                     cur.execute("UPDATE categorias SET activo = 1 WHERE id = %s", (cat_id,))
                 else:
-                    # Crear nueva categoría si no existe
                     cur.execute("INSERT INTO categorias (nombre, activo) VALUES (%s, 1)", (nombre,))
                     cat_id = cur.lastrowid
             else:
-                # Editar nombre de una categoría existente
                 cur.execute("UPDATE categorias SET nombre = %s WHERE id = %s", (nombre, cat_id))
                 
-            # Guardar o actualizar la prioridad y tiempo personalizado para esta empresa
             cur.execute("""
                 INSERT INTO empresa_categoria_prioridad 
                 (empresa_id, categoria_id, prioridad_id, tiempo_horas, tiempo_minutos)
@@ -1674,9 +1676,7 @@ def eliminar_categoria_individual(cat_id):
     con = conexion()
     try:
         with con.cursor() as cur:
-            # Eliminamos la relación de SLA de esta empresa
             cur.execute("DELETE FROM empresa_categoria_prioridad WHERE empresa_id = %s AND categoria_id = %s", (empresa_id, cat_id))
-            # Ocultamos la categoría de forma global
             cur.execute("UPDATE categorias SET activo = 0 WHERE id = %s", (cat_id,))
         con.commit()
         return jsonify(mensaje="Categoría eliminada.")
@@ -1685,109 +1685,3 @@ def eliminar_categoria_individual(cat_id):
         return jsonify(error=str(e)), 500
     finally:
         con.close()
-
-
-# ==========================================
-# RUTAS PARA TICKET_HISTORIAL
-# ==========================================
-
-# @tickets_bp.route('/api_insertar_historial', methods=['POST'])
-""" def api_insertar_historial():
-    rpta = dict()
-    try:
-        objConexion = obtener_conexion()
-        # Ajusta los nombres de estos campos según el JSON que envíes desde Postman
-        v_ticket_id = request.json["ticket_id"]
-        v_accion = request.json["accion"]
-        v_detalles = request.json.get("detalles", "") # .get() evita error si viene vacío
-
-        with objConexion:
-            with objConexion.cursor() as cursor:
-                sql = "INSERT INTO `ticket_historial` (`ticket_id`, `accion`, `detalles`) VALUES (%s, %s, %s)"
-                cursor.execute(sql, (v_ticket_id, v_accion, v_detalles))
-            objConexion.commit()
-
-        rpta["status"] = 1
-        rpta["data"] = {}
-        rpta["message"] = "Historial del ticket registrado correctamente"
-    except Exception as e:
-        rpta["status"] = -1
-        rpta["data"] = {}
-        rpta["message"] = "Error: " + repr(e)
-    return jsonify(rpta)
-
-# @tickets_bp.route('/api_obtener_historial', methods=['GET'])
-def api_obtener_historial():
-    rpta = dict()
-    try:
-        # Permite filtrar por ticket si envías ?ticket_id=X en la URL
-        v_ticket_id = request.args.get('ticket_id')
-
-        objConexion = obtener_conexion()
-        with objConexion:
-            with objConexion.cursor() as cursor:
-                if v_ticket_id:
-                    sql = "SELECT * FROM `ticket_historial` WHERE `ticket_id` = %s"
-                    cursor.execute(sql, (v_ticket_id,))
-                else:
-                    sql = "SELECT * FROM `ticket_historial`"
-                    cursor.execute(sql)
-                result = cursor.fetchall()
-
-        rpta["status"] = 1
-        rpta["data"] = result
-        rpta["message"] = "Historial listado correctamente"
-    except Exception as e:
-        rpta["status"] = -1
-        rpta["data"] = {}
-        rpta["message"] = "Error: " + repr(e)
-    return jsonify(rpta)
-
-
-# ==========================================
-# RUTAS PARA NOTIFICACIONES
-# ==========================================
-
-# @tickets_bp.route('/api_insertar_notificacion', methods=['POST'])
-def api_insertar_notificacion():
-    rpta = dict()
-    try:
-        objConexion = obtener_conexion()
-        v_usuario_id = request.json["usuario_id"]
-        v_mensaje = request.json["mensaje"]
-        v_estado = request.json.get("estado", "Pendiente")
-
-        with objConexion:
-            with objConexion.cursor() as cursor:
-                sql = "INSERT INTO `notificaciones` (`usuario_id`, `mensaje`, `estado`) VALUES (%s, %s, %s)"
-                cursor.execute(sql, (v_usuario_id, v_mensaje, v_estado))
-            objConexion.commit()
-
-        rpta["status"] = 1
-        rpta["data"] = {}
-        rpta["message"] = "Notificación generada correctamente"
-    except Exception as e:
-        rpta["status"] = -1
-        rpta["data"] = {}
-        rpta["message"] = "Error: " + repr(e)
-    return jsonify(rpta)
-
-# @tickets_bp.route('/api_obtener_notificaciones', methods=['GET'])
-def api_obtener_notificaciones():
-    rpta = dict()
-    try:
-        objConexion = obtener_conexion()
-        with objConexion:
-            with objConexion.cursor() as cursor:
-                sql = "SELECT * FROM `notificaciones` ORDER BY id DESC"
-                cursor.execute(sql)
-                result = cursor.fetchall()
-
-        rpta["status"] = 1
-        rpta["data"] = result
-        rpta["message"] = "Notificaciones listadas correctamente"
-    except Exception as e:
-        rpta["status"] = -1
-        rpta["data"] = {}
-        rpta["message"] = "Error: " + repr(e)
-    return jsonify(rpta) """

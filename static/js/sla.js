@@ -550,3 +550,41 @@ function inicializarEventosSlaConfig() {
         });
     }
 }
+
+function mensajeSla(texto) {
+    let toast = document.getElementById('toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0f172a;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+            z-index: 9999;
+            font-size: 0.875rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(10px);
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = texto;
+    toast.style.display = 'block';
+    setTimeout(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+    }, 10);
+
+    clearTimeout(mensajeSla.t);
+    mensajeSla.t = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 3200);
+}
