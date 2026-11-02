@@ -1,0 +1,403 @@
+/* Pantalla de Configuración de la empresa (templates/configuracion.html) */
+
+.config-card {
+  padding: 24px;
+}
+
+.config-card h2 {
+  margin-top: 0;
+}
+
+.two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.color-row {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.color-row label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: #254f81;
+}
+
+.color-row input[type=color] {
+  width: 46px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid #c9d8ec;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.preview {
+  border: 1px solid #d8e5f4;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 6px 0 18px;
+}
+
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #24466b;
+  color: #fff;
+}
+
+.preview-bar img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.preview-bar .badge {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.preview-body {
+  padding: 12px 16px;
+  background: #f5f9ff;
+  display: flex;
+  gap: 8px;
+}
+
+.preview-body span {
+  padding: 6px 14px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.area-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.area-form input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #c9d8ec;
+  border-radius: 8px;
+}
+
+.area-actions form {
+  margin: 0;
+}
+
+.btn-small {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #c9d8ec;
+  background: #fff;
+  color: #1f4f86;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.area-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.area-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e8f0fa;
+}
+
+.area-list li>div {
+  flex: 1;
+  min-width: 0;
+}
+
+.area-list strong {
+  display: block;
+  color: #17375f;
+  font-size: 13px;
+}
+
+.area-list small {
+  color: #58749a;
+  font-size: 11px;
+}
+
+.domain-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.domain-list li {
+  font-weight: 600;
+  color: #17375f;
+}
+
+.aviso-smtp {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff6db;
+  border: 1px solid #f0d78a;
+  color: #7a5a00;
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+
+.envios-scroll {
+  overflow-x: auto;
+}
+
+.envios-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.envios-tabla th {
+  text-align: left;
+  color: #58749a;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-bottom: 1px solid #d8e5f4;
+  white-space: nowrap;
+}
+
+.envios-tabla td {
+  padding: 8px;
+  border-bottom: 1px solid #e8f0fa;
+  color: #17375f;
+  vertical-align: top;
+  white-space: normal;
+}
+
+.envios-tabla td:last-child {
+  min-width: 190px;
+}
+
+.envios-tabla .error-envio {
+  display: block;
+  color: #9b1c1c;
+  margin-top: 2px;
+}
+
+.envios-tabla td.sin-salto {
+  white-space: nowrap;
+}
+
+/* Textos y botones sueltos de la pantalla */
+.field-label.etiqueta-preview {
+  font-size: 13px;
+  color: #58749a;
+}
+
+.config-intro {
+  font-size: 13px;
+  color: #58749a;
+  margin: 0 0 12px;
+}
+
+.config-nota {
+  font-size: 12px;
+  color: #58749a;
+  margin: 12px 0 0;
+}
+
+.domain-list + .config-nota {
+  margin-top: 10px;
+}
+
+.btn-primary.btn-agregar {
+  padding: 0 14px;
+}
+
+.form-enviar {
+  margin: 16px 0 20px;
+}
+
+.btn-primary.btn-enviar {
+  padding: 10px 16px;
+}
+
+.envios-titulo {
+  font-size: 14px;
+  color: #17375f;
+  margin: 0 0 8px;
+}
+
+/* Módulo 8: lista de destinatarios, programación y envío manual */
+.reporte-bloque {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #e8f0fa;
+}
+
+.reporte-etiqueta {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #254f81;
+}
+
+.reporte-etiqueta-otro {
+  margin-top: 14px;
+}
+
+.reporte-campo,
+.prog-grid select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #c9d8ec;
+  border-radius: 8px;
+  background: #fff;
+  color: #17375f;
+  font: inherit;
+  font-size: 13px;
+}
+
+.prog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.prog-grid .btn-primary.btn-enviar {
+  min-height: 40px;
+}
+
+.fechas-envio {
+  margin-top: 14px;
+}
+
+.interruptor {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  font-size: 13px;
+  color: #17375f;
+  cursor: pointer;
+}
+
+.interruptor input {
+  position: absolute;
+  opacity: 0;
+}
+
+.interruptor-pista {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: #b8c9e0;
+}
+
+.interruptor-pista::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.interruptor input:checked + .interruptor-pista {
+  background: var(--company-color, #0077b6);
+}
+
+.interruptor input:checked + .interruptor-pista::after {
+  transform: translateX(18px);
+}
+
+.interruptor input:focus-visible + .interruptor-pista {
+  outline: 2px solid var(--company-color, #0077b6);
+  outline-offset: 2px;
+}
+
+.aviso-proximo {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f5f9ff;
+  color: #58749a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.aviso-proximo strong {
+  color: #17375f;
+}
+
+.aviso-programacion {
+  margin: 12px 0 0;
+}
+
+.envio-opcion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: #17375f;
+  overflow-wrap: anywhere;
+}
+
+.envio-opcion input,
+.check-semanal {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--company-color, #0077b6);
+  cursor: pointer;
+}
+
+.envios-tabla td form {
+  margin: 0;
+}
+
+.envios-tabla td.celda-accion {
+  min-width: 0;
+  text-align: right;
+}
+
+.interruptor input:checked ~ .estado-desactivado,
+.interruptor input:not(:checked) ~ .estado-activado {
+  display: none;
+}
+
+/* tbody td:first-child de usuarios.css centra la primera columna */
+.envios-tabla tbody td {
+  text-align: left;
+}
+
+.envios-tabla tbody td.celda-accion {
+  text-align: right;
+}

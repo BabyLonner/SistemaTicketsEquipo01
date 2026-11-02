@@ -91,6 +91,8 @@ def texto_filtros(f):
     return " | ".join(partes) or "Sin filtros (todos los tickets)"
 
 
+SIN_TIEMPO_PROMEDIO = "Sin tickets resueltos"
+
 FILAS = ("Código", "Asunto", "Solicitante", "Área", "Categoría", "Prioridad", "Estado", "Técnico",
          "Creado", "Fecha límite", "Resuelto", "SLA")
 
@@ -140,7 +142,7 @@ def exportar_excel():
            [("Total de tickets", r["total"]), *[(e, n) for e, n in r["por_estado"].items()],
             ("Vencidos (SLA)", r["vencidos"]),
             ("Cumplimiento SLA de resueltos", f"{r['cumplimiento']}%" if r["cumplimiento"] is not None else "—"),
-            ("Tiempo promedio de atención", r["tiempo_promedio"] or "—")])
+            ("Tiempo promedio de atención", r["tiempo_promedio"] or SIN_TIEMPO_PROMEDIO)])
     bloque("Por prioridad", ["Prioridad", "Tickets"], r["por_prioridad"])
     bloque("Por categoría", ["Categoría", "Tickets"], r["por_categoria"])
     bloque("Por técnico", ["Técnico", "Tickets"], r["por_tecnico"])
@@ -166,9 +168,10 @@ def exportar_excel():
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
-@reportes_bp.get("/reportes/exportar/pdf")
-@roles_requeridos(ROL_SUPER, ROL_ADMIN, ROL_TECNICO)
-def exportar_pdf():
+def generar_pdf_reporte(empresa, f, autor_nombre, usuario_id=None):
+    """MÓDULO 8: arma el PDF sin depender de la sesión (lo usan la descarga, el botón y el cron).
+    empresa = fila de la tabla empresas. usuario_id = None -> envío automático.
+    Devuelve (bytes del PDF, código del QR)."""
     from reportlab.graphics.barcode.qr import QrCodeWidget
     from reportlab.graphics.charts.barcharts import VerticalBarChart
     from reportlab.graphics.charts.legends import Legend
@@ -180,11 +183,10 @@ def exportar_pdf():
     from reportlab.lib.units import cm
     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-    f = filtros_de_la_peticion()
-    empresa_id = empresa_actual()
+    empresa_id = empresa["id"]
     tickets = tickets_filtrados(empresa_id, f)
     r = resumen(tickets)
-    primario = colors.HexColor(session.get("empresa_color") or "#0077B6")
+    primario = colors.HexColor(empresa["color_primario"] or "#0077B6")
     estilos = getSampleStyleSheet()
     chico = estilos["BodyText"].clone("chico", fontSize=7.5, leading=9.5)
 
@@ -270,9 +272,9 @@ def exportar_pdf():
                             topMargin=1.2 * cm, bottomMargin=1.2 * cm, title="Reporte de tickets")
     titulo = estilos["Title"].clone("titulo_izq", alignment=0)
     cabecera = Table([[
-        [Paragraph(f"Reporte de tickets — {session.get('empresa_titulo') or session.get('empresa_nombre', '')}", titulo),
+        [Paragraph(f"Reporte de tickets — {empresa['titulo_sistema'] or empresa['nombre']}", titulo),
          Paragraph(texto_filtros(f), estilos["Normal"]),
-         Paragraph(f"Generado el {ahora():%d/%m/%Y %H:%M} por {session.get('nombre', '')}", estilos["Normal"])],
+         Paragraph(f"Generado el {ahora():%d/%m/%Y %H:%M} por {autor_nombre}", estilos["Normal"])],
         [qr(enlace, 2.8 * cm),
          Paragraph(f"Verifique la autenticidad escaneando el código<br/>Código: <b>{codigo}</b>", chico)],
     ]], colWidths=[None, 4.2 * cm])
@@ -280,10 +282,10 @@ def exportar_pdf():
     partes = [
         cabecera,
         Spacer(1, 0.4 * cm),
-        tabla([["Total", *ESTADOS, "Vencidos", "Cumplimiento SLA", "Tiempo prom. atención"],
+        tabla([["Total", *ESTADOS, "Vencidos", "Cumplimiento SLA", "Tiempo promedio de atención"],
                [r["total"], *r["por_estado"].values(), r["vencidos"],
                 f"{r['cumplimiento']}%" if r["cumplimiento"] is not None else "—",
-                r["tiempo_promedio"] or "—"]], [3 * cm] * 7 + [4 * cm]),
+                r["tiempo_promedio"] or SIN_TIEMPO_PROMEDIO]], [2.8 * cm] * 6 + [3.2 * cm, 5.4 * cm]),
         Spacer(1, 0.5 * cm),
         Table([[grafico_estados(12.5 * cm, 6 * cm), grafico_sla(12.5 * cm, 6 * cm)]],
               colWidths=[13.6 * cm, 13.6 * cm], style=[("VALIGN", (0, 0), (-1, -1), "TOP")]),
@@ -294,8 +296,17 @@ def exportar_pdf():
     ]
     doc.build(partes)
     pdf = salida.getvalue()
-    registrar_reporte(codigo, empresa_id, pdf, f["desde"], f["hasta"], texto_filtros(f), len(tickets),
-                      g.usuario_token["id"])
+    registrar_reporte(codigo, empresa_id, pdf, f["desde"], f["hasta"], texto_filtros(f), len(tickets), usuario_id)
+    return pdf, codigo
+
+
+@reportes_bp.get("/reportes/exportar/pdf")
+@roles_requeridos(ROL_SUPER, ROL_ADMIN, ROL_TECNICO)
+def exportar_pdf():
+    empresa = consultar("SELECT * FROM empresas WHERE id = %s", (empresa_actual(),), uno=True)
+    if not empresa:
+        return jsonify(error="Elige primero la empresa del reporte."), 400
+    pdf, _ = generar_pdf_reporte(empresa, filtros_de_la_peticion(), session.get("nombre", ""), g.usuario_token["id"])
     return send_file(io.BytesIO(pdf), as_attachment=True, download_name=f"reporte_tickets_{ahora():%Y%m%d_%H%M}.pdf",
                      mimetype="application/pdf")
 

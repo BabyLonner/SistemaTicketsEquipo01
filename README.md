@@ -52,9 +52,9 @@ lo sube y el servidor recalcula la huella; si cambió un solo byte, el resultado
 
 **Configuración**
 - `.env` → `URL_BASE=http://127.0.0.1:5000` en tu PC, `URL_BASE=https://grupo01.pythonanywhere.com` en el servidor.
-- Base de datos: si partes de cero, `python inicializar_bd.py` ya crea la tabla. Si ya tienes datos (PythonAnywhere),
-  ejecuta solo `database/migracion_modulo8.sql`, que **no borra nada**.
-- No requiere librerías nuevas: el QR lo dibuja ReportLab y el hash es `hashlib` de Python.
+- Base de datos: si partes de cero, `python inicializar_bd.py` ya crea las tablas. Si ya tienes datos (PythonAnywhere),
+  ejecuta solo `python3.13 migrar_modulo8.py`, que **no borra nada**.
+- No requiere librerías nuevas: el QR lo dibuja ReportLab, el hash es `hashlib` y el correo es `smtplib` de Python.
 
 **Cómo probarlo**
 1. Inicia sesión como administrador o técnico → **Reportes** → botón PDF.
@@ -65,6 +65,52 @@ lo sube y el servidor recalcula la huella; si cambió un solo byte, el resultado
 
 > El celular solo puede abrir el QR si `URL_BASE` es una dirección que alcance (PythonAnywhere o la IP de tu PC en la
 > misma red Wi-Fi, ej. `http://192.168.1.20:5000` con `app.run(host="0.0.0.0")`).
+
+### Envío semanal por correo (SMTP + tarea programada)
+
+**1. Cuenta de Gmail.** Usen una cuenta solo para el proyecto. Activen la verificación en 2 pasos y creen una
+contraseña de aplicación en https://myaccount.google.com/apppasswords. La contraseña normal no funciona.
+
+**2. `.env`** (en cada PC y en el servidor; nunca en GitHub):
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=cuenta.del.proyecto@gmail.com
+SMTP_PASSWORD=la-contraseña-de-aplicación
+SMTP_REMITENTE=Mesa de Ayuda TI <cuenta.del.proyecto@gmail.com>
+URL_BASE=https://grupo01.pythonanywhere.com
+```
+
+**3. Base de datos.** Si ya tienes datos: `python migrar_modulo8.py` (crea las tablas y agrega la columna `semanal`, sin
+borrar nada). Los correos que ya existían quedan con envío semanal.
+
+**4. Configuración → Reporte semanal por correo** (como administrador):
+- **Lista de destinatarios:** agrega o elimina correos. La casilla *Envío semanal* indica quién recibe el envío automático.
+- **Programación automática:** activa o desactiva el envío y elige el día. Se guarda por empresa y no hay que tocar el
+  código. El reporte cubre los 7 días anteriores al día de envío (tickets creados en ese periodo).
+- **Envío manual:** elige correos de la lista o escribe uno nuevo (se guarda sin envío semanal), elige las fechas
+  *Desde* y *Hasta* y pulsa *Enviar ahora*. Pide confirmar a quién se envía.
+- **Últimos envíos:** resultado de cada envío, manual o automático.
+
+**5. Tarea programada en PythonAnywhere.** Pestaña **Tasks** → *Scheduled tasks*, una tarea diaria a las `13:00`
+(hora UTC, son las 8:00 de Perú):
+```
+cd /home/<usuario>/<carpeta-del-proyecto> && python3.13 enviar_reportes.py
+```
+El script corre todos los días y revisa la programación de cada empresa: envía a las que les toca hoy y reintenta los
+envíos que fallaron. Nunca repite un envío que ya salió bien. La **hora** no se elige en la pantalla: la cuenta gratuita
+ejecuta la tarea una vez al día, a la hora definida en *Tasks*. El resultado se ve en el log de la tarea.
+
+**Cómo probarlo**
+| Prueba | Resultado esperado |
+|---|---|
+| Elegir tu correo, las fechas y pulsar *Enviar ahora* | Llega el PDF de esas fechas; su QR verifica como auténtico |
+| Escribir un correo nuevo en *Otro correo* | Se envía y queda en la lista sin envío semanal |
+| *Desde* posterior a *Hasta*, o *Hasta* futura | Error, no se envía nada |
+| Cambiar el día y guardar | *Próximo envío* muestra la nueva fecha y el nuevo periodo |
+| `SMTP_PASSWORD` incorrecta, reiniciar y enviar | ❌ en *Últimos envíos*: el servidor rechazó el usuario o la contraseña |
+| `python enviar_reportes.py --forzar` | Envía hoy a los correos con envío semanal de las empresas activadas |
+| `python enviar_reportes.py` dos veces el día programado | La segunda vez: "ya se envió el reporte" |
 
 ## Postman
 
@@ -84,6 +130,9 @@ empresas.py      pantalla del superusuario (empresas + su administrador)
 tickets.py       tickets, fotos, asignación, estados, historial, comentarios (Módulos 2-4)
 reportes.py      exportar Excel/PDF y configuración de SLA (Módulos 4 y 6)
 verificacion.py  verificación del PDF con QR + hash SHA-256 (Módulo 8)
+correo.py        cliente SMTP: STARTTLS, login y PDF adjunto (Módulo 8)
+envios.py        genera el reporte de un periodo, lo envía y guarda el historial (Módulo 8)
+enviar_reportes.py   script de la tarea programada semanal (Módulo 8)
 cuenta.py        Mi Perfil (cambiar contraseña) y Configuración de la empresa
 api_postman.py   rutas de la colección de Postman (con JWT)
 vistas.py        consultas que antes eran VISTAS de MySQL + SLA en Python

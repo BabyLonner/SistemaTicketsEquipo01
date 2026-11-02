@@ -27,7 +27,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 DROP VIEW IF EXISTS v_dashboard_responsables, v_dashboard_resumen, v_notificaciones_pendientes,
                     v_ticket_timeline, v_tickets, v_usuarios_sesion;
-DROP TABLE IF EXISTS push_suscripciones, login_facial_intentos, usuario_rostros, reportes_generados, mensajes_externos, ticket_tareas, notificaciones, ticket_historial, ticket_evidencias, tickets, equipos,
+DROP TABLE IF EXISTS reporte_programacion, reporte_envios, reporte_destinatarios, push_suscripciones, login_facial_intentos, usuario_rostros, reportes_generados, mensajes_externos, ticket_tareas, notificaciones, ticket_historial, ticket_evidencias, tickets, equipos,
                      tokens_revocados, users, areas, categorias, prioridades,
                      empresa_dominios, empresas;
 
@@ -382,6 +382,46 @@ CREATE TABLE reportes_generados (
   CONSTRAINT ck_reportes_hash    CHECK (hash_sha256 REGEXP '^[0-9a-f]{64}$'),
   CONSTRAINT fk_reportes_empresa FOREIGN KEY (empresa_id)   REFERENCES empresas (id) ON DELETE CASCADE,
   CONSTRAINT fk_reportes_usuario FOREIGN KEY (generado_por) REFERENCES users (id)    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Lista de correos de cada empresa; semanal = 1 recibe el envio automatico
+CREATE TABLE reporte_destinatarios (
+  id          INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  empresa_id  INT UNSIGNED  NOT NULL,
+  correo      VARCHAR(150)  NOT NULL,
+  semanal     TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT uq_destinatario  UNIQUE (empresa_id, correo),
+  CONSTRAINT fk_dest_empresa  FOREIGN KEY (empresa_id) REFERENCES empresas (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Programacion del envio automatico. Sin fila: activado y los lunes
+CREATE TABLE reporte_programacion (
+  empresa_id  INT UNSIGNED      NOT NULL,
+  activo      TINYINT(1)        NOT NULL DEFAULT 1,
+  dia_semana  TINYINT UNSIGNED  NOT NULL DEFAULT 0,               -- 0 = lunes ... 6 = domingo
+  updated_at  DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (empresa_id),
+  CONSTRAINT ck_programacion_dia CHECK (dia_semana <= 6),
+  CONSTRAINT fk_prog_empresa FOREIGN KEY (empresa_id) REFERENCES empresas (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Historial de envios: evita repetir el reporte de una semana y muestra los errores
+CREATE TABLE reporte_envios (
+  id              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  empresa_id      INT UNSIGNED  NOT NULL,
+  origen          ENUM('manual','automatico') NOT NULL,
+  periodo_desde   DATE          NOT NULL,
+  periodo_hasta   DATE          NOT NULL,
+  destinatarios   VARCHAR(1000) NOT NULL,
+  codigo_reporte  VARCHAR(32)   COLLATE utf8mb4_bin NULL,        -- el codigo del QR del PDF enviado
+  estado          ENUM('ok','error') NOT NULL,
+  detalle         VARCHAR(500)  NULL,                            -- mensaje de error o aviso
+  created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_envio_empresa FOREIGN KEY (empresa_id) REFERENCES empresas (id) ON DELETE CASCADE,
+  INDEX idx_envio_periodo (empresa_id, origen, periodo_desde, estado)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
