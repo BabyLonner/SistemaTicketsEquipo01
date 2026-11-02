@@ -21,10 +21,13 @@ const CLASE_ESTADO = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("SLA JS Cargado correctamente.");
     if (document.getElementById("tickets-tbody")) {
         configurarEventosSla();
         cargarTicketsSla();
     }
+    cargarConfiguracionCategoriasSla();
+    inicializarEventosSlaConfig();
 });
 
 function escaparHTML(texto) {
@@ -315,11 +318,14 @@ function configurarEventosSla() {
    --------------------------------------------------------- */
 function mensajeSla(texto) {
     const toast = document.getElementById('toast');
-    if (!toast) return;
-    toast.textContent = texto;
-    toast.classList.add('show');
-    clearTimeout(mensajeSla.t);
-    mensajeSla.t = setTimeout(() => toast.classList.remove('show'), 3200);
+    if (toast) {
+        toast.textContent = texto;
+        toast.classList.add('show');
+        clearTimeout(mensajeSla.t);
+        mensajeSla.t = setTimeout(() => toast.classList.remove('show'), 3200);
+    } else {
+        alert(texto); // Respaldo nativo si no existe el elemento toast
+    }
 }
 
 function mostrarConfirmacionSla(mensaje, alConfirmar) {
@@ -332,7 +338,6 @@ function mostrarConfirmacionSla(mensaje, alConfirmar) {
     const btnOk = document.getElementById('btn-confirmar-sla-ok');
     const btnCancel = document.getElementById('btn-confirmar-sla-cancel');
     
-    // Clonar para evitar eventos duplicados
     const nuevoBtnOk = btnOk.cloneNode(true);
     const nuevoBtnCancel = btnCancel.cloneNode(true);
     btnOk.parentNode.replaceChild(nuevoBtnOk, btnOk);
@@ -371,7 +376,8 @@ async function cargarConfiguracionCategoriasSla() {
 
         let html = "";
         categorias.forEach(cat => {
-            const prio = prioridadesDisponibles.find(p => p.id === cat.prioridad_id) || { nombre: 'No asignada' };
+            // CORRECCIÓN: Usar Number() para evitar fallos de coincidencia entre string y número
+            const prio = prioridadesDisponibles.find(p => Number(p.id) === Number(cat.prioridad_id)) || { nombre: 'No asignada' };
             const prioLower = (prio.nombre || '').toLowerCase();
             const prioClase = prioLower === 'alta' ? 'high' : (prioLower === 'media' ? 'medium' : 'low');
             
@@ -380,7 +386,7 @@ async function cargarConfiguracionCategoriasSla() {
             const tiempoFormateado = formatearTiempoPersonalizado(h, m);
 
             html += `
-                <tr class="fila-categoria" data-id="${cat.categoria_id}" data-nombre="${cat.categoria_nombre}" data-prioridad="${prio.id}" data-horas="${h}" data-minutos="${m}" style="border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s;">
+                <tr class="fila-categoria" data-id="${cat.categoria_id}" data-nombre="${cat.categoria_nombre}" data-prioridad="${cat.prioridad_id}" data-horas="${h}" data-minutos="${m}" style="border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s;">
                     <td style="padding: 6px 4px; font-weight: 600; color: #334155; white-space: nowrap; font-size: 0.7rem;">
                         ${escaparHTML(cat.categoria_nombre).toUpperCase()}
                     </td>
@@ -430,10 +436,11 @@ function abrirModal(modo) {
     ).join('');
 
     if (modo === 'agregar') {
-        categoriaSeleccionada = null;
+        categoriaSeleccionada = null; 
         document.querySelectorAll('.fila-categoria').forEach(f => f.style.backgroundColor = 'transparent');
         titulo.textContent = 'Agregar Categoría';
         inputNombre.value = '';
+        if (selectPrioridad.options.length > 0) selectPrioridad.selectedIndex = 0;
         inputHoras.value = '1';
         inputMinutos.value = '0';
     } else if (modo === 'editar') {
@@ -443,7 +450,7 @@ function abrirModal(modo) {
         }
         titulo.textContent = 'Editar Categoría';
         inputNombre.value = categoriaSeleccionada.nombre;
-        selectPrioridad.value = categoriaSeleccionada.prioridad;
+        selectPrioridad.value = String(categoriaSeleccionada.prioridad);
         inputHoras.value = categoriaSeleccionada.horas;
         inputMinutos.value = categoriaSeleccionada.minutos;
     }
@@ -456,11 +463,7 @@ function cerrarModal() {
     if (modal) modal.style.display = 'none';
 }
 
-// Inicialización de la configuración lateral al cargar la vista
-// Inicialización de la configuración lateral al cargar la vista
-document.addEventListener('DOMContentLoaded', () => {
-    cargarConfiguracionCategoriasSla();
-
+function inicializarEventosSlaConfig() {
     document.getElementById('btn-agregar-sla')?.addEventListener('click', () => abrirModal('agregar'));
     document.getElementById('btn-editar-sla')?.addEventListener('click', () => abrirModal('editar'));
     document.getElementById('btn-cancelar-sla')?.addEventListener('click', cerrarModal);
@@ -493,10 +496,11 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     });
 
-    // Enlace directo y seguro para el botón Guardar del Modal
     const btnGuardarModal = document.getElementById('btn-guardar-modal-sla');
     if (btnGuardarModal) {
         btnGuardarModal.addEventListener('click', async () => {
+            console.log("Botón Guardar clickeado.");
+            
             const nombreInput = document.getElementById('modal-sla-nombre');
             const prioridadSelect = document.getElementById('modal-sla-prioridad');
             const horasInput = document.getElementById('modal-sla-horas');
@@ -513,12 +517,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const payload = {
-                categoria_id: categoriaSeleccionada ? categoriaSeleccionada.id : null,
+                categoria_id: categoriaSeleccionada ? parseInt(categoriaSeleccionada.id, 10) : null,
                 nombre: nombre,
                 prioridad_id: parseInt(prioridad, 10),
                 horas: parseInt(horas, 10) || 0,
                 minutos: parseInt(minutos, 10) || 0
             };
+
+            console.log("Enviando payload:", payload);
 
             try {
                 const res = await fetch('/api/configuracion/categoria-individual', {
@@ -533,13 +539,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     mensajeSla("Configuración guardada exitosamente.");
                     cerrarModal();
                     categoriaSeleccionada = null;
-                    cargarConfiguracionCategoriasSla(); // Recarga la tabla de inmediato
+                    cargarConfiguracionCategoriasSla();
                 } else {
                     mensajeSla("Error al guardar: " + (data.error || "Desconocido"));
                 }
             } catch (e) {
+                console.error("Error en fetch:", e);
                 mensajeSla("Error de conexión con el servidor.");
             }
         });
     }
-});
+}

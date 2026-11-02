@@ -1619,7 +1619,7 @@ def guardar_categoria_individual():
     datos = request.get_json(silent=True) or {}
     empresa_id = g.usuario["empresa_id"]
     cat_id = datos.get("categoria_id")
-    nombre = datos.get("nombre")
+    nombre = (datos.get("nombre") or "").strip()
     prio_id = datos.get("prioridad_id")
     horas = datos.get("horas", 0)
     minutos = datos.get("minutos", 0)
@@ -1628,9 +1628,18 @@ def guardar_categoria_individual():
     try:
         with con.cursor() as cur:
             if not cat_id:
-                # Es una categoría nueva
-                cur.execute("INSERT INTO categorias (nombre, activo) VALUES (%s, 1)", (nombre,))
-                cat_id = cur.lastrowid
+                # Verificar si ya existe una categoría con el mismo nombre (activa o inactiva)
+                cur.execute("SELECT id FROM categorias WHERE nombre = %s", (nombre,))
+                existente = cur.fetchone()
+                
+                if existente:
+                    cat_id = existente["id"]
+                    # Asegurarse de que esté activa
+                    cur.execute("UPDATE categorias SET activo = 1 WHERE id = %s", (cat_id,))
+                else:
+                    # Crear nueva categoría si no existe
+                    cur.execute("INSERT INTO categorias (nombre, activo) VALUES (%s, 1)", (nombre,))
+                    cat_id = cur.lastrowid
             else:
                 # Editar nombre de una categoría existente
                 cur.execute("UPDATE categorias SET nombre = %s WHERE id = %s", (nombre, cat_id))
@@ -1675,31 +1684,6 @@ def eliminar_categoria_individual(cat_id):
         return jsonify(error=str(e)), 500
     finally:
         con.close()
-    if g.usuario["rol"] != ROL_ADMIN and not g.usuario.get("es_super"):
-        return jsonify(error="No autorizado"), 403
-    
-    datos = request.get_json(silent=True) or {}
-    asignaciones = datos.get("asignaciones", []) # Espera una lista de {categoria_id, prioridad_id}
-    empresa_id = g.usuario["empresa_id"]
-    
-    con = conexion()
-    try:
-        with con.cursor() as cur:
-            for item in asignaciones:
-                cat_id = int(item["categoria_id"])
-                prio_id = int(item["prioridad_id"])
-                
-                # Inserta o actualiza la prioridad asignada a esta categoría para esta empresa
-                cur.execute("""
-                    INSERT INTO empresa_categoria_prioridad (empresa_id, categoria_id, prioridad_id)
-                    VALUES (%s, %s, %s)
-                    ON DUPLICATE KEY UPDATE prioridad_id = %s
-                """, (empresa_id, cat_id, prio_id, prio_id))
-        con.commit()
-        return jsonify(mensaje="Configuración de prioridades por categoría guardada correctamente.")
-    except Exception as e:
-        con.rollback()
-        return jsonify(error=str(e)), 500
 
 
 # ==========================================
