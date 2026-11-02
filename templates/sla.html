@@ -190,51 +190,72 @@
   </section>
 
   <aside class="right-column">
-    <section class="panel config-panel">
-      <h2><span class="config-icon">⚙</span>Configuración de SLA</h2>
-      <div class="config-head"><span>Prioridad</span><span>Tiempo de respuesta</span><span>Tiempo de resolución</span>
+<section class="panel config-panel" style="padding: 12px;">
+      <h2 style="margin-bottom: 12px; font-size: 1rem;"><span class="config-icon">⚙</span>Configuración SLA</h2>
+      
+      <!-- Contenedor con position: relative y z-index: 1 para "atrapar" el scroll -->
+      <div style="position: relative; z-index: 1; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 12px; max-height: 260px; overflow-y: auto; overflow-x: auto;">
+        <table style="width: 100%; min-width: 260px; border-collapse: collapse; text-align: left; font-size: 0.7rem;">
+          <!-- z-index reducido a 2 para que no sobrepase el topbar -->
+          <thead style="background-color: #f8fafc; color: #64748b; text-transform: uppercase; position: sticky; top: 0; z-index: 2; outline: 1px solid #e2e8f0;">
+            <tr>
+              <th style="padding: 6px 4px; white-space: nowrap;">Categoría</th>
+              <th style="padding: 6px 4px; white-space: nowrap;">Prioridad</th>
+              <th style="padding: 6px 4px; white-space: nowrap;">T. Máx</th>
+            </tr>
+          </thead>
+          <tbody id="lista-config-categorias">
+            <tr>
+              <td colspan="3" style="text-align: center; padding: 15px; color: #94a3b8;">Cargando datos...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <form id="sla-config-form">
-        <div class="sla-config-row"><span class="priority-name"><i class="dot red"></i>Alta</span><select
-            aria-label="Tiempo de respuesta prioridad alta" data-priority="Alta" data-kind="response">
-            <option>15 minutos</option>
-            <option selected>30 minutos</option>
-            <option>1 hora</option>
-            <option>2 horas</option>
-          </select><select aria-label="Tiempo de resolución prioridad alta" data-priority="Alta" data-kind="resolution">
-            <option>4 horas</option>
-            <option selected>8 horas</option>
-            <option>12 horas</option>
-            <option>24 horas</option>
-          </select></div>
-        <div class="sla-config-row"><span class="priority-name"><i class="dot amber"></i>Media</span><select
-            aria-label="Tiempo de respuesta prioridad media" data-priority="Media" data-kind="response">
-            <option>30 minutos</option>
-            <option>1 hora</option>
-            <option selected>2 horas</option>
-            <option>4 horas</option>
-          </select><select aria-label="Tiempo de resolución prioridad media" data-priority="Media"
-            data-kind="resolution">
-            <option>8 horas</option>
-            <option selected>24 horas</option>
-            <option>48 horas</option>
-            <option>72 horas</option>
-          </select></div>
-        <div class="sla-config-row"><span class="priority-name"><i class="dot green"></i>Baja</span><select
-            aria-label="Tiempo de respuesta prioridad baja" data-priority="Baja" data-kind="response">
-            <option>2 horas</option>
-            <option>4 horas</option>
-            <option selected>8 horas</option>
-            <option>12 horas</option>
-          </select><select aria-label="Tiempo de resolución prioridad baja" data-priority="Baja" data-kind="resolution">
-            <option>24 horas</option>
-            <option>48 horas</option>
-            <option selected>72 horas</option>
-            <option>5 días</option>
-          </select></div>
-        <button class="btn-primary save-config" type="submit"><span>▣</span>Guardar configuración</button>
-      </form>
+
+      <div style="display: flex; gap: 6px;">
+        <button id="btn-agregar-sla" class="btn-primary" type="button" style="flex: 1; padding: 6px 2px; font-size: 0.75rem;">
+          ➕ Agregar
+        </button>
+        <button id="btn-editar-sla" class="btn-outline" type="button" style="flex: 1; padding: 6px 2px; font-size: 0.75rem; background: white;">
+          ✎ Editar
+        </button>
+        <button id="btn-eliminar-sla" type="button" style="flex: 1; padding: 6px 2px; font-size: 0.75rem; border-radius: 6px; border: 1px solid #fca5a5; background: #fef2f2; color: #ef4444;">
+          🗑 Eliminar
+        </button>
+      </div>
     </section>
+
+    <!-- Modal Emergente para Categorías SLA -->
+    <div id="modal-sla" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1050; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+      <div style="background: white; padding: 24px; border-radius: 10px; width: 360px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+        <h3 id="modal-sla-titulo" style="margin-top: 0; margin-bottom: 20px; color: #1e293b; font-size: 1.15rem; font-weight: 700;">
+          Agregar Categoría
+        </h3>
+        
+        <label style="display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #475569;">Nombre de la Categoría</label>
+        <input type="text" id="modal-sla-nombre" placeholder="Ej. Software" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none;">
+        
+        <label style="display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #475569;">Nivel de Prioridad</label>
+        <select id="modal-sla-prioridad" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; background: white;"></select>
+
+        <label style="display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #475569;">Tiempo Máx. Resolución</label>
+        <div style="display: flex; gap: 10px; margin-bottom: 24px;">
+          <div style="flex: 1; display: flex; align-items: center; gap: 6px;">
+            <input type="number" id="modal-sla-horas" min="0" step="1" value="1" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none;">
+            <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">H</span>
+          </div>
+          <div style="flex: 1; display: flex; align-items: center; gap: 6px;">
+            <input type="number" id="modal-sla-minutos" min="0" max="59" step="1" value="0" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none;">
+            <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">M</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" id="btn-cancelar-sla" class="btn-outline" style="padding: 8px 16px; border-radius: 6px; border: 1px solid #cbd5e1; color: #475569; font-weight: 600;">Cancelar</button>
+          <button type="button" id="btn-guardar-modal-sla" class="btn-primary" style="padding: 8px 16px; border-radius: 6px; font-weight: 600;">Guardar</button>
+        </div>
+      </div>
+    </div>
 
     <section class="panel compliance-panel" style="display: none;">
       <h2><span class="clock-icon">◷</span>Cumplimiento de SLA</h2>
@@ -278,4 +299,45 @@
     </section>
   </aside>
 </div>
+
+<!-- Modal Emergente para Categorías SLA -->
+<div id="modal-sla" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1050; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+  <div style="background: white; padding: 24px; border-radius: 10px; width: 360px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+    <h3 id="modal-sla-titulo" style="margin-top: 0; margin-bottom: 20px; color: #1e293b; font-size: 1.15rem; font-weight: 700;">
+      Agregar Categoría
+    </h3>
+    
+    <label style="display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #475569;">Nombre de la Categoría</label>
+    <input type="text" id="modal-sla-nombre" placeholder="Ej. Software" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none;">
+    
+    <label style="display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #475569;">Nivel de Prioridad</label>
+    <select id="modal-sla-prioridad" style="width: 100%; margin-bottom: 15px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; background: white;">
+      <!-- Se llena desde JS -->
+    </select>
+
+    <label style="display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #475569;">Tiempo Máx. Resolución (Horas)</label>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 24px;">
+      <input type="number" id="modal-sla-tiempo" min="1" step="1" value="1" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none;">
+      <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Horas</span>
+    </div>
+
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" id="btn-cancelar-sla" class="btn-outline" style="padding: 8px 16px; border-radius: 6px; border: 1px solid #cbd5e1; color: #475569; font-weight: 600;">Cancelar</button>
+      <button type="button" id="btn-guardar-modal-sla" class="btn-primary" style="padding: 8px 16px; border-radius: 6px; font-weight: 600;">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Personalizado de Confirmación (Reemplaza al alert/confirm nativo) -->
+    <div id="modal-confirm-sla" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1100; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+      <div style="background: white; padding: 24px; border-radius: 8px; width: 320px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+        <div style="font-size: 2.5rem; margin-bottom: 10px; line-height: 1;">⚠️</div>
+        <h3 style="margin-top: 0; margin-bottom: 10px; color: #1e293b; font-size: 1.1rem;">Confirmar Acción</h3>
+        <p id="texto-confirm-sla" style="font-size: 0.9rem; color: #475569; margin-bottom: 20px;"></p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button type="button" id="btn-confirmar-sla-cancel" class="btn-outline" style="padding: 6px 16px; border-radius: 6px; border: 1px solid #cbd5e1; color: #475569; font-weight: 600;">Cancelar</button>
+          <button type="button" id="btn-confirmar-sla-ok" style="padding: 6px 16px; border-radius: 6px; font-weight: 600; background: #ef4444; color: white; border: none;">Sí, eliminar</button>
+        </div>
+      </div>
+    </div>
 {% endblock %}

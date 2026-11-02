@@ -8,6 +8,10 @@ let paginaActualSla = 1;
 const pageSizeSla = 10;
 let currentSlaFilter = "all";
 
+// Variables para el panel de configuración
+let categoriaSeleccionada = null; 
+let prioridadesDisponibles = [];
+
 const CLASE_PRIORIDAD = { Alta: 'priority-high', Media: 'priority-medium', Baja: 'priority-low' };
 const CLASE_ESTADO = {
     Abierto: 'status-open',
@@ -17,9 +21,10 @@ const CLASE_ESTADO = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-    if (!document.getElementById("tickets-tbody")) return;
-    configurarEventosSla();
-    cargarTicketsSla();
+    if (document.getElementById("tickets-tbody")) {
+        configurarEventosSla();
+        cargarTicketsSla();
+    }
 });
 
 function escaparHTML(texto) {
@@ -34,8 +39,6 @@ function obtenerCodigoTicket(t) {
     return 'CPV-' + String(t.id).padStart(4, '0');
 }
 
-// MÓDULO 4: el semáforo ya viene calculado por el servidor (Python) con los plazos reales
-// de la tabla prioridades (Alta 4 h, Media 24 h, Baja 72 h). Aquí solo se traduce a la vista.
 function calcularPlazoVisualSla(t) {
     const horas = m => Math.max(0, Math.ceil((m || 0) / 60));
     switch (t.semaforo) {
@@ -73,7 +76,6 @@ async function cargarTicketsSla() {
 }
 
 function poblarFiltrosDinamicosSla(tickets) {
-    // Opciones tomadas de los tickets reales de la empresa (nada escrito a mano)
     const llenar = (id, valores, textoTodos) => {
         const select = document.getElementById(id);
         if (!select) return;
@@ -108,12 +110,7 @@ function aplicarFiltrosSla() {
 
         if (priority && row.prioridad !== priority) return false;
         if (category && row.categoria !== category) return false;
-        
-        if (technician) {
-            const tecRow = row.tecnico || 'Sin asignar';
-            if (tecRow !== technician) return false;
-        }
-
+        if (technician && (row.tecnico || 'Sin asignar') !== technician) return false;
         if (status && row.estado !== status) return false;
 
         return true;
@@ -125,31 +122,22 @@ function aplicarFiltrosSla() {
 }
 
 function actualizarMetricasSlaGlobales() {
-    let enTiempo = 0;
-    let porVencer = 0;
-    let vencidos = 0;
-    let totalResueltos = 0;
-    let resueltosATiempo = 0;
+    let enTiempo = 0, porVencer = 0, vencidos = 0, totalResueltos = 0, resueltosATiempo = 0;
 
     ticketsGlobales.forEach(t => {
         const info = calcularPlazoVisualSla(t);
-        
-        // Conteo operativo actual
         if (info.nivel === 'en-tiempo') enTiempo++;
         else if (info.nivel === 'por-vencer') porVencer++;
         else if (info.nivel === 'vencidos') vencidos++;
 
         if (t.estado === 'Resuelto' || t.estado === 'Cerrado') {
             totalResueltos++;
-            if (t.semaforo === 'cumplido') {
-                resueltosATiempo++;
-            }
+            if (t.semaforo === 'cumplido') resueltosATiempo++;
         }
     });
 
     const cumplimiento = totalResueltos > 0 ? Math.round((resueltosATiempo / totalResueltos) * 100) : 0;
 
-    // 1. Actualizar tarjetas superiores de métricas
     const metricCards = document.querySelectorAll('.stat-card, .metric-card');
     if (metricCards.length >= 4) {
         if (metricCards[0].querySelector('.stat-number, strong')) metricCards[0].querySelector('.stat-number, strong').textContent = `${cumplimiento}%`;
@@ -158,7 +146,6 @@ function actualizarMetricasSlaGlobales() {
         if (metricCards[3].querySelector('.stat-number, strong')) metricCards[3].querySelector('.stat-number, strong').textContent = vencidos;
     }
 
-    // 2. Actualizar contadores de las pestañas superiores de la tabla
     const tabs = document.querySelectorAll('.tab');
     tabs.forEach(tab => {
         const textoOriginal = tab.textContent.split('(')[0].trim();
@@ -168,7 +155,6 @@ function actualizarMetricasSlaGlobales() {
         if (textoOriginal.includes('Vencidos')) tab.innerHTML = `Vencidos <span>(${vencidos})</span>`;
     });
 
-    // 3. Actualizar dinámicamente el Gráfico de Barras ("Tickets por estado de SLA")
     actualizarGraficoBarrasSla(enTiempo, porVencer, vencidos);
 }
 
@@ -176,34 +162,17 @@ function actualizarGraficoBarrasSla(enTiempo, porVencer, vencidos) {
     const barColumns = document.querySelectorAll('.chart-bars .bar-column');
     if (barColumns.length < 3) return;
 
-    // Calculamos el valor máximo para escalar las alturas de forma proporcional (mínimo 1 para evitar división por cero)
     const valorMaximo = Math.max(enTiempo, porVencer, vencidos, 1);
-    
-    // Altura máxima en porcentaje para la barra más alta (ej. 85% para que no tope el techo)
     const escalaAltura = 85;
 
-    const datosBarras = [
-        { valor: enTiempo, index: 0 },
-        { valor: porVencer, index: 1 },
-        { valor: vencidos, index: 2 }
-    ];
-
-    datosBarras.forEach(item => {
+    [{ valor: enTiempo, index: 0 }, { valor: porVencer, index: 1 }, { valor: vencidos, index: 2 }].forEach(item => {
         const col = barColumns[item.index];
         if (!col) return;
-
         const labelNumero = col.querySelector('b');
         const barraVisual = col.querySelector('.bar');
-
-        // Actualizar el número flotante sobre la barra
-        if (labelNumero) {
-            labelNumero.textContent = item.valor;
-        }
-
-        // Calcular la altura proporcional de la barra
-        const alturaPorcentual = Math.round((item.valor / valorMaximo) * escalaAltura);
-        const alturaFinal = item.valor > 0 ? Math.max(alturaPorcentual, 8) : 4; // Mínimo 4px para que se note si es 0
-
+        if (labelNumero) labelNumero.textContent = item.valor;
+        
+        const alturaFinal = item.valor > 0 ? Math.max(Math.round((item.valor / valorMaximo) * escalaAltura), 8) : 4; 
         if (barraVisual) {
             barraVisual.style.height = `${alturaFinal}%`;
             barraVisual.style.setProperty('--bar-height', `${alturaFinal}%`);
@@ -230,9 +199,7 @@ function renderizarSla() {
         return;
     }
 
-    if (resultsLabel) {
-        resultsLabel.textContent = `Mostrando ${inicio + 1}–${Math.min(inicio + pageSizeSla, total)} de ${total} tickets`;
-    }
+    if (resultsLabel) resultsLabel.textContent = `Mostrando ${inicio + 1}–${Math.min(inicio + pageSizeSla, total)} de ${total} tickets`;
 
     tbody.innerHTML = paginaDatos.map(t => {
         const codigo = obtenerCodigoTicket(t);
@@ -247,7 +214,6 @@ function renderizarSla() {
         const prioLower = (t.prioridad || 'Media').toLowerCase();
         const prioClase = prioLower === 'alta' ? 'high' : (prioLower === 'media' ? 'medium' : 'low');
 
-        // Mapeo seguro de estado visual
         let estadoClase = 'pending';
         const estLower = (t.estado || '').toLowerCase();
         if (estLower.includes('proceso')) estadoClase = 'progress';
@@ -340,73 +306,240 @@ function configurarEventosSla() {
         document.getElementById(id)?.addEventListener('change', aplicarFiltrosSla);
     });
 
-    const globalSearch = document.getElementById('global-search');
-    globalSearch?.addEventListener('input', aplicarFiltrosSla);
+    document.getElementById('global-search')?.addEventListener('input', aplicarFiltrosSla);
 }
 
+
 /* ---------------------------------------------------------
-   Configuración de SLA: muestra los plazos reales de la BD y
-   los guarda (solo el superusuario; son iguales para todas las empresas).
+   Configuración Dinámica de Prioridades por Categoría
    --------------------------------------------------------- */
 function mensajeSla(texto) {
     const toast = document.getElementById('toast');
-    if (!toast) { alert(texto); return; }
+    if (!toast) return;
     toast.textContent = texto;
     toast.classList.add('show');
     clearTimeout(mensajeSla.t);
     mensajeSla.t = setTimeout(() => toast.classList.remove('show'), 3200);
 }
 
-function horasDeOpcion(texto) {
-    const n = parseInt(texto, 10);
-    if (isNaN(n)) return null;
-    return /d[ií]a/i.test(texto) ? n * 24 : (/min/i.test(texto) ? null : n);
+function mostrarConfirmacionSla(mensaje, alConfirmar) {
+    const modal = document.getElementById('modal-confirm-sla');
+    if (!modal) return;
+    
+    document.getElementById('texto-confirm-sla').textContent = mensaje;
+    modal.style.display = 'flex';
+    
+    const btnOk = document.getElementById('btn-confirmar-sla-ok');
+    const btnCancel = document.getElementById('btn-confirmar-sla-cancel');
+    
+    // Clonar para evitar eventos duplicados
+    const nuevoBtnOk = btnOk.cloneNode(true);
+    const nuevoBtnCancel = btnCancel.cloneNode(true);
+    btnOk.parentNode.replaceChild(nuevoBtnOk, btnOk);
+    btnCancel.parentNode.replaceChild(nuevoBtnCancel, btnCancel);
+    
+    nuevoBtnCancel.addEventListener('click', () => { modal.style.display = 'none'; });
+    nuevoBtnOk.addEventListener('click', () => {
+        modal.style.display = 'none';
+        alConfirmar();
+    });
 }
 
-async function cargarConfiguracionSla() {
-    const form = document.getElementById('sla-config-form');
-    if (!form) return;
+function formatearTiempoPersonalizado(horas, minutos) {
+    let result = [];
+    if (horas > 0) result.push(`${horas}H`);
+    if (minutos > 0) result.push(`${minutos}M`);
+    return result.length ? result.join(' ') : '0M';
+}
+
+async function cargarConfiguracionCategoriasSla() {
+    const contenedor = document.getElementById('lista-config-categorias');
+    if (!contenedor) return;
+
     try {
-        const res = await fetch('/api/sla/configuracion', { credentials: 'same-origin' });
-        if (!res.ok) return;
-        const { prioridades } = await res.json();
-        prioridades.forEach(p => {
-            const select = form.querySelector(`select[data-priority="${p.nombre}"][data-kind="resolution"]`);
-            if (!select) return;
-            let opcion = [...select.options].find(o => horasDeOpcion(o.textContent) === p.sla_horas);
-            if (!opcion) {
-                opcion = new Option(`${p.sla_horas} horas`);
-                select.add(opcion, 0);
-            }
-            select.value = opcion.value;
+        const res = await fetch('/api/configuracion/categorias-prioridad', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error("Error en red");
+        
+        const data = await res.json();
+        const categorias = data.categorias || [];
+        prioridadesDisponibles = data.prioridades || [];
+
+        if (categorias.length === 0) {
+            contenedor.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:15px; color:#94a3b8;">Sin categorías registradas</td></tr>`;
+            return;
+        }
+
+        let html = "";
+        categorias.forEach(cat => {
+            const prio = prioridadesDisponibles.find(p => p.id === cat.prioridad_id) || { nombre: 'No asignada' };
+            const prioLower = (prio.nombre || '').toLowerCase();
+            const prioClase = prioLower === 'alta' ? 'high' : (prioLower === 'media' ? 'medium' : 'low');
+            
+            const h = cat.tiempo_horas !== undefined ? cat.tiempo_horas : (prio.sla_horas || 0);
+            const m = cat.tiempo_minutos || 0;
+            const tiempoFormateado = formatearTiempoPersonalizado(h, m);
+
+            html += `
+                <tr class="fila-categoria" data-id="${cat.categoria_id}" data-nombre="${cat.categoria_nombre}" data-prioridad="${prio.id}" data-horas="${h}" data-minutos="${m}" style="border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s;">
+                    <td style="padding: 6px 4px; font-weight: 600; color: #334155; white-space: nowrap; font-size: 0.7rem;">
+                        ${escaparHTML(cat.categoria_nombre).toUpperCase()}
+                    </td>
+                    <td style="padding: 6px 4px; white-space: nowrap;">
+                        <span class="priority-badge ${prioClase}" style="font-size: 0.6rem; padding: 2px 4px; margin: 0;"><i></i>${escaparHTML(prio.nombre).toUpperCase()}</span>
+                    </td>
+                    <td style="padding: 6px 4px; font-weight: 600; color: #475569; white-space: nowrap; font-size: 0.7rem;">
+                        ${tiempoFormateado}
+                    </td>
+                </tr>
+            `;
+        });
+        contenedor.innerHTML = html;
+        
+        const filas = document.querySelectorAll('.fila-categoria');
+        filas.forEach(fila => {
+            fila.addEventListener('click', () => {
+                filas.forEach(f => f.style.backgroundColor = 'transparent');
+                fila.style.backgroundColor = '#e2e8f0'; 
+                
+                categoriaSeleccionada = {
+                    id: fila.getAttribute('data-id'),
+                    nombre: fila.getAttribute('data-nombre'),
+                    prioridad: fila.getAttribute('data-prioridad'),
+                    horas: fila.getAttribute('data-horas'),
+                    minutos: fila.getAttribute('data-minutos')
+                };
+            });
         });
     } catch (e) {
-        console.error('No se pudo leer la configuración de SLA', e);
+        contenedor.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:15px; color:#ef4444;">Error de conexión</td></tr>`;
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('sla-config-form');
-    if (!form) return;
-    cargarConfiguracionSla();
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const prioridades = {};
-        form.querySelectorAll('select[data-kind="resolution"]').forEach(s => {
-            const horas = horasDeOpcion(s.options[s.selectedIndex].textContent);
-            if (horas) prioridades[s.dataset.priority] = horas;
-        });
-        try {
-            const res = await fetch('/api/sla/configuracion', {
-                method: 'PUT', credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prioridades })
-            });
-            const datos = await res.json();
-            mensajeSla(datos.mensaje || datos.error || 'No se pudo guardar.');
-            if (res.ok) cargarTicketsSla();
-        } catch (err) {
-            mensajeSla('No se pudo conectar con el servidor.');
+function abrirModal(modo) {
+    const modal = document.getElementById('modal-sla');
+    if (!modal) return;
+
+    const titulo = document.getElementById('modal-sla-titulo');
+    const inputNombre = document.getElementById('modal-sla-nombre');
+    const selectPrioridad = document.getElementById('modal-sla-prioridad');
+    const inputHoras = document.getElementById('modal-sla-horas');
+    const inputMinutos = document.getElementById('modal-sla-minutos');
+
+    selectPrioridad.innerHTML = prioridadesDisponibles.map(p => 
+        `<option value="${p.id}">${p.nombre}</option>`
+    ).join('');
+
+    if (modo === 'agregar') {
+        categoriaSeleccionada = null;
+        document.querySelectorAll('.fila-categoria').forEach(f => f.style.backgroundColor = 'transparent');
+        titulo.textContent = 'Agregar Categoría';
+        inputNombre.value = '';
+        inputHoras.value = '1';
+        inputMinutos.value = '0';
+    } else if (modo === 'editar') {
+        if (!categoriaSeleccionada) {
+            mensajeSla("Selecciona una categoría de la tabla primero.");
+            return;
         }
+        titulo.textContent = 'Editar Categoría';
+        inputNombre.value = categoriaSeleccionada.nombre;
+        selectPrioridad.value = categoriaSeleccionada.prioridad;
+        inputHoras.value = categoriaSeleccionada.horas;
+        inputMinutos.value = categoriaSeleccionada.minutos;
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function cerrarModal() {
+    const modal = document.getElementById('modal-sla');
+    if (modal) modal.style.display = 'none';
+}
+
+// Inicialización de la configuración lateral al cargar la vista
+// Inicialización de la configuración lateral al cargar la vista
+document.addEventListener('DOMContentLoaded', () => {
+    cargarConfiguracionCategoriasSla();
+
+    document.getElementById('btn-agregar-sla')?.addEventListener('click', () => abrirModal('agregar'));
+    document.getElementById('btn-editar-sla')?.addEventListener('click', () => abrirModal('editar'));
+    document.getElementById('btn-cancelar-sla')?.addEventListener('click', cerrarModal);
+    
+    document.getElementById('btn-eliminar-sla')?.addEventListener('click', () => {
+        if (!categoriaSeleccionada) {
+            mensajeSla("Selecciona una categoría de la tabla primero.");
+            return;
+        }
+        
+        mostrarConfirmacionSla(
+            `¿Estás seguro de que deseas eliminar la categoría "${categoriaSeleccionada.nombre}"?`,
+            async () => {
+                try {
+                    const res = await fetch(`/api/configuracion/categoria-individual/${categoriaSeleccionada.id}`, {
+                        method: 'DELETE',
+                        credentials: 'same-origin'
+                    });
+                    if (res.ok) {
+                        mensajeSla(`Categoría "${categoriaSeleccionada.nombre}" eliminada.`);
+                        categoriaSeleccionada = null; 
+                        cargarConfiguracionCategoriasSla(); 
+                    } else {
+                        mensajeSla("Error al eliminar en la base de datos.");
+                    }
+                } catch (e) {
+                    mensajeSla("Error de conexión con el servidor.");
+                }
+            }
+        );
     });
+
+    // Enlace directo y seguro para el botón Guardar del Modal
+    const btnGuardarModal = document.getElementById('btn-guardar-modal-sla');
+    if (btnGuardarModal) {
+        btnGuardarModal.addEventListener('click', async () => {
+            const nombreInput = document.getElementById('modal-sla-nombre');
+            const prioridadSelect = document.getElementById('modal-sla-prioridad');
+            const horasInput = document.getElementById('modal-sla-horas');
+            const minutosInput = document.getElementById('modal-sla-minutos');
+
+            const nombre = nombreInput ? nombreInput.value.trim() : '';
+            const prioridad = prioridadSelect ? prioridadSelect.value : '';
+            const horas = horasInput ? horasInput.value : '0';
+            const minutos = minutosInput ? minutosInput.value : '0';
+            
+            if (!nombre) {
+                mensajeSla("El nombre de la categoría es obligatorio.");
+                return;
+            }
+            
+            const payload = {
+                categoria_id: categoriaSeleccionada ? categoriaSeleccionada.id : null,
+                nombre: nombre,
+                prioridad_id: parseInt(prioridad, 10),
+                horas: parseInt(horas, 10) || 0,
+                minutos: parseInt(minutos, 10) || 0
+            };
+
+            try {
+                const res = await fetch('/api/configuracion/categoria-individual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    mensajeSla("Configuración guardada exitosamente.");
+                    cerrarModal();
+                    categoriaSeleccionada = null;
+                    cargarConfiguracionCategoriasSla(); // Recarga la tabla de inmediato
+                } else {
+                    mensajeSla("Error al guardar: " + (data.error || "Desconocido"));
+                }
+            } catch (e) {
+                mensajeSla("Error de conexión con el servidor.");
+            }
+        });
+    }
 });
