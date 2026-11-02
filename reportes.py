@@ -10,6 +10,7 @@ estado (Abierto, En proceso, Resuelto, Cerrado o Vencido), tecnico, q.
 """
 import io
 from datetime import datetime, timedelta
+from xml.sax.saxutils import escape
 
 from flask import Blueprint, g, jsonify, request, send_file, session
 
@@ -272,9 +273,9 @@ def generar_pdf_reporte(empresa, f, autor_nombre, usuario_id=None):
                             topMargin=1.2 * cm, bottomMargin=1.2 * cm, title="Reporte de tickets")
     titulo = estilos["Title"].clone("titulo_izq", alignment=0)
     cabecera = Table([[
-        [Paragraph(f"Reporte de tickets — {empresa['titulo_sistema'] or empresa['nombre']}", titulo),
-         Paragraph(texto_filtros(f), estilos["Normal"]),
-         Paragraph(f"Generado el {ahora():%d/%m/%Y %H:%M} por {autor_nombre}", estilos["Normal"])],
+        [Paragraph(f"Reporte de tickets — {escape(empresa['titulo_sistema'] or empresa['nombre'])}", titulo),
+         Paragraph(escape(texto_filtros(f)), estilos["Normal"]),
+         Paragraph(f"Generado el {ahora():%d/%m/%Y %H:%M} por {escape(autor_nombre)}", estilos["Normal"])],
         [qr(enlace, 2.8 * cm),
          Paragraph(f"Verifique la autenticidad escaneando el código<br/>Código: <b>{codigo}</b>", chico)],
     ]], colWidths=[None, 4.2 * cm])
@@ -291,7 +292,8 @@ def generar_pdf_reporte(empresa, f, autor_nombre, usuario_id=None):
               colWidths=[13.6 * cm, 13.6 * cm], style=[("VALIGN", (0, 0), (-1, -1), "TOP")]),
         Spacer(1, 0.5 * cm),
         tabla([[Paragraph(f"<b>{c}</b>", chico) for c in FILAS]] +
-              [[Paragraph(str(v), chico) for v in fila(t)] for t in tickets],
+              # escape: Paragraph interpreta "<...>" como etiquetas y borraría ese texto del reporte
+              [[Paragraph(escape(str(v)), chico) for v in fila(t)] for t in tickets],
               [1.8 * cm, 5 * cm, 2.8 * cm, 2.2 * cm, 2.2 * cm, 1.5 * cm, 1.7 * cm, 2.6 * cm, 2.2 * cm, 2.2 * cm, 2.2 * cm, 2.4 * cm]),
     ]
     doc.build(partes)

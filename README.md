@@ -82,7 +82,8 @@ URL_BASE=https://grupo01.pythonanywhere.com
 ```
 
 **3. Base de datos.** Si ya tienes datos: `python migrar_modulo8.py` (crea las tablas y agrega la columna `semanal`, sin
-borrar nada). Los correos que ya existían quedan con envío semanal.
+borrar nada). Los correos que ya existían quedan con envío semanal. Ejecuta también `python migrar_empresa_categorias.py`
+(panel de SLA): sin esa tabla no se pueden crear tickets y el reporte se queda sin datos nuevos.
 
 **4. Configuración → Reporte semanal por correo** (como administrador):
 - **Lista de destinatarios:** agrega o elimina correos. La casilla *Envío semanal* indica quién recibe el envío automático.

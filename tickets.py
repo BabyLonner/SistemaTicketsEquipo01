@@ -29,10 +29,15 @@ tickets_bp = Blueprint("tickets", __name__)
 class Catalogo:
     
     @staticmethod
-    def categorias():
+    def categorias(empresa_id):
         with conexion().cursor() as cur:
             cur.execute(
-                "SELECT id, nombre FROM categorias WHERE activo = 1 ORDER BY nombre"
+                """SELECT c.id, c.nombre, ec.prioridad_id 
+                   FROM categorias c
+                   JOIN empresa_categoria_prioridad ec ON c.id = ec.categoria_id
+                   WHERE c.activo = 1 AND ec.empresa_id = %s
+                   ORDER BY c.nombre""",
+                (empresa_id,)
             )
             return cur.fetchall()
 
@@ -77,18 +82,15 @@ class Ticket:
         elif len(descripcion) > 2000:
             errores["descripcion"] = "La descripción no puede superar 2000 caracteres."
 
-        categorias = {c["id"] for c in Catalogo.categorias()}
+        categorias_db = {c["id"]: c for c in Catalogo.categorias(usuario["empresa_id"])}
         categoria_id = _entero(datos.get("categoria_id"))
-        if categoria_id not in categorias:
-            errores["categoria_id"] = "Selecciona una categoría válida."
+        prioridad_id = None
 
-        prioridades = Catalogo.prioridades()
-        valor = str(datos.get("prioridad") or datos.get("prioridad_id") or "").strip()
-        prioridad_id = next(
-            (p["id"] for p in prioridades if valor in (p["nombre"], str(p["id"]))), None
-        )
-        if prioridad_id is None:
-            errores["prioridad"] = "La prioridad debe ser Alta, Media o Baja."
+        if categoria_id not in categorias_db:
+            errores["categoria_id"] = "Selecciona una categoría válida."
+        else:
+            # Asignación automática de la prioridad configurada para esta empresa
+            prioridad_id = categorias_db[categoria_id]["prioridad_id"]
 
         area_id = _entero(datos.get("area_id")) or usuario["area_id"]
         if area_id is not None and area_id not in {
@@ -272,16 +274,16 @@ class Ticket:
             )
 
         cur.execute(
-            "SELECT id FROM prioridades WHERE nombre = %s", (datos.get("prioridad"),)
-        )
-        prio = cur.fetchone()
-        prioridad_id_nueva = prio["id"] if prio else actual["prioridad_id"]
-
-        cur.execute(
-            "SELECT id FROM categorias WHERE nombre = %s", (datos.get("categoria"),)
+            """SELECT c.id, ec.prioridad_id 
+               FROM categorias c
+               JOIN empresa_categoria_prioridad ec ON c.id = ec.categoria_id
+               WHERE c.nombre = %s AND ec.empresa_id = %s""", 
+            (datos.get("categoria"), empresa_id)
         )
         cat = cur.fetchone()
+        
         categoria_id_nueva = cat["id"] if cat else actual["categoria_id"]
+        prioridad_id_nueva = cat["prioridad_id"] if cat else actual["prioridad_id"]
 
         tecnico_id_nuevo = actual["tecnico_id"]
         tecnico_nombre = None
@@ -1016,7 +1018,7 @@ def sesion_actual():
             "area": u["area"],
         },
         catalogos={
-            "categorias": Catalogo.categorias(),
+            "categorias": Catalogo.categorias(u["empresa_id"]),
             "prioridades": Catalogo.prioridades(),
             "areas": Catalogo.areas(u["empresa_id"]),
             "max_evidencias": Evidencia.MAX_POR_TICKET,
@@ -1571,6 +1573,134 @@ def ver_evidencia(evidencia_id, tipo):
     respuesta.headers["Cache-Control"] = "private, max-age=600"
     respuesta.headers["X-Content-Type-Options"] = "nosniff"
     return respuesta
+
+@tickets_bp.get("/api/configuracion/categorias-prioridad")
+@login_requerido
+def obtener_categorias_prioridad():
+    empresa_id = g.usuario["empresa_id"]
+    con = conexion()
+    try:
+        with con.cursor() as cur:
+            # Truco seguro: crear las columnas de tiempo personalizado si aún no existen
+            try:
+                cur.execute("ALTER TABLE empresa_categoria_prioridad ADD COLUMN tiempo_horas INT DEFAULT 0")
+                cur.execute("ALTER TABLE empresa_categoria_prioridad ADD COLUMN tiempo_minutos INT DEFAULT 0")
+            except:
+                pass # Si ya existen, ignora el error
+            
+            # Obtener las categorías con sus prioridades y tiempos
+            cur.execute("""
+                SELECT c.id AS categoria_id, c.nombre AS categoria_nombre, 
+                       COALESCE(ec.prioridad_id, 2) AS prioridad_id,
+                       COALESCE(ec.tiempo_horas, 0) AS tiempo_horas,
+                       COALESCE(ec.tiempo_minutos, 0) AS tiempo_minutos
+                FROM categorias c
+                LEFT JOIN empresa_categoria_prioridad ec 
+                  ON c.id = ec.categoria_id AND ec.empresa_id = %s
+                WHERE c.activo = 1
+                ORDER BY c.nombre
+            """, (empresa_id,))
+            categorias = cur.fetchall()
+            
+            cur.execute("SELECT id, nombre, sla_horas FROM prioridades ORDER BY nivel DESC")
+            prioridades = cur.fetchall()
+            
+        return jsonify(categorias=categorias, prioridades=prioridades)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+    finally:
+        con.close()
+
+@tickets_bp.post("/api/configuracion/categoria-individual")
+@login_requerido
+def guardar_categoria_individual():
+    if g.usuario["rol"] != ROL_ADMIN and not g.usuario.get("es_super"):
+        return jsonify(error="No autorizado"), 403
+        
+    datos = request.get_json(silent=True) or {}
+    empresa_id = g.usuario["empresa_id"]
+    cat_id = datos.get("categoria_id")
+    nombre = datos.get("nombre")
+    prio_id = datos.get("prioridad_id")
+    horas = datos.get("horas", 0)
+    minutos = datos.get("minutos", 0)
+    
+    con = conexion()
+    try:
+        with con.cursor() as cur:
+            if not cat_id:
+                # Es una categoría nueva
+                cur.execute("INSERT INTO categorias (nombre, activo) VALUES (%s, 1)", (nombre,))
+                cat_id = cur.lastrowid
+            else:
+                # Editar nombre de una categoría existente
+                cur.execute("UPDATE categorias SET nombre = %s WHERE id = %s", (nombre, cat_id))
+                
+            # Guardar o actualizar la prioridad y tiempo personalizado para esta empresa
+            cur.execute("""
+                INSERT INTO empresa_categoria_prioridad 
+                (empresa_id, categoria_id, prioridad_id, tiempo_horas, tiempo_minutos)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE 
+                prioridad_id = VALUES(prioridad_id),
+                tiempo_horas = VALUES(tiempo_horas),
+                tiempo_minutos = VALUES(tiempo_minutos)
+            """, (empresa_id, cat_id, prio_id, horas, minutos))
+            
+        con.commit()
+        return jsonify(mensaje="Configuración guardada correctamente.")
+    except Exception as e:
+        con.rollback()
+        return jsonify(error=str(e)), 500
+    finally:
+        con.close()
+
+@tickets_bp.delete("/api/configuracion/categoria-individual/<int:cat_id>")
+@login_requerido
+def eliminar_categoria_individual(cat_id):
+    if g.usuario["rol"] != ROL_ADMIN and not g.usuario.get("es_super"):
+        return jsonify(error="No autorizado"), 403
+        
+    empresa_id = g.usuario["empresa_id"]
+    con = conexion()
+    try:
+        with con.cursor() as cur:
+            # Eliminamos la relación de SLA de esta empresa
+            cur.execute("DELETE FROM empresa_categoria_prioridad WHERE empresa_id = %s AND categoria_id = %s", (empresa_id, cat_id))
+            # Ocultamos la categoría de forma global
+            cur.execute("UPDATE categorias SET activo = 0 WHERE id = %s", (cat_id,))
+        con.commit()
+        return jsonify(mensaje="Categoría eliminada.")
+    except Exception as e:
+        con.rollback()
+        return jsonify(error=str(e)), 500
+    finally:
+        con.close()
+    if g.usuario["rol"] != ROL_ADMIN and not g.usuario.get("es_super"):
+        return jsonify(error="No autorizado"), 403
+    
+    datos = request.get_json(silent=True) or {}
+    asignaciones = datos.get("asignaciones", []) # Espera una lista de {categoria_id, prioridad_id}
+    empresa_id = g.usuario["empresa_id"]
+    
+    con = conexion()
+    try:
+        with con.cursor() as cur:
+            for item in asignaciones:
+                cat_id = int(item["categoria_id"])
+                prio_id = int(item["prioridad_id"])
+                
+                # Inserta o actualiza la prioridad asignada a esta categoría para esta empresa
+                cur.execute("""
+                    INSERT INTO empresa_categoria_prioridad (empresa_id, categoria_id, prioridad_id)
+                    VALUES (%s, %s, %s)
+                    ON DUPLICATE KEY UPDATE prioridad_id = %s
+                """, (empresa_id, cat_id, prio_id, prio_id))
+        con.commit()
+        return jsonify(mensaje="Configuración de prioridades por categoría guardada correctamente.")
+    except Exception as e:
+        con.rollback()
+        return jsonify(error=str(e)), 500
 
 
 # ==========================================
