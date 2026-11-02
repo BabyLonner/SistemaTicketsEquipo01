@@ -3,19 +3,29 @@ Menú del perfil (arriba a la derecha):
 
 * Mi Perfil      (/perfil)        — todos: ver sus datos y cambiar su propia contraseña.
 * Configuración  (/configuracion) — Administrador (o superusuario dentro de una empresa):
-                                    identidad de la empresa (título, colores, logo) y sus áreas.
+                                    identidad de la empresa (título, colores, logo), sus áreas y
+                                    los destinatarios y la programación del reporte (Módulo 8).
 """
+from datetime import datetime
+
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from auth import (
     ROL_ADMIN, ROL_SUPER, clave_correcta, empresa_actual, hashear, llenar_sesion, login_requerido,
     roles_requeridos, validar_clave_nueva,
 )
+from correo import smtp_configurado
 from db import conexion, consultar
-from utils import COLOR_RE, ahora, entero
+from envios import (
+    DIAS_SEMANA, destinatarios_de, enviar_reporte_empresa, periodo_de_envio, programacion_de, proximo_envio,
+    semana_anterior,
+)
+from utils import COLOR_RE, ahora, correo_valido, entero
 from vistas import V_USUARIOS_SESION
 
 cuenta_bp = Blueprint("cuenta", __name__)
+
+MAX_DESTINATARIOS = 20
 
 
 # ------------------------------------------------------------------ Mi Perfil
@@ -108,8 +118,20 @@ def configuracion():
              FROM areas a WHERE a.empresa_id = %s ORDER BY a.activo DESC, a.nombre""", (empresa["id"],))
     dominios = consultar("SELECT dominio FROM empresa_dominios WHERE empresa_id = %s", (empresa["id"],))
     form = request.form if request.method == "POST" else empresa
+    destinatarios = consultar("SELECT id, correo, semanal FROM reporte_destinatarios WHERE empresa_id = %s ORDER BY correo",
+                              (empresa["id"],))
+    envios = consultar(
+        """SELECT origen, periodo_desde, periodo_hasta, destinatarios, estado, detalle, created_at
+             FROM reporte_envios WHERE empresa_id = %s ORDER BY created_at DESC, id DESC LIMIT 10""", (empresa["id"],))
+    hoy = ahora().date()
+    programacion = programacion_de(empresa["id"])
+    proximo = proximo_envio(empresa["id"], programacion["dia_semana"], hoy)
     return render_template("configuracion.html", e=empresa, areas=areas, dominios=dominios,
-                           errores=errores, form=form), (400 if errores else 200)
+                           errores=errores, form=form, destinatarios=destinatarios, envios=envios,
+                           dias_semana=DIAS_SEMANA, programacion=programacion, proximo=proximo,
+                           periodo_proximo=periodo_de_envio(proximo), hoy=hoy,
+                           semanales=sum(1 for d in destinatarios if d["semanal"]),
+                           periodo=semana_anterior(hoy), smtp_listo=smtp_configurado()), (400 if errores else 200)
 
 
 @cuenta_bp.post("/configuracion/areas")
@@ -147,3 +169,136 @@ def cambiar_estado_area(area_id):
         con.commit()
         flash(f"Área «{area['nombre']}» {'desactivada: ya no aparece en los formularios' if area['activo'] else 'activada'}.", "ok")
     return redirect(url_for("cuenta.configuracion") + "#areas")
+
+
+# ------------------------------------------------------------------ Módulo 8: reporte semanal por correo
+@cuenta_bp.post("/configuracion/destinatarios")
+@roles_requeridos(ROL_ADMIN, ROL_SUPER)
+def agregar_destinatario():
+    empresa = _empresa_o_redirigir()
+    if not empresa:
+        return redirect(url_for("empresas.listado"))
+    correo = (request.form.get("correo") or "").strip().lower()
+    actuales = destinatarios_de(empresa["id"])
+    if not correo_valido(correo) or len(correo) > 150:
+        flash("Escribe un correo válido, por ejemplo gerencia@empresa.com.", "error")
+    elif correo in actuales:
+        flash("Ese correo ya está en la lista.", "error")
+    elif len(actuales) >= MAX_DESTINATARIOS:
+        flash(f"Se permiten hasta {MAX_DESTINATARIOS} destinatarios por empresa.", "error")
+    else:
+        con = conexion()
+        with con.cursor() as cur:
+            cur.execute("INSERT INTO reporte_destinatarios (empresa_id, correo) VALUES (%s, %s)", (empresa["id"], correo))
+        con.commit()
+        flash(f"{correo} recibirá el reporte semanal.", "ok")
+    return redirect(url_for("cuenta.configuracion") + "#reporte-semanal")
+
+
+@cuenta_bp.post("/configuracion/destinatarios/<int:destinatario_id>/eliminar")
+@roles_requeridos(ROL_ADMIN, ROL_SUPER)
+def eliminar_destinatario(destinatario_id):
+    empresa = _empresa_o_redirigir()
+    if not empresa:
+        return redirect(url_for("empresas.listado"))
+    con = conexion()
+    with con.cursor() as cur:
+        # Se filtra por empresa: nadie puede borrar los destinatarios de otra empresa
+        cur.execute("DELETE FROM reporte_destinatarios WHERE id = %s AND empresa_id = %s",
+                    (entero(destinatario_id), empresa["id"]))
+    con.commit()
+    flash("Destinatario eliminado.", "ok")
+    return redirect(url_for("cuenta.configuracion") + "#reporte-semanal")
+
+
+@cuenta_bp.post("/configuracion/destinatarios/<int:destinatario_id>/semanal")
+@roles_requeridos(ROL_ADMIN, ROL_SUPER)
+def cambiar_envio_semanal(destinatario_id):
+    empresa = _empresa_o_redirigir()
+    if not empresa:
+        return redirect(url_for("empresas.listado"))
+    semanal = 1 if request.form.get("semanal") else 0
+    con = conexion()
+    with con.cursor() as cur:
+        # Se filtra por empresa: nadie puede cambiar los destinatarios de otra empresa
+        cur.execute("UPDATE reporte_destinatarios SET semanal = %s WHERE id = %s AND empresa_id = %s",
+                    (semanal, entero(destinatario_id), empresa["id"]))
+    con.commit()
+    flash("Destinatario actualizado.", "ok")
+    return redirect(url_for("cuenta.configuracion") + "#reporte-semanal")
+
+
+@cuenta_bp.post("/configuracion/programacion")
+@roles_requeridos(ROL_ADMIN, ROL_SUPER)
+def guardar_programacion():
+    empresa = _empresa_o_redirigir()
+    if not empresa:
+        return redirect(url_for("empresas.listado"))
+    dia = (request.form.get("dia_semana") or "").strip()
+    if dia not in ("0", "1", "2", "3", "4", "5", "6"):
+        flash("Elige un día de la semana válido.", "error")
+        return redirect(url_for("cuenta.configuracion") + "#reporte-semanal")
+    dia = int(dia)
+    activo = 1 if request.form.get("activo") else 0
+    con = conexion()
+    with con.cursor() as cur:
+        cur.execute(
+            """INSERT INTO reporte_programacion (empresa_id, activo, dia_semana) VALUES (%s, %s, %s)
+               ON DUPLICATE KEY UPDATE activo = VALUES(activo), dia_semana = VALUES(dia_semana)""",
+            (empresa["id"], activo, dia))
+    con.commit()
+    flash(f"Programación guardada: cada {DIAS_SEMANA[dia].lower()}." if activo else "Envío automático desactivado.", "ok")
+    return redirect(url_for("cuenta.configuracion") + "#reporte-semanal")
+
+
+def _fecha_del_formulario(campo):
+    try:
+        return datetime.strptime(request.form.get(campo) or "", "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+@cuenta_bp.post("/configuracion/enviar-reporte")
+@roles_requeridos(ROL_ADMIN, ROL_SUPER)
+def enviar_reporte_ahora():
+    empresa = _empresa_o_redirigir()
+    if not empresa:
+        return redirect(url_for("empresas.listado"))
+    volver = redirect(url_for("cuenta.configuracion") + "#reporte-semanal")
+    desde, hasta = _fecha_del_formulario("desde"), _fecha_del_formulario("hasta")
+    if not desde or not hasta:
+        flash("Elige las fechas Desde y Hasta.", "error")
+        return volver
+    if desde > hasta:
+        flash("La fecha Desde no puede ser posterior a Hasta.", "error")
+        return volver
+    if hasta > ahora().date():
+        flash("La fecha Hasta no puede ser futura.", "error")
+        return volver
+    # Solo cuentan los correos de la lista de esta empresa, aunque el formulario traiga otros ids
+    elegidos = set(request.form.getlist("destinatarios"))
+    filas = consultar("SELECT id, correo FROM reporte_destinatarios WHERE empresa_id = %s ORDER BY correo", (empresa["id"],))
+    correos = [d["correo"] for d in filas if str(d["id"]) in elegidos]
+    otro = (request.form.get("otro_correo") or "").strip().lower()
+    if otro:
+        if not correo_valido(otro) or len(otro) > 150:
+            flash("Escribe un correo válido en «Otro correo».", "error")
+            return volver
+        if otro not in [d["correo"] for d in filas]:
+            if len(filas) >= MAX_DESTINATARIOS:
+                flash(f"Se permiten hasta {MAX_DESTINATARIOS} destinatarios por empresa.", "error")
+                return volver
+            con = conexion()
+            with con.cursor() as cur:
+                cur.execute("INSERT INTO reporte_destinatarios (empresa_id, correo, semanal) VALUES (%s, %s, 0)",
+                            (empresa["id"], otro))
+            con.commit()
+        if otro not in correos:
+            correos.append(otro)
+    if not correos:
+        flash("Elige al menos un destinatario o escribe un correo.", "error")
+        return volver
+    ok, mensaje = enviar_reporte_empresa(empresa, desde, hasta, "manual", correos, session.get("nombre", ""),
+                                         g.usuario_token["id"])
+    flash(mensaje, "ok" if ok else "error")
+    return volver
