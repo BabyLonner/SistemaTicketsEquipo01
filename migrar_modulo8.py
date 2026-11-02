@@ -5,8 +5,7 @@ NO borra datos. Se puede ejecutar varias veces sin problema (revisa antes de cre
     PythonAnywhere: python3.13 migrar_modulo8.py
 
 Hace dos cosas:
-  1. Tablas reportes_generados, reporte_destinatarios, reporte_envios y reporte_programacion
-     (ver database/migracion_modulo8.sql)
+  1. Tablas reportes_generados, reporte_destinatarios, reporte_envios y reporte_programacion (ver database/migracion_modulo8.sql)
   2. Columna reporte_destinatarios.semanal: los correos que ya existían quedan con envío semanal
 """
 import os
