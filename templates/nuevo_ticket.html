@@ -109,7 +109,6 @@
         escribas contraseñas ni datos personales.</p>
     </section>
 
-
     <form id="new-ticket-form" novalidate>
       <!-- MÓDULO 3 (avance 2): equipo afectado (se llena al escanear su QR) -->
       <section class="qr-equipo" id="qr-seccion" data-url-publica="{{ url_publica_qr }}">
@@ -138,8 +137,9 @@
           <span class="voz__icono" aria-hidden="true"><i data-lucide="mic"></i></span>
           <div class="voz__textos">
             <strong>¿Prefieres contarlo hablando?</strong>
-            <small id="voz-ayuda">Pulsa «Dictar incidencia» y explica el problema. La primera frase será el asunto y el resto la
-              descripción. También puedes decir «asunto…» y luego «descripción…».</small>
+            <small id="voz-ayuda">Pulsa «Dictar incidencia» y, en una sola grabación, di <b>«asunto»</b> y el título del
+              problema, y luego <b>«descripción»</b> y los detalles. Ej.: «Asunto: la impresora no imprime. Descripción: desde
+              la mañana los documentos se quedan en cola».</small>
           </div>
           <button type="button" class="voz__boton" id="voz-boton" aria-pressed="false">
             <i data-lucide="mic"></i> <span id="voz-boton-texto">Dictar incidencia</span>
