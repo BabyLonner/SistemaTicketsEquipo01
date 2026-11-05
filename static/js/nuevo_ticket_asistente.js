@@ -23,7 +23,7 @@
 		IA: 'Redactado con IA',
 		CACHE: 'Respuesta guardada',
 		LOCAL: 'Artículo encontrado',
-		SIN_ARTICULOS: 'Sin artículos'
+		SIN_ARTICULOS: 'Sin resultado'
 	};
 
 	let ui = {};
@@ -112,8 +112,8 @@
 		ui.resuelto.hidden = datos.modo === 'SIN_ARTICULOS';
 
 		if (datos.modo === 'SIN_ARTICULOS') {
-			ui.texto.innerHTML = '<p>No encontré artículos en la base de conocimiento que respondan a este problema. '
-				+ 'Lo mejor es que lo revise un técnico: crea el ticket y ya lo dejamos lleno con lo que escribiste.</p>';
+			ui.texto.innerHTML = '<p><strong>No se encontró un resultado.</strong> En la base de conocimiento no hay '
+				+ 'artículos sobre este problema. Para que lo revise un técnico, crea el ticket con el botón de abajo.</p>';
 		} else {
 			ui.texto.innerHTML = formatear(datos.respuesta || '');
 		}

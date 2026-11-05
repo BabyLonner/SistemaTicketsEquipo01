@@ -38,6 +38,7 @@ Variables de entorno (.env):
 Rutas:
   POST /api/kb/consultar                       el asistente responde
   POST /api/kb/consultas/<id>/resultado        RESUELTO (sin ticket) | TICKET
+  GET  /api/kb/estadisticas                    dashboard: intentos válidos y erróneos (pantalla Tickets)
 """
 import json
 import os
@@ -48,7 +49,7 @@ import urllib.request
 
 from flask import Blueprint, current_app, g, jsonify, request, session
 
-from auth import empresa_actual, login_requerido
+from auth import ROL_ADMIN, ROL_SUPER, ROL_TECNICO, empresa_actual, login_requerido, roles_requeridos
 from db import conexion, consultar
 
 kb_bp = Blueprint("kb", __name__)
@@ -66,6 +67,16 @@ muy nada ni no nos nosotros o otra otro para pero poco por porque puede pueden p
 sido sin sobre solo son su sus tambien tengo tiene todo todos tu un una uno unos usted ya yo favor ayuda
 problema problemas tengo necesito sale aparece funciona funcionan funcionando hoy ayer dia
 correctamente correcto bien mal normal normalmente igual siempre nunca todavia esta estan
+buenas buenos dias tardes noches tarde manana noche semana rato momento ahorita oficina area piso segundo
+primer tercer jefe senor senora companero companera usar uso trabajar trabajo
+""".split())
+
+# Palabras que describen un SÍNTOMA y no el TEMA del problema («no responde», «da error», «se cierra»).
+# Por sí solas no bastan para elegir un artículo: con ellas «la cámara no responde» terminaba en el de Excel.
+SINTOMAS = set("""
+responde responder respondia error errores falla fallas fallo fallando sirve abre abrir cierra cerrar cierre
+carga cargar cargan prende prender enciende encender apaga apagado apagada lento lenta lentos lentas raro rara
+extraño extraña congela congelado congelada cuelga colgado colgada traba trabado trabada imagen imagenes
 """.split())
 
 
@@ -113,7 +124,7 @@ def _palabras(texto):
     """Palabras útiles del texto: sin tildes, sin palabras vacías y con una raíz simple."""
     salida = []
     for p in re.findall(r"[a-z0-9ñ]+", _normalizar(texto)):
-        if len(p) < 3 or p in PALABRAS_VACIAS:
+        if (len(p) < 3 and p not in ("pc", "ip", "tv")) or p in PALABRAS_VACIAS:
             continue
         for fin in ("aciones", "acion", "mente", "es", "s"):   # impresoras -> impresora
             if p.endswith(fin) and len(p) - len(fin) >= 4:
@@ -163,7 +174,19 @@ def _articulos_de_empresa(empresa_id):
     )
 
 
+_SINTOMAS = None
+
+
+def _es_sintoma(palabra):
+    global _SINTOMAS
+    if _SINTOMAS is None:
+        _SINTOMAS = set(_palabras(" ".join(SINTOMAS)))
+    return palabra in _SINTOMAS
+
+
 def buscar_articulos(texto, empresa_id, limite=MAX_ARTICULOS):
+    """Artículos registrados que responden al problema. Si ninguno trata el tema, devuelve []
+    y el asistente dice que no se encontró un resultado (no se inventa una respuesta)."""
     palabras = set(_palabras(texto))
     if not palabras:
         return []
@@ -176,8 +199,18 @@ def buscar_articulos(texto, empresa_id, limite=MAX_ARTICULOS):
     candidatos = []
     for art, campos in articulos:
         puntos = _puntaje(palabras, campos, frecuencia)
-        if puntos >= PUNTAJE_MINIMO:
-            candidatos.append((puntos, art))
+        if puntos < PUNTAJE_MINIMO:
+            continue
+        principales = campos[0][0] + campos[1][0]                       # título + palabras clave
+        todas = principales + campos[2][0] + campos[3][0]               # + resumen + contenido
+        # 1) Debe coincidir en el TEMA (no solo en un síntoma) en el título o las palabras clave
+        if not any(not _es_sintoma(p) and any(_coinciden(p, o) for o in principales) for p in palabras):
+            continue
+        # 2) Al menos la mitad de las palabras importantes del problema deben estar en el artículo
+        cubiertas = sum(1 for p in palabras if any(_coinciden(p, o) for o in todas))
+        if cubiertas < len(palabras) / 2:
+            continue
+        candidatos.append((puntos, art))
     candidatos.sort(key=lambda x: x[0], reverse=True)
     return [dict(art, puntaje=round(p, 1)) for p, art in candidatos[:limite]]
 
@@ -347,3 +380,50 @@ def guardar_resultado(consulta_id):
                     (resultado, consulta_id))
     con.commit()
     return jsonify(ok=True, resultado=resultado)
+
+
+# ---------------------------------------------------------------------
+#  Dashboard: todos los intentos, cuántos fueron válidos y cuántos erróneos
+#  (se muestra en la pantalla Tickets, solo para Administrador y Técnico)
+#
+#  Cada consulta al asistente es un intento:
+#    · Válido  → el usuario pulsó «Sí, se resolvió mi problema» (no generó ticket)
+#    · Erróneo → cualquier otro caso: no se resolvió, no se encontró un resultado
+#                o el usuario no confirmó que se resolviera
+# ---------------------------------------------------------------------
+@kb_bp.get("/api/kb/estadisticas")
+@roles_requeridos(ROL_SUPER, ROL_ADMIN, ROL_TECNICO)
+def estadisticas():
+    empresa_id = empresa_actual()
+    if not empresa_id:
+        return jsonify(ok=False, error="Elige una empresa primero."), 400
+    consultas = consultar(
+        """SELECT k.id, k.pregunta, k.articulos, k.resultado, k.created_at, u.nombre AS usuario
+             FROM kb_consultas k JOIN users u ON u.id = k.usuario_id
+            WHERE k.empresa_id = %s
+            ORDER BY k.id DESC""",
+        (empresa_id,),
+    )
+    titulos = {a["id"]: a["titulo"] for a in consultar("SELECT id, titulo FROM kb_articulos")}
+
+    validos = sum(1 for c in consultas if c["resultado"] == "RESUELTO")
+    intentos = []
+    for c in consultas[:200]:
+        ids = [int(x) for x in (c["articulos"] or "").split(",") if x.isdigit()]
+        intentos.append({
+            "fecha": c["created_at"].strftime("%d/%m/%Y %H:%M"),
+            "usuario": c["usuario"],
+            "pregunta": c["pregunta"],
+            "articulo": ", ".join(titulos[i] for i in ids if i in titulos) or None,
+            "valido": c["resultado"] == "RESUELTO",
+        })
+    return jsonify(
+        ok=True,
+        resumen={
+            "intentos": len(consultas),
+            "validos": validos,
+            "erroneos": len(consultas) - validos,
+            "efectividad": round(100 * validos / len(consultas)) if consultas else None,
+        },
+        intentos=intentos,
+    )

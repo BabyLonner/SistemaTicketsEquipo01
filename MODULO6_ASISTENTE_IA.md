@@ -22,6 +22,7 @@ llamada se hace desde Flask con `urllib` de Python: **no se instala ninguna libr
 | `database/migracion_modulo6.sql` | **Nuevo.** Lo mismo que `migrar_modulo6.py`, para importarlo en phpMyAdmin. |
 | `templates/nuevo_ticket.html` | Panel del asistente antes del formulario (se agregó, no se cambió nada existente). |
 | `static/js/nuevo_ticket_asistente.js` + `static/css/nuevo_ticket_asistente.css` | **Nuevos.** Lógica y diseño del asistente en Nuevo ticket. |
+| `templates/tickets.html` + `static/js/kb_dashboard.js` + `static/css/kb_dashboard.css` | **Dashboard** en la pantalla Tickets (Administrador y Técnico): todos los intentos, cuántos fueron válidos y cuántos erróneos. |
 | `run.py` | Registra el blueprint `kb_bp` (2 líneas). |
 | `.env.example` | Variables `LLM_*`. |
 
@@ -40,10 +41,21 @@ clave y categoría). `empresa_id = NULL` = artículo general para todas las empr
 | `tokens_entrada`, `tokens_salida` | Tokens que cobró la API (para el costo) |
 | `resultado` | `PENDIENTE`, `RESUELTO` (se resolvió **sin** ticket) o `TICKET` |
 
-**Cuántas consultas se resolvieron sin generar ticket:**
+**Cuántas consultas se resolvieron sin generar ticket:** se ve en el **dashboard** de la pantalla
+**Tickets** (Administrador y Técnico). Arriba muestra todos los **intentos** (cada consulta al
+asistente) y debajo cuántos fueron:
+
+| | Cuándo |
+|---|---|
+| **Válidos** | El usuario pulsó *Sí, se resolvió mi problema* (no se creó ticket) |
+| **Erróneos** | Cualquier otro caso: no se resolvió, no se encontró un resultado o no lo confirmó |
+
+También muestra la efectividad (válidos entre todos los intentos), una barra con la proporción y
+la tabla con todos los intentos (se puede filtrar). En phpMyAdmin:
 
 ```sql
-SELECT resultado, COUNT(*) AS consultas FROM kb_consultas GROUP BY resultado;
+SELECT IF(resultado = 'RESUELTO', 'Válido', 'Erróneo') AS tipo, COUNT(*) AS intentos
+  FROM kb_consultas GROUP BY tipo;
 ```
 
 ### Rutas nuevas
@@ -52,6 +64,7 @@ SELECT resultado, COUNT(*) AS consultas FROM kb_consultas GROUP BY resultado;
 |---|---|
 | `POST /api/kb/consultar` | El asistente responde con los artículos registrados |
 | `POST /api/kb/consultas/<id>/resultado` | Guarda `RESUELTO` (sin ticket) o `TICKET` |
+| `GET /api/kb/estadisticas` | Datos del dashboard (Administrador y Técnico) |
 
 ---
 
@@ -93,7 +106,9 @@ o importar `database/migracion_modulo6.sql` en phpMyAdmin. Se puede ejecutar var
 4. Pulsa **Sí, se resolvió mi problema** → mensaje de confirmación, sin ticket.
 5. **Hacer otra consulta**: *"Outlook no me deja enviar correos"* → **No resolvió mi problema, crear ticket**.
    El formulario aparece con el asunto y la descripción ya llenos. Elige la categoría y el área, y envía.
-6. En phpMyAdmin ejecuta la consulta de la sección 1: verás 1 consulta `RESUELTO` (sin ticket) y 1 `TICKET`.
+6. Escribe *"La cámara de vigilancia no responde"*: como no hay artículos de cámaras, dice **No se encontró un resultado**.
+7. Entra como administrador (ej. `christian.llontop@agrofutura.com.pe`) a **Tickets**: el dashboard del asistente muestra
+   3 intentos: 1 válido y 2 erróneos.
 
 Si se entra a Nuevo ticket escaneando un QR (`?equipo=`) o para editar (`?editar=`), el asistente
 no aparece y se va directo al formulario. También existe el enlace *Prefiero crear el ticket directamente*.
@@ -102,7 +117,7 @@ no aparece y se va directo al formulario. También existe el enlace *Prefiero cr
 
 | Caso | Qué pasa |
 |---|---|
-| Problema sin artículos (ej. "necesito una silla nueva") | No se llama a la IA (costo 0): *"No encontré artículos…"* y botón para crear el ticket. |
+| Problema sin artículos (ej. "la cámara de vigilancia no responde", "necesito una silla nueva") | No se llama a la IA (costo 0): *"No se encontró un resultado"* y botón para crear el ticket. |
 | La IA responde que los artículos no sirven | Igual que el caso anterior (`SIN_RESPUESTA`). |
 | Clave vacía o incorrecta, sin internet, API caída | Modo local con el aviso *"El asistente de IA no respondió; te mostramos el artículo más parecido"*. |
 | Más de 15 consultas a la IA en una hora | Modo local con aviso de límite. |
@@ -131,6 +146,14 @@ parecidos (búsqueda por palabras en título, palabras clave, resumen y contenid
 - no recomienda programas, enlaces o teléfonos que no son de la empresa;
 - el usuario puede comprobar la respuesta en el artículo de origen;
 - para cambiar lo que responde el asistente basta con editar un artículo, sin reentrenar nada.
+
+**Cuándo un artículo cuenta como resultado.** La búsqueda no basta con que coincida una palabra:
+- debe coincidir el **tema** del problema (impresora, correo, VPN, Excel…) en el título o las palabras
+  clave; palabras de **síntoma** como "no responde", "da error", "se cierra" o "no prende" no bastan
+  por sí solas (antes, "la cámara no responde" terminaba en el artículo de Excel);
+- al menos la **mitad** de las palabras importantes del problema deben aparecer en el artículo.
+
+Si ningún artículo cumple, se responde **"No se encontró un resultado"** y no se llama a la IA.
 
 **Cómo se controla el costo por consulta.** Las APIs cobran por *token* (≈ ¾ de palabra) de entrada y
 de salida. En este módulo:

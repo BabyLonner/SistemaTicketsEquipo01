@@ -1,0 +1,212 @@
+/* =========================================================
+   kb_dashboard.css — MÓDULO 6: dashboard del asistente con IA
+   Las tarjetas reutilizan las clases .metrics / .metric de tickets.css
+   ========================================================= */
+
+.kbd {
+  margin: 0 0 22px;
+  padding: 18px 20px;
+  border: 1px solid var(--line, #dce9f9);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.kbd__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.kbd__cabecera h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  color: var(--ink, #102b50);
+}
+
+.kbd__cabecera h2 span { color: var(--blue, #2672c7); }
+
+.kbd__cabecera p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted, #58749a);
+}
+
+.kbd__efectividad {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #e4f7ef;
+  color: #0b8a60;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Arriba los intentos y debajo, lado a lado, válidos y erróneos */
+.kbd__metricas {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.kbd__fila {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .kbd__fila { grid-template-columns: 1fr; }
+}
+
+/* Barra con la proporción de cada grupo */
+.kbd__barra {
+  display: flex;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef1f5;
+}
+
+.kbd__barra--vacia { opacity: .5; }
+
+.kbd__tramo {
+  display: block;
+  width: 0;
+  height: 100%;
+  transition: width .4s ease;
+}
+
+.kbd__tramo--valido { background: #16a878; }
+.kbd__tramo--erroneo { background: #e94d5b; }
+
+.kbd__leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted, #58749a);
+}
+
+.kbd__leyenda li { display: flex; align-items: center; gap: 6px; }
+
+.kbd__punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+/* Dos columnas: tarjetas a la izquierda y la lista de intentos a la derecha */
+.kbd__cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.kbd__izq { min-width: 0; }
+
+.kbd__der {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kbd__lista-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.kbd__lista-cabecera h3 {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--ink, #102b50);
+}
+
+.kbd__lista-cabecera h3 span { color: var(--muted, #58749a); font-weight: 600; }
+
+.kbd__filtros {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted, #58749a);
+}
+
+.kbd__filtros select {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line, #dce9f9);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  color: var(--ink, #102b50);
+}
+
+.kbd__tabla-caja {
+  flex: 1 1 auto;
+  min-height: 220px;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid #eef3fa;
+  border-radius: 10px;
+}
+
+@media (max-width: 1100px) {
+  .kbd__cuerpo { grid-template-columns: 1fr; }
+}
+
+.kbd__tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.kbd__tabla th {
+  position: sticky;
+  top: 0;
+  padding: 9px 10px;
+  background: #f6f9fd;
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--muted, #58749a);
+  border-bottom: 1px solid var(--line, #dce9f9);
+}
+
+.kbd__tabla td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #eef3fa;
+  color: var(--ink, #102b50);
+  vertical-align: top;
+}
+
+.kbd__quien { white-space: nowrap; }
+.kbd__quien small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted, #58749a); }
+.kbd__pregunta { min-width: 160px; }
+.kbd__nada { color: var(--muted, #58749a); }
+
+.kbd__estado {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.kbd__estado--valido { background: #e4f7ef; color: #0b8a60; }
+.kbd__estado--erroneo { background: #fff0f2; color: #d63445; }
+
+/* El texto bajo cada tarjeta en gris (en tickets.css ese texto es verde porque es la tendencia) */
+.kbd .metric > small { color: var(--muted, #58749a); font-weight: 600; }

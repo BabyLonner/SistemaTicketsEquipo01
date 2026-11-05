@@ -7,6 +7,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
 <script src="{{ url_for('static', filename='js/tickets.js') }}" defer></script>
+{% if session.rol in ['Administrador', 'Técnico', 'Superusuario'] %}
+<!-- MÓDULO 6: dashboard de las consultas al asistente con IA -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kb_dashboard.css') }}">
+<script src="{{ url_for('static', filename='js/kb_dashboard.js') }}" defer></script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -49,6 +54,83 @@
   <strong>1 ticket venció su plazo y 2 están por vencer.</strong>
   <button type="button" id="show-urgent" class="alert-link">Ver urgentes <span>→</span></button>
 </div>
+
+{% if session.rol in ['Administrador', 'Técnico', 'Superusuario'] %}
+<!-- MÓDULO 6: todos los intentos al asistente con IA, cuántos fueron válidos y cuántos erróneos -->
+<section class="kbd" id="kbd" aria-labelledby="kbd-titulo">
+  <div class="kbd__cabecera">
+    <div>
+      <h2 id="kbd-titulo"><span aria-hidden="true">✦</span> Asistente con IA: consultas antes de crear un ticket</h2>
+      <p>Cada consulta que un usuario hace al asistente en «Nuevo ticket» cuenta como un intento.</p>
+    </div>
+    <span class="kbd__efectividad" id="kbd-efectividad" title="Válidos entre todos los intentos"></span>
+  </div>
+
+  <div class="kbd__cuerpo">
+    <div class="kbd__izq">
+      <div class="kbd__metricas">
+        <article class="metric metric-blue kbd__intentos">
+          <span class="metric-icon">✦</span>
+          <div class="metric-data"><strong id="kbd-intentos">0</strong><span>Intentos</span></div>
+          <small>Consultas al asistente</small>
+        </article>
+        <div class="kbd__fila">
+          <article class="metric metric-green">
+            <span class="metric-icon">✓</span>
+            <div class="metric-data"><strong id="kbd-validos">0</strong><span>Válidos</span></div>
+            <small>Se resolvieron sin crear ticket</small>
+          </article>
+          <article class="metric metric-red">
+            <span class="metric-icon">✕</span>
+            <div class="metric-data"><strong id="kbd-erroneos">0</strong><span>Erróneos</span></div>
+            <small>No se resolvió o no se encontró un resultado</small>
+          </article>
+        </div>
+      </div>
+
+      <div class="kbd__barra" id="kbd-barra" aria-hidden="true">
+        <span class="kbd__tramo kbd__tramo--valido" id="kbd-tramo-valido"></span>
+        <span class="kbd__tramo kbd__tramo--erroneo" id="kbd-tramo-erroneo"></span>
+      </div>
+      <ul class="kbd__leyenda">
+        <li><i class="kbd__punto kbd__tramo--valido"></i> Válidos</li>
+        <li><i class="kbd__punto kbd__tramo--erroneo"></i> Erróneos</li>
+      </ul>
+    </div>
+
+    <div class="kbd__der">
+      <div class="kbd__lista-cabecera">
+        <h3>Todos los intentos <span id="kbd-cuenta"></span></h3>
+        <label class="kbd__filtros">
+          <span>Mostrar</span>
+          <select id="kbd-filtro">
+            <option value="">Todos</option>
+            <option value="VALIDO">Válidos</option>
+            <option value="ERRONEO">Erróneos</option>
+          </select>
+        </label>
+      </div>
+      <div class="kbd__tabla-caja">
+        <table class="kbd__tabla">
+          <thead>
+            <tr>
+              <th>Usuario y fecha</th>
+              <th>Consulta</th>
+              <th>Artículo usado</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody id="kbd-intentos-lista">
+            <tr>
+              <td colspan="4">Cargando…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
 
 <form class="filters-panel" id="ticket-filters">
   <label class="search-filter">
