@@ -41,6 +41,7 @@ from equipos import equipos_bp
 from facial import facial_bp
 from reportes import reportes_bp
 from sla_push import sla_push_bp
+from tareas import tareas_bp
 from tickets import Ticket, puede_ver, tickets_bp
 from usuarios import usuarios_bp
 from utils import ordenar_por_urgencia
@@ -70,6 +71,7 @@ for bp in (
     facial_bp,
     sla_push_bp,
     kb_bp,
+    tareas_bp,
 ):
     app.register_blueprint(bp)
     

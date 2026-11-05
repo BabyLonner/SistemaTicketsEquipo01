@@ -35,4 +35,7 @@ SMTP_USER = os.getenv("SMTP_USER", "").strip()
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").replace(" ", "")
 SMTP_REMITENTE = os.getenv("SMTP_REMITENTE", "").strip() or SMTP_USER
 
+# Módulo 8: clave que debe enviar cron-job.org para ejecutar el envío programado
+CRON_TOKEN = os.getenv("CRON_TOKEN", "").strip()
+
 VERSION = "2.1.0"

@@ -104,3 +104,34 @@ def enviar_reporte_empresa(empresa, desde, hasta, origen, correos, autor="Envío
             (empresa["id"], origen, desde, hasta, ", ".join(correos)[:1000], codigo, estado, detalle))
     con.commit()
     return estado == "ok", mensaje
+
+def procesar_envios_programados(hoy, forzar=False):
+    """Revisa la programación de cada empresa. Devuelve el resultado de cada una y cuántos envíos fallaron."""
+    resultados, errores = [], 0
+    for empresa in consultar("SELECT * FROM empresas WHERE activo = 1 ORDER BY id"):
+        nombre = empresa["nombre"]
+        programacion = programacion_de(empresa["id"])
+        if not programacion["activo"]:
+            resultados.append(f"{nombre}: envío automático desactivado.")
+            continue
+        correos = destinatarios_semanales(empresa["id"])
+        if not correos:
+            resultados.append(f"{nombre}: sin destinatarios con envío semanal.")
+            continue
+        fecha_envio = ultimo_dia_programado(programacion["dia_semana"], hoy)
+        desde, hasta = periodo_de_envio(fecha_envio)
+        if not forzar:
+            if ya_enviado(empresa["id"], desde):
+                resultados.append(f"{nombre}: ya se envió el reporte del {desde:%d/%m} al {hasta:%d/%m}.")
+                continue
+            if fecha_envio != hoy and not fallo_el_envio(empresa["id"], desde):
+                resultados.append(f"{nombre}: hoy no le toca y no hay envíos pendientes.")
+                continue
+        try:
+            ok, mensaje = enviar_reporte_empresa(empresa, desde, hasta, "automatico", correos)
+        except Exception as e:  # noqa: BLE001  una empresa con problemas no detiene a las demás
+            ok, mensaje = False, f"Error inesperado: {e}"
+        resultados.append(f"{nombre} ({desde:%d/%m} al {hasta:%d/%m}): {'OK' if ok else 'NO ENVIADO'} - {mensaje}")
+        errores += 0 if ok else 1
+    return resultados, errores
+
