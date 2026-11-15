@@ -1,4 +1,3 @@
-
 from flask import (
     Flask,
     abort,
@@ -13,6 +12,7 @@ from flask import (
     url_for,
 )
 from jinja2 import TemplateNotFound
+from notificaciones import notificaciones_bp
 
 import config
 from api_postman import api_postman_bp
@@ -35,10 +35,11 @@ from avisos_whatsapp import avisos_bp
 from base_conocimiento import kb_bp
 from chat_realtime import chat_rt_bp
 from cuenta import cuenta_bp
-from db import cerrar_conexion, conexion, consultar
+from db import cerrar_conexion, consultar
 from empresas import empresas_bp
 from equipos import equipos_bp
 from facial import facial_bp
+from notificaciones import notificaciones_bp
 from reportes import reportes_bp
 from sla_push import sla_push_bp
 from tareas import tareas_bp
@@ -72,10 +73,10 @@ for bp in (
     sla_push_bp,
     kb_bp,
     tareas_bp,
+    chat_rt_bp,
+    notificaciones_bp,
 ):
     app.register_blueprint(bp)
-    
-app.register_blueprint(chat_rt_bp)
 
 app.before_request(validar_peticion)
 app.teardown_appcontext(cerrar_conexion)
@@ -314,6 +315,7 @@ def api_marcar_todas_leidas():
     con.commit()
     return jsonify({"ok": True, "marcadas": total})
 
+
 def _comparar(sql, params):
     """sql debe devolver columnas mes_actual_<x> y mes_anterior_<x>."""
     fila = consultar(sql, params, uno=True) or {}
@@ -473,9 +475,7 @@ def sla():
     tickets = consultar(
         f"SELECT * FROM {V_TICKETS} AS v WHERE v.empresa_id = %s", (empresa_actual(),)
     )
-    tickets = ordenar_por_urgencia(
-        aplicar_sla_lista(tickets)
-    )
+    tickets = ordenar_por_urgencia(aplicar_sla_lista(tickets))
     prioridades = consultar(
         "SELECT id, nombre, sla_horas FROM prioridades ORDER BY nivel DESC"
     )
@@ -538,6 +538,7 @@ def reportes():
         tecnicos=tecnicos,
     )
 
+
 @app.route("/<pagina>")
 @app.route("/<pagina>.html")
 def pantalla(pagina):
@@ -545,17 +546,17 @@ def pantalla(pagina):
         return redirect(url_for("cerrar_sesion"))
     if pagina in ("dashboard", "reportes", "sla"):
         return redirect(url_for(pagina))
-    
+
     error = pagina_permitida(pagina)
     if error:
         return error
 
-    if pagina == "detalle_ticket":        
+    if pagina == "detalle_ticket":
         ticket_id = request.args.get("id", type=int)
         emp_id = empresa_actual()
-        
+
         ticket = Ticket.obtener(ticket_id, emp_id) if (ticket_id and emp_id) else None
-            
+
         usuario_eval = dict(g.usuario_token) if g.get("usuario_token") else {}
         if es_super():
             usuario_eval["rol"] = "Administrador"
@@ -564,7 +565,7 @@ def pantalla(pagina):
             return render_template(
                 "error.html",
                 codigo=403,
-                mensaje="Usted no tiene acceso a este ticket o no existe en esta empresa."
+                mensaje="Usted no tiene acceso a este ticket o no existe en esta empresa.",
             ), 403
 
     try:
@@ -598,6 +599,7 @@ def no_encontrado(_e):
 @app.errorhandler(500)
 def error_interno(_e):
     return _error(500, "Ocurrió un error inesperado. Inténtalo de nuevo en un momento.")
+
 
 if __name__ == "__main__":
     app.run(debug=True)

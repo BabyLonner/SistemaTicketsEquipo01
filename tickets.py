@@ -3,7 +3,6 @@ import os
 import shutil
 import uuid
 import warnings
-from datetime import datetime
 from functools import wraps
 
 import pymysql
@@ -20,14 +19,13 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from auth import ROL_SUPER, empresa_actual
-from chat_realtime import emitir_comentario_ticket
 from db import conexion
 from vistas import V_TICKET_TIMELINE, V_TICKETS, aplicar_sla, aplicar_sla_lista
 
 tickets_bp = Blueprint("tickets", __name__)
 
+
 class Catalogo:
-    
     @staticmethod
     def categorias(empresa_id):
         with conexion().cursor() as cur:
@@ -37,7 +35,7 @@ class Catalogo:
                    JOIN empresa_categoria_prioridad ec ON c.id = ec.categoria_id
                    WHERE c.activo = 1 AND ec.empresa_id = %s
                    ORDER BY c.nombre""",
-                (empresa_id,)
+                (empresa_id,),
             )
             return cur.fetchall()
 
@@ -113,12 +111,14 @@ class Ticket:
                 """SELECT tiempo_horas, tiempo_minutos 
                    FROM empresa_categoria_prioridad 
                    WHERE empresa_id = %s AND categoria_id = %s""",
-                (empresa_id, categoria_id)
+                (empresa_id, categoria_id),
             )
             personalizado = cur.fetchone()
-            if personalizado and (personalizado["tiempo_horas"] > 0 or personalizado["tiempo_minutos"] > 0):
+            if personalizado and (
+                personalizado["tiempo_horas"] > 0 or personalizado["tiempo_minutos"] > 0
+            ):
                 return personalizado["tiempo_horas"], personalizado["tiempo_minutos"]
-        
+
         cur.execute("SELECT sla_horas FROM prioridades WHERE id = %s", (prioridad_id,))
         fila = cur.fetchone()
         if fila is None:
@@ -149,7 +149,9 @@ class Ticket:
             "UPDATE empresas SET ultimo_ticket = %s WHERE id = %s", (numero, empresa_id)
         )
 
-        horas, minutos = Ticket._horas_sla(cur, datos["prioridad_id"], datos["categoria_id"], empresa_id)
+        horas, minutos = Ticket._horas_sla(
+            cur, datos["prioridad_id"], datos["categoria_id"], empresa_id
+        )
 
         cur.execute(
             """INSERT INTO tickets
@@ -227,7 +229,7 @@ class Ticket:
                 "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR + INTERVAL %s MINUTE WHERE id = %s",
                 (horas, minutos, ticket_id),
             )
-            
+
     TRANSICIONES = {  # noqa: RUF012
         "Abierto": ("En proceso",),
         "En proceso": ("Resuelto",),
@@ -288,11 +290,11 @@ class Ticket:
             """SELECT c.id, ec.prioridad_id 
                FROM categorias c
                JOIN empresa_categoria_prioridad ec ON c.id = ec.categoria_id
-               WHERE c.nombre = %s AND ec.empresa_id = %s""", 
-            (datos.get("categoria"), empresa_id)
+               WHERE c.nombre = %s AND ec.empresa_id = %s""",
+            (datos.get("categoria"), empresa_id),
         )
         cat = cur.fetchone()
-        
+
         categoria_id_nueva = cat["id"] if cat else actual["categoria_id"]
         prioridad_id_nueva = cat["prioridad_id"] if cat else actual["prioridad_id"]
 
@@ -315,7 +317,10 @@ class Ticket:
                     raise ErrorRegla(
                         "El técnico elegido no existe o no está activo en tu empresa."
                     )
-                if tec["id"] != actual["tecnico_id"] and not (tec["telefono"] or "").strip():
+                if (
+                    tec["id"] != actual["tecnico_id"]
+                    and not (tec["telefono"] or "").strip()
+                ):
                     aviso = ErrorRegla(
                         f"No se asignó el ticket: {tec['nombre']} no ha registrado su número de "
                         "WhatsApp en «Mi Perfil», por eso no recibiría el aviso. Pídele que lo "
@@ -417,7 +422,9 @@ class Ticket:
                 (ticket_id, usuario["id"], ". ".join(partes) + "."),
             )
         if cambia_prioridad or cambia_categoria:
-            horas, minutos = Ticket._horas_sla(cur, prioridad_id_nueva, categoria_id_nueva, empresa_id)
+            horas, minutos = Ticket._horas_sla(
+                cur, prioridad_id_nueva, categoria_id_nueva, empresa_id
+            )
             cur.execute(
                 "UPDATE tickets SET fecha_limite = created_at + INTERVAL %s HOUR + INTERVAL %s MINUTE WHERE id = %s",
                 (horas, minutos, ticket_id),
@@ -642,6 +649,7 @@ def _entero(valor):
     except (TypeError, ValueError):
         return None
 
+
 EXTENSIONES_PERMITIDAS = {"jpg", "jpeg", "png", "webp"}
 MIME_PERMITIDOS = {"image/jpeg", "image/png", "image/webp"}
 TAMANO_MAXIMO = 5 * 1024 * 1024
@@ -797,6 +805,7 @@ def borrar_carpeta_ticket(empresa_codigo, ticket_id):
         ignore_errors=True,
     )
 
+
 ROL_ADMIN = "Administrador"
 ROL_TECNICO = "Técnico"
 ROL_SOLICITANTE = "Solicitante"
@@ -849,11 +858,34 @@ def puede_ver(usuario, ticket):
         return ticket["tecnico_id"] is None or ticket["tecnico_id"] == usuario["id"]
     return False
 
+
+def puede_chatear(usuario, ticket):
+    if usuario["rol"] == ROL_ADMIN:
+        return True
+    return usuario["id"] in (ticket["solicitante_id"], ticket["tecnico_id"])
+
+
+def ticket_de_chat(ticket_id):
+    ticket, error = _ticket_o_error(ticket_id)
+    if error:
+        return None, error
+    if not puede_chatear(g.usuario, ticket):
+        return None, (
+            jsonify(
+                error="La conversación es solo del solicitante, el técnico asignado y el administrador."
+            ),
+            403,
+        )
+    return ticket, None
+
+
 def _ticket_o_error(ticket_id):
     ticket = Ticket.obtener(ticket_id, g.usuario["empresa_id"])
     if ticket is None or not puede_ver(g.usuario, ticket):
         return None, (
-            jsonify(error="Usted no tiene acceso a este ticket o no existe en esta empresa."),
+            jsonify(
+                error="Usted no tiene acceso a este ticket o no existe en esta empresa."
+            ),
             403,
         )
     return ticket, None
@@ -888,6 +920,7 @@ def puede_eliminar(usuario, ticket):
         and ticket["estado"] == "Abierto"
         and ticket["tecnico_id"] is None
     )
+
 
 @tickets_bp.record_once
 def _configurar(state):
@@ -992,6 +1025,8 @@ def _ticket_detalle(t, usuario):
         "editar": puede_editar(usuario, t),
         "adjuntar": puede_adjuntar(usuario, t),
         "eliminar": puede_eliminar(usuario, t),
+        "ver_chat": puede_chatear(usuario, t),
+        "escribir_chat": puede_chatear(usuario, t) and t["estado"] != "Cerrado",
     }
     return datos
 
@@ -1282,6 +1317,9 @@ def obtener_historial_ticket(ticket_id):
     ticket, error = _ticket_o_error(ticket_id)
     if error:
         return error
+    filtro_chat = (
+        "" if puede_chatear(g.usuario, ticket) else "AND h.tipo <> 'COMENTARIO'"
+    )
 
     con = conexion()
     with con.cursor() as cur:
@@ -1289,7 +1327,7 @@ def obtener_historial_ticket(ticket_id):
             f"""SELECT id, tipo, estado_anterior, estado_nuevo, tecnico_anterior,
                       tecnico_nuevo, comentario, usuario, usuario_rol, created_at, minutos_desde
                  FROM {V_TICKET_TIMELINE} AS h
-                WHERE h.ticket_id = %s
+                WHERE h.ticket_id = %s {filtro_chat}
                 ORDER BY created_at ASC""",
             (ticket_id,),
         )
@@ -1304,7 +1342,7 @@ def obtener_historial_ticket(ticket_id):
 @tickets_bp.post("/api/tickets/<int:ticket_id>/comentarios")
 @login_requerido
 def comentar_ticket(ticket_id):
-    ticket, error = _ticket_o_error(ticket_id)
+    ticket, error = ticket_de_chat(ticket_id)
     if error:
         return error
     datos = request.get_json(silent=True) or request.form
@@ -1350,22 +1388,6 @@ def comentar_ticket(ticket_id):
     except Exception:
         con.rollback()
         raise
-
-    try:
-        emitir_comentario_ticket(
-            ticket_id,
-            {
-                "ticket_id": ticket_id,
-                "tipo": "COMENTARIO",
-                "usuario": g.usuario["nombre"],
-                "usuario_rol": g.usuario["rol"],
-                "comentario": comentario,
-                "created_at": datetime.now().isoformat(timespec="seconds"),
-            },
-            destinatarios_ids=list(destinos_finales),
-        )
-    except Exception as e:
-        current_app.logger.warning(f"Error al emitir comentario SSE: {e}")
 
     return jsonify(mensaje="Comentario agregado."), 201
 
@@ -1583,6 +1605,7 @@ def ver_evidencia(evidencia_id, tipo):
     respuesta.headers["X-Content-Type-Options"] = "nosniff"
     return respuesta
 
+
 @tickets_bp.get("/api/configuracion/categorias-prioridad")
 @login_requerido
 def obtener_categorias_prioridad():
@@ -1591,12 +1614,17 @@ def obtener_categorias_prioridad():
     try:
         with con.cursor() as cur:
             try:
-                cur.execute("ALTER TABLE empresa_categoria_prioridad ADD COLUMN tiempo_horas INT DEFAULT 0")
-                cur.execute("ALTER TABLE empresa_categoria_prioridad ADD COLUMN tiempo_minutos INT DEFAULT 0")
+                cur.execute(
+                    "ALTER TABLE empresa_categoria_prioridad ADD COLUMN tiempo_horas INT DEFAULT 0"
+                )
+                cur.execute(
+                    "ALTER TABLE empresa_categoria_prioridad ADD COLUMN tiempo_minutos INT DEFAULT 0"
+                )
             except:
                 pass
-            
-            cur.execute("""
+
+            cur.execute(
+                """
                 SELECT c.id AS categoria_id, c.nombre AS categoria_nombre, 
                        COALESCE(ec.prioridad_id, 2) AS prioridad_id,
                        COALESCE(ec.tiempo_horas, 0) AS tiempo_horas,
@@ -1606,24 +1634,29 @@ def obtener_categorias_prioridad():
                   ON c.id = ec.categoria_id AND ec.empresa_id = %s
                 WHERE c.activo = 1
                 ORDER BY c.nombre
-            """, (empresa_id,))
+            """,
+                (empresa_id,),
+            )
             categorias = cur.fetchall()
-            
-            cur.execute("SELECT id, nombre, sla_horas FROM prioridades ORDER BY nivel DESC")
+
+            cur.execute(
+                "SELECT id, nombre, sla_horas FROM prioridades ORDER BY nivel DESC"
+            )
             prioridades = cur.fetchall()
-            
+
         return jsonify(categorias=categorias, prioridades=prioridades)
     except Exception as e:
         return jsonify(error=str(e)), 500
     finally:
         con.close()
 
+
 @tickets_bp.post("/api/configuracion/categoria-individual")
 @login_requerido
 def guardar_categoria_individual():
     if g.usuario["rol"] != ROL_ADMIN and not g.usuario.get("es_super"):
         return jsonify(error="No autorizado"), 403
-        
+
     datos = request.get_json(silent=True) or {}
     empresa_id = g.usuario["empresa_id"]
     cat_id = datos.get("categoria_id")
@@ -1631,24 +1664,32 @@ def guardar_categoria_individual():
     prio_id = datos.get("prioridad_id")
     horas = datos.get("horas", 0)
     minutos = datos.get("minutos", 0)
-    
+
     con = conexion()
     try:
         with con.cursor() as cur:
             if not cat_id:
                 cur.execute("SELECT id FROM categorias WHERE nombre = %s", (nombre,))
                 existente = cur.fetchone()
-                
+
                 if existente:
                     cat_id = existente["id"]
-                    cur.execute("UPDATE categorias SET activo = 1 WHERE id = %s", (cat_id,))
+                    cur.execute(
+                        "UPDATE categorias SET activo = 1 WHERE id = %s", (cat_id,)
+                    )
                 else:
-                    cur.execute("INSERT INTO categorias (nombre, activo) VALUES (%s, 1)", (nombre,))
+                    cur.execute(
+                        "INSERT INTO categorias (nombre, activo) VALUES (%s, 1)",
+                        (nombre,),
+                    )
                     cat_id = cur.lastrowid
             else:
-                cur.execute("UPDATE categorias SET nombre = %s WHERE id = %s", (nombre, cat_id))
-                
-            cur.execute("""
+                cur.execute(
+                    "UPDATE categorias SET nombre = %s WHERE id = %s", (nombre, cat_id)
+                )
+
+            cur.execute(
+                """
                 INSERT INTO empresa_categoria_prioridad 
                 (empresa_id, categoria_id, prioridad_id, tiempo_horas, tiempo_minutos)
                 VALUES (%s, %s, %s, %s, %s)
@@ -1656,8 +1697,10 @@ def guardar_categoria_individual():
                 prioridad_id = VALUES(prioridad_id),
                 tiempo_horas = VALUES(tiempo_horas),
                 tiempo_minutos = VALUES(tiempo_minutos)
-            """, (empresa_id, cat_id, prio_id, horas, minutos))
-            
+            """,
+                (empresa_id, cat_id, prio_id, horas, minutos),
+            )
+
         con.commit()
         return jsonify(mensaje="Configuración guardada correctamente.")
     except Exception as e:
@@ -1666,17 +1709,21 @@ def guardar_categoria_individual():
     finally:
         con.close()
 
+
 @tickets_bp.delete("/api/configuracion/categoria-individual/<int:cat_id>")
 @login_requerido
 def eliminar_categoria_individual(cat_id):
     if g.usuario["rol"] != ROL_ADMIN and not g.usuario.get("es_super"):
         return jsonify(error="No autorizado"), 403
-        
+
     empresa_id = g.usuario["empresa_id"]
     con = conexion()
     try:
         with con.cursor() as cur:
-            cur.execute("DELETE FROM empresa_categoria_prioridad WHERE empresa_id = %s AND categoria_id = %s", (empresa_id, cat_id))
+            cur.execute(
+                "DELETE FROM empresa_categoria_prioridad WHERE empresa_id = %s AND categoria_id = %s",
+                (empresa_id, cat_id),
+            )
             cur.execute("UPDATE categorias SET activo = 0 WHERE id = %s", (cat_id,))
         con.commit()
         return jsonify(mensaje="Categoría eliminada.")
