@@ -12,7 +12,6 @@ from flask import (
     url_for,
 )
 from jinja2 import TemplateNotFound
-from notificaciones import notificaciones_bp
 
 import config
 from api_postman import api_postman_bp
