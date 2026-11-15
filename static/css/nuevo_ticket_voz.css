@@ -1,5 +1,7 @@
 /* =========================================================
-   nuevo_ticket_voz.css — MÓDULO 2 (avance 2): ticket por voz
+   MÓDULO 2 — CREACIÓN DE TICKETS POR VOZ (avance 2)
+   nuevo_ticket_voz.css: panel de dictado, indicador «grabando»,
+   micrófonos de cada campo y avisos
    Usa los colores de global.css (--navy, --blue, --red, etc.)
    ========================================================= */
 
@@ -225,9 +227,6 @@
   color: #fff;
   animation: voz-pulso 1.1s ease-in-out infinite;
 }
-
-.voz[data-estado="no-soportado"] ~ .form-field .voz-campo,
-.voz[data-estado="inseguro"] ~ .form-field .voz-campo { display: none; }
 
 /* Resalta el campo que se llenó con la voz */
 .voz-dictado {

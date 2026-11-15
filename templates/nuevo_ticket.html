@@ -12,12 +12,14 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/qr_equipo.css') }}">
 <script src="{{ url_for('static', filename='vendor/html5-qrcode.min.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/nuevo_ticket_qr.js') }}" defer></script>
-<!-- MÓDULO 2 (avance 2): crear el ticket dictando por voz (Web Speech API) -->
+<!-- ===== INICIO MÓDULO 2 (avance 2): crear el ticket dictando por voz (Web Speech API) ===== -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nuevo_ticket_voz.css') }}">
 <script src="{{ url_for('static', filename='js/nuevo_ticket_voz.js') }}" defer></script>
-<!-- MÓDULO 6: asistente con IA que sugiere soluciones antes de crear el ticket -->
+<!-- ===== FIN MÓDULO 2 ===== -->
+<!-- ===== INICIO MÓDULO 6: asistente con IA que sugiere soluciones antes de crear el ticket ===== -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/nuevo_ticket_asistente.css') }}">
 <script src="{{ url_for('static', filename='js/nuevo_ticket_asistente.js') }}" defer></script>
+<!-- ===== FIN MÓDULO 6 ===== -->
 {% endblock %}
 
 {% block content %}
@@ -44,7 +46,7 @@
       <span class="m2-solicitante__candado" title="Se toma de tu sesión; no se puede cambiar">🔒</span>
     </div>
 
-    <!-- MÓDULO 6: asistente con IA. Aparece ANTES del formulario; si no resuelve, se pasa al ticket -->
+    <!-- ===== INICIO MÓDULO 6: asistente con IA. Aparece ANTES del formulario; si no resuelve, se pasa al ticket ===== -->
     <section class="kb-asistente" id="kb-asistente" aria-labelledby="kb-titulo" hidden>
       <div class="kb-cabecera">
         <span class="kb-cabecera__icono" aria-hidden="true"><i data-lucide="sparkles"></i></span>
@@ -108,6 +110,7 @@
       <p class="kb-privacidad">🔒 Tu consulta y los artículos se envían al servicio de IA para redactar la respuesta. No
         escribas contraseñas ni datos personales.</p>
     </section>
+    <!-- ===== FIN MÓDULO 6 ===== -->
 
     <form id="new-ticket-form" novalidate>
       <!-- MÓDULO 3 (avance 2): equipo afectado (se llena al escanear su QR) -->
@@ -131,7 +134,7 @@
         <div id="qr-lector-archivo" hidden></div>
       </section>
 
-      <!-- MÓDULO 2 (avance 2): dictado por voz del asunto y la descripción -->
+      <!-- ===== INICIO MÓDULO 2 (avance 2): dictado por voz del asunto y la descripción ===== -->
       <section class="voz" id="voz-panel" data-estado="cargando" aria-label="Dictado por voz">
         <div class="voz__fila">
           <span class="voz__icono" aria-hidden="true"><i data-lucide="mic"></i></span>
@@ -161,6 +164,7 @@
           audio pasa por el servicio de voz de Google o Microsoft). El sistema no guarda audio: solo recibe el texto que tú
           revisas y envías.</p>
       </section>
+      <!-- ===== FIN MÓDULO 2 ===== -->
 
       <div class="form-field">
         <label for="subject">Asunto <span class="required">*</span></label>

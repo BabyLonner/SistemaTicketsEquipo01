@@ -32,7 +32,7 @@ from auth import (
     validar_peticion,
 )
 from avisos_whatsapp import avisos_bp
-from base_conocimiento import kb_bp
+from base_conocimiento import kb_bp  # MÓDULO 6: asistente con IA
 from chat_realtime import chat_rt_bp
 from cuenta import cuenta_bp
 from db import cerrar_conexion, conexion, consultar
@@ -70,7 +70,7 @@ for bp in (
     equipos_bp,
     facial_bp,
     sla_push_bp,
-    kb_bp,
+    kb_bp,  # MÓDULO 6: asistente con IA
     tareas_bp,
 ):
     app.register_blueprint(bp)

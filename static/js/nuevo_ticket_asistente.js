@@ -1,5 +1,13 @@
 /* =========================================================
-   nuevo_ticket_asistente.js — MÓDULO 6: asistente con IA
+   MÓDULO 6 — ASISTENTE CON IA EN LA BASE DE CONOCIMIENTO
+   nuevo_ticket_asistente.js
+   ---------------------------------------------------------
+   ÍNDICE DE FUNCIONES
+   1. Inicio .................. iniciar
+   2. Consulta al asistente ... preguntar, pintarRespuesta, formatear, itemArticulo
+   3. Resultado ............... guardarResultado, marcarResuelto, crearTicket,
+                                prellenarFormulario, separarTexto, escribir,
+                                mayuscula, recortar, mostrarFormulario, reiniciar
    ---------------------------------------------------------
    En "Nuevo Ticket", ANTES del formulario, el usuario describe su
    problema y el asistente responde con los artículos de la base de
@@ -27,7 +35,7 @@
 	};
 
 	let ui = {};
-	let consulta = null;        // { id, pregunta, articulos }
+	let consulta = null;        // { id, pregunta }
 
 	document.addEventListener('DOMContentLoaded', iniciar);
 
@@ -96,7 +104,7 @@
 			if (res.status === 401) return (location.href = '/');
 			const datos = await res.json().catch(() => ({}));
 			if (!res.ok || !datos.ok) throw new Error(datos.error || 'El asistente no está disponible.');
-			consulta = { id: datos.consulta_id, pregunta, articulos: datos.articulos || [] };
+			consulta = { id: datos.consulta_id, pregunta };
 			pintarRespuesta(datos);
 		} catch (e) {
 			ui.error.textContent = `${e.message} Puedes crear el ticket directamente.`;
@@ -125,7 +133,6 @@
 		(datos.articulos || []).forEach((a) => ui.fuentes.append(itemArticulo(a)));
 
 		ui.resultado.hidden = false;
-		window.lucide?.createIcons?.();
 		ui.resultado.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 	}
 

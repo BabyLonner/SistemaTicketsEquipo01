@@ -1,5 +1,8 @@
 /* =========================================================
-   kb_dashboard.js — MÓDULO 6: dashboard del asistente con IA
+   MÓDULO 6 — ASISTENTE CON IA EN LA BASE DE CONOCIMIENTO
+   kb_dashboard.js: dashboard del asistente (pantalla Tickets)
+   ÍNDICE DE FUNCIONES: cargar, pintarResumen, pintarTabla, esc
+   ---------------------------------------------------------
    En la pantalla Tickets (Administrador y Técnico) muestra todos
    los intentos al asistente, cuántos fueron válidos y cuántos
    erróneos. Los datos vienen de GET /api/kb/estadisticas.

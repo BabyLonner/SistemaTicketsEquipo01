@@ -1,5 +1,15 @@
 """
-MÓDULO 6 — Base de conocimiento con asistente de IA.
+MÓDULO 6 — ASISTENTE CON IA EN LA BASE DE CONOCIMIENTO (base_conocimiento.py)
+
+ÍNDICE DE FUNCIONES
+  1. Configuración ......... _cfg, PROMPT_SISTEMA
+  2. Búsqueda de artículos . _normalizar, _palabras, _coinciden, _campos, _puntaje,
+                             _articulos_de_empresa, _es_sintoma, buscar_articulos
+  3. Llamada al LLM ........ _armar_mensajes, llamar_llm, respuesta_local, _citados, _publico
+  4. Asistente (rutas) ..... consultar_asistente   POST /api/kb/consultar
+                             _consulta_propia, guardar_resultado
+                                                   POST /api/kb/consultas/<id>/resultado
+  5. Dashboard (ruta) ...... estadisticas          GET  /api/kb/estadisticas
 
 Antes de crear un ticket, el usuario cuenta su problema y el asistente responde
 usando SOLO los artículos registrados en el sistema.
@@ -65,8 +75,8 @@ cuando de del desde donde dos el ella ellas ello ellos en entre era eran es esa 
 estado estan estar este esto estos estoy fue ha hace hacer hay he hola la las le les lo los mas me mi mis mucho
 muy nada ni no nos nosotros o otra otro para pero poco por porque puede pueden puedo que quiero se sea ser si
 sido sin sobre solo son su sus tambien tengo tiene todo todos tu un una uno unos usted ya yo favor ayuda
-problema problemas tengo necesito sale aparece funciona funcionan funcionando hoy ayer dia
-correctamente correcto bien mal normal normalmente igual siempre nunca todavia esta estan
+problema problemas necesito sale aparece funciona funcionan funcionando hoy ayer dia
+correctamente correcto mal normal normalmente igual siempre nunca todavia
 buenas buenos dias tardes noches tarde manana noche semana rato momento ahorita oficina area piso segundo
 primer tercer jefe senor senora companero companera usar uso trabajar trabajo
 """.split())
@@ -361,7 +371,7 @@ def consultar_asistente():
 
 def _consulta_propia(consulta_id):
     return consultar(
-        "SELECT * FROM kb_consultas WHERE id = %s AND usuario_id = %s AND empresa_id = %s",
+        "SELECT id FROM kb_consultas WHERE id = %s AND usuario_id = %s AND empresa_id = %s",
         (consulta_id, g.usuario_token["id"], empresa_actual()), uno=True,
     )
 
@@ -397,33 +407,50 @@ def estadisticas():
     empresa_id = empresa_actual()
     if not empresa_id:
         return jsonify(ok=False, error="Elige una empresa primero."), 400
+    # 1) Los números del dashboard los cuenta MySQL: llega una sola fila
+    conteo = consultar(
+        """SELECT COUNT(*) AS intentos, COALESCE(SUM(resultado = 'RESUELTO'), 0) AS validos
+             FROM kb_consultas
+            WHERE empresa_id = %s""",
+        (empresa_id,), uno=True,
+    )
+    total, validos = int(conteo["intentos"]), int(conteo["validos"])
+
+    # 2) La lista de intentos: solo los 200 más recientes
     consultas = consultar(
-        """SELECT k.id, k.pregunta, k.articulos, k.resultado, k.created_at, u.nombre AS usuario
+        """SELECT k.pregunta, k.articulos, k.resultado, k.created_at, u.nombre AS usuario
              FROM kb_consultas k JOIN users u ON u.id = k.usuario_id
             WHERE k.empresa_id = %s
-            ORDER BY k.id DESC""",
+            ORDER BY k.id DESC
+            LIMIT 200""",
         (empresa_id,),
     )
-    titulos = {a["id"]: a["titulo"] for a in consultar("SELECT id, titulo FROM kb_articulos")}
 
-    validos = sum(1 for c in consultas if c["resultado"] == "RESUELTO")
-    intentos = []
-    for c in consultas[:200]:
-        ids = [int(x) for x in (c["articulos"] or "").split(",") if x.isdigit()]
-        intentos.append({
-            "fecha": c["created_at"].strftime("%d/%m/%Y %H:%M"),
-            "usuario": c["usuario"],
-            "pregunta": c["pregunta"],
-            "articulo": ", ".join(titulos[i] for i in ids if i in titulos) or None,
-            "valido": c["resultado"] == "RESUELTO",
-        })
+    # 3) Solo los títulos de los artículos que aparecen en esa lista
+    for c in consultas:
+        c["ids"] = [int(x) for x in (c["articulos"] or "").split(",") if x.isdigit()]
+    usados = sorted({i for c in consultas for i in c["ids"]})
+    titulos = {}
+    if usados:
+        marcas = ", ".join(["%s"] * len(usados))
+        titulos = {a["id"]: a["titulo"] for a in consultar(
+            f"SELECT id, titulo FROM kb_articulos WHERE id IN ({marcas})", tuple(usados))}
+
+    intentos = [{
+        "fecha": c["created_at"].strftime("%d/%m/%Y %H:%M"),
+        "usuario": c["usuario"],
+        "pregunta": c["pregunta"],
+        "articulo": ", ".join(titulos[i] for i in c["ids"] if i in titulos) or None,
+        "valido": c["resultado"] == "RESUELTO",
+    } for c in consultas]
+
     return jsonify(
         ok=True,
         resumen={
-            "intentos": len(consultas),
+            "intentos": total,
             "validos": validos,
-            "erroneos": len(consultas) - validos,
-            "efectividad": round(100 * validos / len(consultas)) if consultas else None,
+            "erroneos": total - validos,
+            "efectividad": round(100 * validos / total) if total else None,
         },
         intentos=intentos,
     )

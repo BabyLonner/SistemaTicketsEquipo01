@@ -1,7 +1,7 @@
 -- =====================================================================
 --  MODULO 6  -  Base de conocimiento + asistente con IA (NO borra datos).
 --  Importar en phpMyAdmin (pestaña Importar) o en la consola MySQL de PythonAnywhere.
---  Es lo mismo que hace: python migrar_modulo6.py
+--  Crea kb_articulos y kb_consultas y registra 12 artículos generales.
 -- =====================================================================
 
 SET NAMES utf8mb4;

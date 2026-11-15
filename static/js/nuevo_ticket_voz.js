@@ -1,5 +1,18 @@
 /* =========================================================
-   nuevo_ticket_voz.js — MÓDULO 2 (avance 2): ticket por voz
+   MÓDULO 2 — CREACIÓN DE TICKETS POR VOZ (avance 2)
+   nuevo_ticket_voz.js
+   ---------------------------------------------------------
+   ÍNDICE DE FUNCIONES
+   1. Inicio ............ iniciarModulo, navegadorIncompatible, bloquearPanel,
+                          revisarPermisoMicrofono, agregarMicrofonoACampo
+   2. Grabación ......... comenzar, alRecibirResultado, llenarEnVivo, detener,
+                          descartar, alTerminar, reiniciarSilencio, actualizarReloj
+   3. Texto → campos .... aplicarTexto, textoDictado, dividirPorPalabrasClave,
+                          separarAsuntoYDescripcion, puntuacionHablada,
+                          formatearAsunto, formatearDescripcion, mayuscula,
+                          unir, escribir, resaltar
+   4. Interfaz .......... pintarGrabando, pintarTextoEnVivo, mostrarAviso,
+                          ocultarAviso, avisarToast
    ---------------------------------------------------------
    Usa la Web Speech API del navegador (SpeechRecognition) para
    que el usuario dicte su incidencia en español. El texto llena
@@ -54,8 +67,8 @@
 		const $ = (id) => document.getElementById(id);
 		ui = {
 			panel: $('voz-panel'), boton: $('voz-boton'), textoBoton: $('voz-boton-texto'),
-			ayuda: $('voz-ayuda'), grabando: $('voz-grabando'), tiempo: $('voz-tiempo'),
-			vivo: $('voz-vivo'), aviso: $('voz-aviso'), privacidad: $('voz-privacidad-texto'),
+			grabando: $('voz-grabando'), tiempo: $('voz-tiempo'),
+			vivo: $('voz-vivo'), aviso: $('voz-aviso'),
 			detener: $('voz-detener'), descartar: $('voz-descartar'),
 			asunto: $('subject'), descripcion: $('description'), form: $('new-ticket-form')
 		};
@@ -152,7 +165,6 @@
 		reco.lang = IDIOMA;
 		reco.continuous = true;       // sigue escuchando entre pausas
 		reco.interimResults = true;   // muestra el texto mientras se habla
-		reco.maxAlternatives = 1;
 
 		estado = {
 			destino, finales: [], interino: '', inicio: Date.now(), error: null, descartado: false, reloj: null, silencio: null,
@@ -262,6 +274,7 @@
 		const partes = segmentos.map(puntuacionHablada).filter(Boolean);
 		const completo = textoDictado(segmentos);
 		const llenados = [];
+		const claves = destino === 'auto' ? dividirPorPalabrasClave(completo) : null;
 
 		if (destino === 'asunto') {
 			escribir(ui.asunto, unir(ui.asunto.value, formatearAsunto(completo)), MAX_ASUNTO);
@@ -269,9 +282,8 @@
 		} else if (destino === 'descripcion') {
 			escribir(ui.descripcion, unir(ui.descripcion.value, formatearDescripcion(completo)), MAX_DESCRIPCION);
 			llenados.push(ui.descripcion);
-		} else if (dividirPorPalabrasClave(completo)) {
+		} else if (claves) {
 			// Una sola grabación con «asunto» y «descripción»: cada parte a su campo
-			const claves = dividirPorPalabrasClave(completo);
 			if (claves.asunto) {
 				escribir(ui.asunto, formatearAsunto(claves.asunto), MAX_ASUNTO);
 				llenados.push(ui.asunto);

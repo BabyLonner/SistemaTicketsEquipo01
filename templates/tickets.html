@@ -7,11 +7,12 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
 <script src="{{ url_for('static', filename='js/tickets.js') }}" defer></script>
+<!-- ===== INICIO MÓDULO 6: dashboard de las consultas al asistente con IA ===== -->
 {% if session.rol in ['Administrador', 'Técnico', 'Superusuario'] %}
-<!-- MÓDULO 6: dashboard de las consultas al asistente con IA -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kb_dashboard.css') }}">
 <script src="{{ url_for('static', filename='js/kb_dashboard.js') }}" defer></script>
 {% endif %}
+<!-- ===== FIN MÓDULO 6 ===== -->
 {% endblock %}
 
 {% block content %}
@@ -55,8 +56,8 @@
   <button type="button" id="show-urgent" class="alert-link">Ver urgentes <span>→</span></button>
 </div>
 
+<!-- ===== INICIO MÓDULO 6: todos los intentos al asistente con IA, cuántos fueron válidos y cuántos erróneos ===== -->
 {% if session.rol in ['Administrador', 'Técnico', 'Superusuario'] %}
-<!-- MÓDULO 6: todos los intentos al asistente con IA, cuántos fueron válidos y cuántos erróneos -->
 <section class="kbd" id="kbd" aria-labelledby="kbd-titulo">
   <div class="kbd__cabecera">
     <div>
@@ -131,6 +132,7 @@
   </div>
 </section>
 {% endif %}
+<!-- ===== FIN MÓDULO 6 ===== -->
 
 <form class="filters-panel" id="ticket-filters">
   <label class="search-filter">
