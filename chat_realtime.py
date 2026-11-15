@@ -1,53 +1,67 @@
 import time
+
 from flask import Blueprint, g, jsonify
+
+from db import consultar
+from tickets import login_requerido, ticket_de_chat
 
 chat_rt_bp = Blueprint("chat_rt", __name__)
 
-_USUARIOS_ESCRIBIENDO = {}
-_ULTIMO_COMENTARIO_TS = {}
-TTL_ESCRIBIENDO = 2.5
+SEGUNDOS_ESCRIBIENDO = 3
+_salas_escribiendo = {}
 
-def emitir_comentario_ticket(ticket_id, payload, destinatarios_ids=None):
-    t_id = int(ticket_id)
-    _ULTIMO_COMENTARIO_TS[t_id] = time.time()
-    sala = _USUARIOS_ESCRIBIENDO.get(t_id, {})
-    for k, v in list(sala.items()):
-        if v[0] == payload.get("usuario"):
-            sala.pop(k, None)
+
+def _quitar_vencidos(sala):
+    limite = time.time() - SEGUNDOS_ESCRIBIENDO
+    for usuario_id in [u for u, datos in sala.items() if datos["momento"] < limite]:
+        sala.pop(usuario_id, None)
+
+
+def _ultimo_comentario(ticket_id):
+    fila = consultar(
+        """SELECT MAX(id) AS ultimo
+             FROM ticket_historial
+            WHERE ticket_id = %s AND tipo = 'COMENTARIO'""",
+        (ticket_id,),
+        uno=True,
+    )
+    return int(fila["ultimo"] or 0)
+
 
 @chat_rt_bp.post("/api/tickets/<int:ticket_id>/escribiendo")
-def api_marcar_escribiendo(ticket_id):
-    u = g.get("usuario_token")
-    if not u:
-        return jsonify(error="No autorizado"), 401
-
-    ahora = time.time()
-    t_id = int(ticket_id)
-
-    sala = _USUARIOS_ESCRIBIENDO.setdefault(t_id, {})
-    sala[int(u["id"])] = (u["nombre"], u.get("rol", ""), ahora)
-
-    for k in [k for k, v in sala.items() if ahora - v[2] > TTL_ESCRIBIENDO]:
-        sala.pop(k, None)
-
+@login_requerido
+def marcar_escribiendo(ticket_id):
+    _, error = ticket_de_chat(ticket_id)
+    if error:
+        return error
+    sala = _salas_escribiendo.setdefault(ticket_id, {})
+    sala[g.usuario["id"]] = {"nombre": g.usuario["nombre"], "momento": time.time()}
     return jsonify(ok=True)
 
+
+@chat_rt_bp.delete("/api/tickets/<int:ticket_id>/escribiendo")
+@login_requerido
+def dejar_de_escribir(ticket_id):
+    _, error = ticket_de_chat(ticket_id)
+    if error:
+        return error
+    _salas_escribiendo.get(ticket_id, {}).pop(g.usuario["id"], None)
+    return jsonify(ok=True)
+
+
 @chat_rt_bp.get("/api/tickets/<int:ticket_id>/estado-chat")
-def api_estado_chat(ticket_id):
-    u = g.get("usuario_token")
-    if not u:
-        return jsonify(error="No autorizado"), 401
-
-    ahora = time.time()
-    t_id = int(ticket_id)
-
-    sala = _USUARIOS_ESCRIBIENDO.get(t_id, {})
-
-    activos = [
-        {"usuario": nombre, "rol": rol}
-        for uid, (nombre, rol, ts) in list(sala.items())
-        if ahora - ts <= TTL_ESCRIBIENDO and int(uid) != int(u["id"])
+@login_requerido
+def estado_chat(ticket_id):
+    _, error = ticket_de_chat(ticket_id)
+    if error:
+        return error
+    sala = _salas_escribiendo.get(ticket_id, {})
+    _quitar_vencidos(sala)
+    escribiendo = [
+        datos["nombre"]
+        for usuario_id, datos in sala.items()
+        if usuario_id != g.usuario["id"]
     ]
-
-    ultimo_ts = _ULTIMO_COMENTARIO_TS.get(t_id, 0)
-    return jsonify(ok=True, escribiendo=activos, ultimo_comentario_ts=ultimo_ts)
+    return jsonify(
+        escribiendo=escribiendo, ultimo_comentario=_ultimo_comentario(ticket_id)
+    )

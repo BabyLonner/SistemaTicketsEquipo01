@@ -133,6 +133,7 @@ async function cargarDetalleTicket(id) {
         // MÓDULO 3: recordar el estado y técnico actuales y cargar los técnicos reales
         ticketDetalleActual = { id: t.id, codigo: t.codigo, estado: t.estado, tecnico: t.tecnico || null };
         cargarTecnicosDetalle(t.tecnico);
+        document.dispatchEvent(new CustomEvent('ticket:cargado', { detail: t }));
 
         // --- NUEVO 5: PROYECTAR EVIDENCIAS (IMÁGENES) ---
         const contenedorEvidencias = document.getElementById('contenedor-evidencias');
@@ -298,38 +299,6 @@ function tiempoRelativoDetalle(iso) {
     if (h < 24) return `hace ${h} h`;
     const dias = Math.floor(h / 24);
     return dias === 1 ? 'ayer' : `hace ${dias} días`;
-}
-
-function renderizarChat(historialArray) {
-    const chatContainer = document.getElementById('contenedor-chat');
-    if (!chatContainer) return;
-
-    chatContainer.innerHTML = ''; // Limpiamos el chat quemado de "Rosa Villanueva"
-
-    // Filtramos para mostrar solo la creación y los comentarios en la pestaña Conversación
-    const mensajes = historialArray.filter(h => h.tipo === 'COMENTARIO' || h.tipo === 'CREACION');
-
-    if (mensajes.length === 0) {
-        chatContainer.innerHTML = '<p class="text-muted">No hay mensajes en la conversación aún.</p>';
-        return;
-    }
-
-    mensajes.forEach(m => {
-        chatContainer.innerHTML += `
-            <div class="mensaje" style="display: flex; gap: 15px; margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #eee;">
-                <div class="avatar" style="width: 40px; height: 40px; border-radius: 50%; background: #2672C7; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                    ${iniciales(m.usuario)}
-                </div>
-                <div class="contenido" style="flex: 1;">
-                    <div style="margin-bottom: 5px;">
-                        <strong style="color: #333;">${escaparHTML(m.usuario)}</strong>
-                        <small style="color: #888; font-size: 12px; margin-left: 5px;">(${escaparHTML(m.usuario_rol)}) - ${formatearFecha(m.created_at)}</small>
-                    </div>
-                    <p style="margin: 0; color: #555; line-height: 1.4;">${escaparHTML(m.comentario)}</p>
-                </div>
-            </div>
-        `;
-    });
 }
 
 /* =========================================================================
@@ -598,55 +567,6 @@ function configurarEventosPanelDerecho(ticketId) {
     }
 }
 
-
-/* =========================================================================
-   Pestaña Conversación: enviar comentario (POST /api/tickets/<id>/comentarios)
-   ========================================================================= */
-document.addEventListener('DOMContentLoaded', () => {
-    const idTicket = new URLSearchParams(window.location.search).get('id');
-    const form = document.getElementById('reply-form');
-    const input = document.getElementById('reply-text');
-    if (!idTicket || !form || !input) return;
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const comentario = input.value.trim();
-        if (comentario.length < 2) {
-            mostrarToast('Escribe un comentario.');
-            input.focus();
-            return;
-        }
-        const boton = form.querySelector('button[type="submit"]');
-        if (boton) boton.disabled = true;
-        try {
-            const res = await fetch(`/api/tickets/${idTicket}/comentarios`, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: obtenerHeadersAuth(),
-                body: JSON.stringify({ comentario })
-            });
-            const datos = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                mostrarToast(datos.error || 'No se pudo enviar el comentario.');
-                return;
-            }
-            input.value = '';
-            mostrarToast('Comentario enviado.');
-            cargarHistorial(idTicket);
-        } catch (err) {
-            mostrarToast('No se pudo conectar con el servidor.');
-        } finally {
-            if (boton) boton.disabled = false;
-        }
-    });
-
-    // "Responder" lleva al cuadro de comentario de la conversación
-    document.querySelector('[data-action="reply"]')?.addEventListener('click', () => {
-        document.querySelector('.tab[data-tab="conversation"], .tab[data-tab="conversacion"]')?.click();
-        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        input.focus();
-    });
-});
 
 /* =========================================================================
    Evidencias: agregar fotos desde el detalle (POST /api/tickets/<id>/evidencias)
