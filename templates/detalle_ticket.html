@@ -6,9 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/detalle_ticket.css') }}">
 <script src="{{ url_for('static', filename='js/detalle_ticket.js') }}" defer></script>
-<!-- MÓDULO 5: Socket.IO para Chat en Tiempo Real -->
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
-<script src="{{ url_for('static', filename='js/chat_socket.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/chat_ticket.js') }}" defer></script>
 <!-- tickets.js va después: muestra las fotos reales del ticket (?id=N) -->
 <script src="{{ url_for('static', filename='js/tickets.js') }}" defer></script>
 <!-- MÓDULO 3 (avance 2): equipo vinculado por QR -->
@@ -84,15 +82,14 @@
           aria-selected="false"><span>↗</span>Archivos</button>
       </div>
       <div class="tab-content" id="tab-conversation" role="tabpanel">
-
-        <!-- Contenedor vacío donde detalle_ticket.js inyectará la conversación real -->
-        <div class="conversation-list" id="contenedor-chat">
-          <p class="text-muted" style="padding: 20px;">Cargando conversación...</p>
+        <div class="conversation-list" id="contenedor-chat" aria-live="polite">
+          <p class="chat-vacio">Cargando conversación...</p>
         </div>
-
-        <form class="reply-form" id="reply-form"><span class="comment-avatar avatar-admin">US</span><label
-            class="reply-input"><span class="sr-only">Escribe un comentario</span><input id="reply-text" type="text"
-              maxlength="1000" placeholder="Escribe un comentario..." required><label class="attach-button"
+        <p class="chat-aviso" id="chat-aviso" hidden></p>
+        <p class="chat-escribiendo animated-dots" id="chat-escribiendo" aria-live="polite" hidden></p>
+        <form class="reply-form" id="reply-form" hidden><span class="comment-avatar avatar-admin">{{ (session.get('nombre') or 'US').split()[:2] | map('first') | join | upper }}</span><label
+            class="reply-input"><span class="sr-only">Escribe un mensaje</span><input id="reply-text" type="text"
+              maxlength="500" placeholder="Escribe un mensaje..." required><label class="attach-button"
               title="Adjuntar archivo">↗<input id="reply-file" type="file" accept="image/jpeg,image/png,image/webp"
                 hidden></label></label><button class="btn-primary send-button"
             type="submit"><span>➤</span>Enviar</button></form>
