@@ -12,7 +12,6 @@ from flask import (
     url_for,
 )
 from jinja2 import TemplateNotFound
-from notificaciones import notificaciones_bp
 
 import config
 from api_postman import api_postman_bp
@@ -260,61 +259,6 @@ def api_login():
 def api_logout():
     revocar_token_actual()
     return jsonify(status=1, message="Token invalidado")
-
-
-# =====================================================================
-#  MÓDULO 5: API REST DE NOTIFICACIONES INTERNAS
-# =====================================================================
-@app.route("/api/notificaciones", methods=["GET"])
-@login_requerido
-def api_listar_notificaciones():
-    usuario_id = g.usuario_token["id"]
-    fila = consultar(
-        "SELECT COUNT(*) AS no_leidas FROM notificaciones WHERE usuario_id = %s AND leido = 0",
-        (usuario_id,),
-        uno=True,
-    )
-    notificaciones = consultar(
-        """SELECT n.id, n.tipo, n.referencia_ticket, n.titulo, n.mensaje, n.leido,
-                  DATE_FORMAT(n.created_at, '%%d/%%m/%%Y %%H:%%i') AS fecha_formateada,
-                  TIMESTAMPDIFF(MINUTE, n.created_at, NOW()) AS hace_minutos
-             FROM notificaciones n
-            WHERE n.usuario_id = %s
-            ORDER BY n.created_at DESC, n.id DESC
-            LIMIT 50""",
-        (usuario_id,),
-    )
-    return jsonify(
-        {"ok": True, "no_leidas": fila["no_leidas"], "notificaciones": notificaciones}
-    )
-
-
-@app.route("/api/notificaciones/<int:notif_id>/leer", methods=["POST", "PUT"])
-@login_requerido
-def api_marcar_notificacion_leida(notif_id):
-    con = conexion()
-    with con.cursor() as cur:
-        cur.execute(
-            "UPDATE notificaciones SET leido = 1, leido_at = NOW() WHERE id = %s AND usuario_id = %s",
-            (notif_id, g.usuario_token["id"]),
-        )
-    con.commit()
-    return jsonify({"ok": True})
-
-
-@app.route("/api/notificaciones/leer-todas", methods=["POST", "PUT"])
-@login_requerido
-def api_marcar_todas_leidas():
-    con = conexion()
-    with con.cursor() as cur:
-        cur.execute(
-            "UPDATE notificaciones SET leido = 1, leido_at = NOW() WHERE usuario_id = %s AND leido = 0",
-            (g.usuario_token["id"],),
-        )
-        total = cur.rowcount
-    con.commit()
-    return jsonify({"ok": True, "marcadas": total})
-
 
 def _comparar(sql, params):
     """sql debe devolver columnas mes_actual_<x> y mes_anterior_<x>."""
