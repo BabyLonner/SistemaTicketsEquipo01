@@ -100,7 +100,7 @@ async function ejecutarVerificacionSlaSilenciosa() {
                 );
             });
             if (typeof cargarTicketsSla === 'function') cargarTicketsSla();
-            if (typeof cargarNotificaciones === 'function') document.dispatchEvent(new Event('notificaciones:actualizar'));
+            document.dispatchEvent(new Event('notificaciones:actualizar'));
         }
     } catch (e) {
         console.error('Error al verificar SLA en segundo plano.');
