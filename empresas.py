@@ -1,12 +1,4 @@
-"""
-Gestión de empresas — SOLO SUPERUSUARIO.
 
-* Crear una empresa crea también su dominio de correo, sus áreas y su
-  usuario Administrador (que desde ahí controla a sus trabajadores).
-* "Administrar" deja al superusuario trabajando dentro de esa empresa
-  (tickets, asignación, SLA, reportes y usuarios) con permisos de administrador.
-* Activar/desactivar o eliminar la empresa con todos sus datos.
-"""
 import os
 import shutil
 

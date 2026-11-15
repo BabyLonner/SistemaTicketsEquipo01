@@ -1,17 +1,4 @@
-"""
-MÓDULO 1 — Autenticación con JWT, roles y protección de rutas.
 
-* Al iniciar sesión se genera un JWT (PyJWT, HS256) con sub = id, rol, emp y jti.
-    - En la web viaja en una cookie HttpOnly (mesa_token).
-    - En Postman viaja en el header  Authorization: Bearer <token>  (POST /api/login).
-* Antes de CADA petición se valida el token: firma, vencimiento, que no esté
-  en tokens_revocados, que el usuario siga activo y su empresa también.
-  Si el token no es válido, la sesión de Flask se borra: la session solo
-  guarda los datos que muestran las plantillas (nombre, rol, logo...).
-* Cerrar sesión guarda el jti en tokens_revocados (el token deja de servir).
-* Superusuario: no pertenece a ninguna empresa. Elige la empresa que quiere
-  administrar en /empresas y dentro de ella actúa como administrador.
-"""
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -30,10 +17,6 @@ ROL_ADMIN = "Administrador"
 ROL_TECNICO = "Técnico"
 ROL_SOLICITANTE = "Solicitante"
 
-
-# =====================================================================
-#  Contraseñas (bcrypt)
-# =====================================================================
 def hashear(clave):
     return bcrypt.hashpw(clave.encode("utf-8"), bcrypt.gensalt(12)).decode("utf-8")
 
@@ -52,10 +35,6 @@ def validar_clave_nueva(clave):
         return "La contraseña debe combinar letras y números."
     return None
 
-
-# =====================================================================
-#  JWT
-# =====================================================================
 def crear_token(usuario, recordar=False):
     momento = datetime.now(timezone.utc)
     duracion = timedelta(days=config.JWT_DIAS_RECORDAR) if recordar else timedelta(hours=config.JWT_HORAS)

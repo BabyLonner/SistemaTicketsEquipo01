@@ -1,5 +1,4 @@
 import time
-
 from flask import Blueprint, g, jsonify
 
 chat_rt_bp = Blueprint("chat_rt", __name__)
