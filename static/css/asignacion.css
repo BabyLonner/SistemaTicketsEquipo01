@@ -310,7 +310,7 @@
   font-size: 12px;
 }
 .assign-table th {
-  padding: 12px 10px;
+  padding: 12px 8px;
   background: #edf5ff;
   color: #173b67;
   text-align: left;
@@ -324,7 +324,7 @@
   border-radius: 0 7px 0 0;
 }
 .assign-table td {
-  padding: 11px 10px;
+  padding: 11px 8px;
   border-bottom: 1px solid #e5eef9;
   color: #27466e;
   vertical-align: middle;
@@ -339,9 +339,6 @@
   border-left: 4px solid #f5a623;
   padding-left: 6px;
 }
-.assign-table tbody tr.flash {
-  animation: flash 1.4s ease;
-}
 .assign-table td.subject-cell {
   white-space: normal;
   min-width: 190px;
@@ -349,20 +346,6 @@
 .assign-table td.subject-cell strong {
   max-width: none;
   white-space: normal;
-}
-.assign-table td,
-.assign-table th {
-  padding-left: 8px;
-  padding-right: 8px;
-}
-
-@keyframes flash {
-  0% {
-    background: #fff6d6;
-  }
-  100% {
-    background: transparent;
-  }
 }
 
 .ticket-code {

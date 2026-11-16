@@ -10,7 +10,7 @@
    ========================================================= */
 
 let ticketsGlobales = [];
-let tecnicosDisponibles = []; // [{ id, nombre, activos }]
+let tecnicosDisponibles = []; // [{ id, nombre, tiene_whatsapp }]
 let historialReciente = []; // últimos movimientos de ticket_historial
 let movimientosHoy = 0;
 let vistaActual = 'todos'; // 'todos', 'sin-asignar', 'activos'
@@ -30,9 +30,9 @@ const CLASE_ESTADO = {
 	Cerrado: 'status-closed'
 };
 const CLASE_PRIORIDAD = { Alta: 'priority-high', Media: 'priority-medium', Baja: 'priority-low' };
+const JSON_HEADERS = { 'Content-Type': 'application/json' }; // la sesión viaja en la cookie
 
 document.addEventListener('DOMContentLoaded', () => {
-	if (!document.getElementById('assign-body')) return;
 	configurarEventosUI();
 	cargarDatosAsignacion();
 	setInterval(cargarDatosAsignacion, 30000);
@@ -41,13 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
 /* =========================================================================
    UTILIDADES
    ========================================================================= */
-function obtenerHeadersAuth() {
-	const headers = { 'Content-Type': 'application/json' };
-	const token = localStorage.getItem('token');
-	if (token) headers['Authorization'] = `Bearer ${token}`;
-	return headers;
-}
-
 function escaparHTML(t) {
 	return String(t ?? '').replace(
 		/[&<>"']/g,
@@ -95,7 +88,7 @@ function mostrarToast(msg) {
 async function mensajeDeError(res, porDefecto) {
 	try {
 		const data = await res.json();
-		return data.error || data.msg || porDefecto;
+		return data.error || porDefecto;
 	} catch (e) {
 		return porDefecto;
 	}
@@ -156,45 +149,28 @@ function ultimoMovimiento(ticketId) {
 async function cargarDatosAsignacion() {
 	try {
 		const [resTickets, resTecnicos, resHistorial] = await Promise.all([
-			fetch('/api/tickets?mios=0&limite=200', { headers: obtenerHeadersAuth() }),
-			fetch('/api/tecnicos', { headers: obtenerHeadersAuth() }),
-			fetch('/api/historial/reciente?limite=200', { headers: obtenerHeadersAuth() })
+			fetch('/api/tickets?mios=0&limite=200'),
+			fetch('/api/tecnicos'),
+			fetch('/api/historial/reciente?limite=200')
 		]);
-
-		if (!resTickets.ok) {
-			mostrarToast(await mensajeDeError(resTickets, 'No se pudieron cargar los tickets.'));
+		const respuestaFallida = [resTickets, resTecnicos, resHistorial].find((r) => !r.ok);
+		if (respuestaFallida) {
+			mostrarToast(await mensajeDeError(respuestaFallida, 'No se pudieron cargar los datos.'));
 			return;
 		}
-		ticketsGlobales = (await resTickets.json()).tickets || [];
+		ticketsGlobales = (await resTickets.json()).tickets;
+		tecnicosDisponibles = (await resTecnicos.json()).tecnicos;
+		const data = await resHistorial.json();
+		historialReciente = data.historial;
+		movimientosHoy = data.movimientos_hoy;
 
-		if (resTecnicos.ok) {
-			tecnicosDisponibles = (await resTecnicos.json()).tecnicos || [];
-		} else {
-			// Respaldo: técnicos que ya aparecen en los tickets
-			const nombres = [...new Set(ticketsGlobales.map((t) => t.tecnico).filter(Boolean))].sort();
-			tecnicosDisponibles = nombres.map((nombre) => ({ id: null, nombre, activos: null }));
-		}
-
-		if (resHistorial.ok) {
-			const data = await resHistorial.json();
-			historialReciente = data.historial || [];
-			movimientosHoy = data.movimientos_hoy || 0;
-		}
-
-		const msg = document.getElementById('page-message');
-		if (msg) msg.textContent = 'Conectado a la base de datos';
+		document.getElementById('page-message').textContent = 'Conectado a la base de datos';
 		cargarAvisos(); // MÓDULO 4
-
-		// Si uno falla, los demás siguen funcionando
-		[actualizarFiltros, renderizarMetricas, renderizarCargaTrabajo, renderizarActividadReciente, aplicarFiltrosTabla].forEach(
-			(fn) => {
-				try {
-					fn();
-				} catch (e) {
-					console.error(e);
-				}
-			}
-		);
+		actualizarFiltros();
+		renderizarMetricas();
+		renderizarCargaTrabajo();
+		renderizarActividadReciente();
+		aplicarFiltrosTabla();
 	} catch (e) {
 		console.error('Error al cargar la API:', e);
 		mostrarToast('Error de conexión con el servidor.');
@@ -203,7 +179,6 @@ async function cargarDatosAsignacion() {
 
 function actualizarFiltros() {
 	const filterTech = document.getElementById('assign-tech-filter');
-	if (!filterTech) return;
 	const actual = filterTech.value;
 	let opciones = `<option value="">Todos</option><option value="Sin asignar">Sin asignar</option>`;
 	tecnicosDisponibles.forEach(
@@ -234,7 +209,6 @@ function cargaDe(nombre) {
 
 function renderizarCargaTrabajo() {
 	const list = document.getElementById('workload-list');
-	if (!list) return;
 	if (tecnicosDisponibles.length === 0) {
 		list.innerHTML = '<li class="muted">No hay técnicos activos registrados.</li>';
 		return;
@@ -258,7 +232,6 @@ function renderizarCargaTrabajo() {
 
 function renderizarActividadReciente() {
 	const feed = document.getElementById('activity-feed');
-	if (!feed) return;
 	const recientes = historialReciente.slice(0, 10);
 	feed.innerHTML = recientes.length
 		? recientes.map((h) => itemLineaDeTiempo(h, true)).join('')
@@ -270,18 +243,14 @@ function renderizarActividadReciente() {
    TABLA PRINCIPAL
    ========================================================================= */
 function aplicarFiltrosTabla() {
-	const searchEl = document.getElementById('assign-search');
-	const statusEl = document.getElementById('assign-status-filter');
-	const techEl = document.getElementById('assign-tech-filter');
-
 	const normalizar = (s) =>
 		s
 			.toLowerCase()
 			.normalize('NFD')
 			.replace(/[̀-ͯ]/g, '');
-	const q = searchEl ? normalizar(searchEl.value) : '';
-	const est = statusEl ? statusEl.value : '';
-	const tec = techEl ? techEl.value : '';
+	const q = normalizar(document.getElementById('assign-search').value);
+	const est = document.getElementById('assign-status-filter').value;
+	const tec = document.getElementById('assign-tech-filter').value;
 
 	const filtrados = ticketsGlobales.filter((t) => {
 		if (vistaActual === 'sin-asignar' && (t.tecnico || t.estado === 'Cerrado')) return false;
@@ -298,22 +267,18 @@ function aplicarFiltrosTabla() {
 	const tbody = document.getElementById('assign-body');
 	const emptyState = document.getElementById('assign-empty');
 	const countLabel = document.getElementById('assign-count');
-	if (!tbody) return;
-
+	emptyState.hidden = filtrados.length > 0;
 	if (filtrados.length === 0) {
 		tbody.innerHTML = '';
-		if (emptyState) emptyState.hidden = false;
-		if (countLabel) countLabel.textContent = 'Mostrando 0 tickets';
+		countLabel.textContent = 'Mostrando 0 tickets';
 		return;
 	}
-
-	if (emptyState) emptyState.hidden = true;
-	if (countLabel) countLabel.textContent = `Mostrando ${filtrados.length} de ${ticketsGlobales.length} tickets`;
+	countLabel.textContent = `Mostrando ${filtrados.length} de ${ticketsGlobales.length} tickets`;
 
 	tbody.innerHTML = filtrados
 		.map((t) => {
 			const canAssign = t.estado === 'Abierto' || t.estado === 'En proceso';
-			const canChange = (TRANSICIONES[t.estado] || []).length > 0;
+			const canChange = TRANSICIONES[t.estado].length > 0;
 			const ultimo = ultimoMovimiento(t.id);
 			const fechaUlt = ultimo ? ultimo.created_at : t.created_at;
 			const quien = ultimo ? ultimo.usuario : t.solicitante;
@@ -352,16 +317,13 @@ function aplicarFiltrosTabla() {
    EVENTOS DE INTERFAZ Y MODALES
    ========================================================================= */
 function configurarEventosUI() {
-	['assign-search', 'assign-status-filter', 'assign-tech-filter'].forEach((id) => {
-		document
-			.getElementById(id)
-			?.addEventListener(id === 'assign-search' ? 'input' : 'change', aplicarFiltrosTabla);
+	const filtros = ['assign-search', 'assign-status-filter', 'assign-tech-filter'];
+	filtros.forEach((id) => {
+		document.getElementById(id).addEventListener(id === 'assign-search' ? 'input' : 'change', aplicarFiltrosTabla);
 	});
 
-	document.getElementById('assign-reset')?.addEventListener('click', () => {
-		['assign-search', 'assign-status-filter', 'assign-tech-filter'].forEach((id) => {
-			if (document.getElementById(id)) document.getElementById(id).value = '';
-		});
+	document.getElementById('assign-reset').addEventListener('click', () => {
+		filtros.forEach((id) => (document.getElementById(id).value = ''));
 		aplicarFiltrosTabla();
 	});
 
@@ -376,14 +338,6 @@ function configurarEventosUI() {
 			vistaActual = e.currentTarget.dataset.view;
 			aplicarFiltrosTabla();
 		});
-	});
-
-	// Buscador del encabezado (base.html): filtra la bandeja
-	const buscadorGlobal = document.querySelector('.global-search input');
-	buscadorGlobal?.addEventListener('input', (e) => {
-		const search = document.getElementById('assign-search');
-		if (search) search.value = e.target.value;
-		aplicarFiltrosTabla();
 	});
 
 	// Cerrar modales
@@ -401,7 +355,7 @@ function configurarEventosUI() {
 		['assign-comment', 'assign-comment-count', 'assign-comment-error'],
 		['status-comment', 'status-comment-count', 'status-comment-error']
 	].forEach(([campo, contador, error]) => {
-		document.getElementById(campo)?.addEventListener('input', (e) => {
+		document.getElementById(campo).addEventListener('input', (e) => {
 			document.getElementById(contador).textContent = e.target.value.length;
 			if (e.target.value.trim().length >= MIN_COMENTARIO) {
 				document.getElementById(error).textContent = '';
@@ -411,24 +365,24 @@ function configurarEventosUI() {
 	});
 
 	// Vista previa del nuevo estado (un solo listener)
-	document.getElementById('status-options')?.addEventListener('change', () => {
+	document.getElementById('status-options').addEventListener('change', () => {
 		const check = document.querySelector('input[name="new-status"]:checked');
 		const prev = document.getElementById('status-preview');
-		if (check && prev) {
+		if (check) {
 			prev.textContent = check.value;
 			prev.className = `badge ${CLASE_ESTADO[check.value] || 'category-tag'}`;
 			document.getElementById('status-option-error').textContent = '';
 		}
 	});
 
-	document.getElementById('auto-progress')?.addEventListener('change', actualizarReglaComentarioAsignacion);
-	document.getElementById('tech-options')?.addEventListener('change', () => {
+	document.getElementById('auto-progress').addEventListener('change', actualizarReglaComentarioAsignacion);
+	document.getElementById('tech-options').addEventListener('change', () => {
 		document.getElementById('assign-tech-error').textContent = '';
 		revisarWhatsAppElegido();
 	});
 
-	document.getElementById('assign-form')?.addEventListener('submit', submitAsignacion);
-	document.getElementById('status-form')?.addEventListener('submit', submitEstado);
+	document.getElementById('assign-form').addEventListener('submit', submitAsignacion);
+	document.getElementById('status-form').addEventListener('submit', submitEstado);
 }
 
 /* =========================================================================
@@ -436,14 +390,12 @@ function configurarEventosUI() {
    ========================================================================= */
 /* El comentario es obligatorio si se reasigna o si el ticket también cambia de estado */
 function comentarioObligatorioEnAsignacion() {
-	if (!ticketActivo) return false;
 	const autoProg = document.getElementById('auto-progress').checked;
 	return Boolean(ticketActivo.tecnico) || (ticketActivo.estado === 'Abierto' && autoProg);
 }
 
 function actualizarReglaComentarioAsignacion() {
-	const req = document.getElementById('assign-comment-req');
-	if (req) req.hidden = !comentarioObligatorioEnAsignacion();
+	document.getElementById('assign-comment-req').hidden = !comentarioObligatorioEnAsignacion();
 }
 
 window.abrirModalAsignacion = function (id) {
@@ -463,13 +415,13 @@ window.abrirModalAsignacion = function (id) {
 	tecnicosDisponibles.forEach((tec) => {
 		const esActual = tec.nombre === ticketActivo.tecnico;
 		const carga = cargaDe(tec.nombre);
-		const sinWhatsApp = tec.tiene_whatsapp === 0 || tec.tiene_whatsapp === false;
+		const sinWhatsApp = !tec.tiene_whatsapp;
 		radiosHTML += `
         <label class="option-card ${sinWhatsApp && !esActual ? 'option-card--sin-wa' : ''}">
             <input type="radio" name="tech" value="${escaparHTML(tec.nombre)}" data-sin-wa="${sinWhatsApp ? '1' : ''}" ${esActual ? 'checked' : ''}>
             <span class="tech-avatar">${iniciales(tec.nombre)}</span>
             <span><strong>${escaparHTML(tec.nombre)} ${esActual ? '<span class="current-tag">· actual</span>' : ''}</strong>
-                ${tec.tiene_whatsapp === undefined ? '' : tec.tiene_whatsapp
+                ${tec.tiene_whatsapp
 					? '<small class="wa-tag wa-tag-ok" title="Recibirá el aviso por WhatsApp">✆ Recibirá aviso por WhatsApp</small>'
 					: '<small class="wa-tag wa-tag-no" title="No registró su número en Mi Perfil: no se le puede asignar">✆ Sin WhatsApp · no se puede asignar</small>'}</span>
             <span class="load ${carga >= 3 ? 'high' : ''}">${carga} activo${carga === 1 ? '' : 's'}</span>
@@ -492,17 +444,14 @@ window.abrirModalAsignacion = function (id) {
    por eso no se le asigna el ticket. Se muestra el motivo y se bloquea el botón.
    (El servidor vuelve a comprobarlo: tickets.py no guarda la asignación.) */
 function mostrarBloqueoWhatsApp(texto) {
-	const caja = document.getElementById('assign-wa-aviso');
-	const boton = document.getElementById('assign-confirmar');
-	if (!caja) return;
-	document.getElementById('assign-wa-texto').textContent = texto || '';
-	caja.hidden = !texto;
-	if (boton) boton.disabled = Boolean(texto);
+	document.getElementById('assign-wa-texto').textContent = texto;
+	document.getElementById('assign-wa-aviso').hidden = !texto;
+	document.getElementById('assign-confirmar').disabled = Boolean(texto);
 }
 
 function revisarWhatsAppElegido() {
 	const radio = document.querySelector('input[name="tech"]:checked');
-	const esNuevo = radio && radio.value !== ticketActivo?.tecnico;
+	const esNuevo = radio && radio.value !== ticketActivo.tecnico;
 	if (esNuevo && radio.dataset.sinWa) {
 		mostrarBloqueoWhatsApp(
 			`${radio.value} no ha registrado su número de WhatsApp en «Mi Perfil», por eso no recibiría el aviso ` +
@@ -546,7 +495,7 @@ async function submitAsignacion(e) {
 	try {
 		const res = await fetch(`/api/tickets/${ticketActivo.id}`, {
 			method: 'PUT',
-			headers: obtenerHeadersAuth(),
+			headers: JSON_HEADERS,
 			body: JSON.stringify(datos)
 		});
 		if (res.ok) {
@@ -562,7 +511,7 @@ async function submitAsignacion(e) {
 			if (data.codigo === 'SIN_WHATSAPP') {
 				mostrarBloqueoWhatsApp(data.error); // aviso, no error: la asignación no se guardó
 			} else {
-				errTec.textContent = data.error || data.msg || 'No se pudo asignar el ticket.';
+				errTec.textContent = data.error || 'No se pudo asignar el ticket.';
 			}
 		}
 	} catch (err) {
@@ -586,7 +535,7 @@ window.abrirModalEstado = function (id) {
 	prev.textContent = 'Selecciona';
 	prev.className = 'badge category-tag';
 
-	const permitidos = TRANSICIONES[ticketActivo.estado] || [];
+	const permitidos = TRANSICIONES[ticketActivo.estado];
 	let radiosHTML = `<legend>Nuevo estado <span class="req">*</span></legend>`;
 	['Abierto', 'En proceso', 'Resuelto', 'Cerrado']
 		.filter((s) => s !== ticketActivo.estado)
@@ -642,7 +591,7 @@ async function submitEstado(e) {
 	try {
 		const res = await fetch(`/api/tickets/${ticketActivo.id}`, {
 			method: 'PUT',
-			headers: obtenerHeadersAuth(),
+			headers: JSON_HEADERS,
 			body: JSON.stringify({ estado: radio.value, comentario })
 		});
 		if (res.ok) {
@@ -666,12 +615,12 @@ async function submitEstado(e) {
 window.abrirModalHistorial = async function (id) {
 	const t = ticketsGlobales.find((x) => x.id === id);
 	try {
-		const res = await fetch(`/api/tickets/${id}/historial`, { headers: obtenerHeadersAuth() });
+		const res = await fetch(`/api/tickets/${id}/historial`);
 		if (!res.ok) {
 			mostrarToast(await mensajeDeError(res, 'No se pudo cargar el historial.'));
 			return;
 		}
-		const historial = ((await res.json()).historial || []).slice().reverse(); // más reciente primero
+		const historial = (await res.json()).historial.reverse(); // más reciente primero
 
 		document.getElementById('history-ticket-label').textContent = t
 			? `${t.codigo} · ${t.asunto} · ${historial.length} movimientos`
@@ -680,8 +629,7 @@ window.abrirModalHistorial = async function (id) {
 			? historial.map((h) => itemLineaDeTiempo(h, false)).join('')
 			: '<li class="muted">No hay movimientos.</li>';
 
-		const btnIrDetalle = document.querySelector('#history-modal .btn-secondary');
-		if (btnIrDetalle) btnIrDetalle.href = `/detalle_ticket?id=${id}`;
+		document.getElementById('history-detalle').href = `/detalle_ticket?id=${id}`;
 		document.getElementById('history-modal').hidden = false;
 	} catch (e) {
 		mostrarToast('No se pudo cargar el historial.');
@@ -709,9 +657,8 @@ function textoAviso(aviso) {
 
 async function cargarAvisos() {
 	const lista = document.getElementById('wa-avisos-lista');
-	if (!lista) return;
 	try {
-		const res = await fetch('/api/avisos?limite=8', { headers: obtenerHeadersAuth() });
+		const res = await fetch('/api/avisos?limite=8');
 		if (!res.ok) {
 			lista.innerHTML = `<li class="muted">${escaparHTML(await mensajeDeError(res, 'No se pudo cargar el registro.'))}</li>`;
 			return;
@@ -724,14 +671,10 @@ async function cargarAvisos() {
 
 function renderizarAvisos(data) {
 	const lista = document.getElementById('wa-avisos-lista');
-	const resumen = document.getElementById('wa-avisos-resumen');
-	const alerta = document.getElementById('wa-config-alerta');
-	if (alerta) alerta.hidden = data.configurado;
-	if (resumen) {
-		const r = data.resumen || {};
-		resumen.textContent = `${r.enviados || 0} enviados · ${r.fallidos || 0} fallidos`;
-	}
-	const avisos = data.avisos || [];
+	document.getElementById('wa-config-alerta').hidden = data.configurado;
+	document.getElementById('wa-avisos-resumen').textContent =
+		`${data.resumen.enviados} enviados · ${data.resumen.fallidos} fallidos`;
+	const avisos = data.avisos;
 	if (!avisos.length) {
 		lista.innerHTML = '<li class="muted">Aún no se envió ningún aviso. Asigna un ticket para probar.</li>';
 		return;
@@ -763,12 +706,10 @@ function renderizarAvisos(data) {
 }
 
 window.reintentarAviso = async function (id, boton) {
-	if (boton) {
-		boton.disabled = true;
-		boton.textContent = 'Reenviando…';
-	}
+	boton.disabled = true;
+	boton.textContent = 'Reenviando…';
 	try {
-		const res = await fetch(`/api/avisos/${id}/reintentar`, { method: 'POST', headers: obtenerHeadersAuth() });
+		const res = await fetch(`/api/avisos/${id}/reintentar`, { method: 'POST' });
 		const data = await res.json().catch(() => ({}));
 		mostrarToast(res.ok ? 'Aviso reenviado por WhatsApp.' : `No se pudo reenviar: ${data.error || 'error'}`);
 	} catch (e) {

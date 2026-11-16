@@ -4,7 +4,6 @@
 {% block title %}Asignación y estados | Soporte TI{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/asignacion.css') }}">
 <script src="{{ url_for('static', filename='js/asignacion.js') }}" defer></script>
 {% endblock %}
@@ -227,7 +226,7 @@
       </div>
     </div>
     <ol class="timeline timeline-full" id="history-timeline"></ol>
-    <div class="modal-actions"><a class="btn-secondary" href="{{ url_for('pantalla', pagina='detalle_ticket') }}">Abrir
+    <div class="modal-actions"><a class="btn-secondary" id="history-detalle" href="#">Abrir
         detalle</a><button type="button" class="btn-primary" data-close>Cerrar</button></div>
   </div>
 </div>
