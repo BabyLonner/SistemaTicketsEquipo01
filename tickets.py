@@ -1325,7 +1325,7 @@ def obtener_historial_ticket(ticket_id):
     with con.cursor() as cur:
         cur.execute(
             f"""SELECT id, tipo, estado_anterior, estado_nuevo, tecnico_anterior,
-                      tecnico_nuevo, comentario, usuario, usuario_rol, created_at, minutos_desde
+                      tecnico_nuevo, comentario, usuario, usuario_rol, created_at
                  FROM {V_TICKET_TIMELINE} AS h
                 WHERE h.ticket_id = %s {filtro_chat}
                 ORDER BY created_at ASC""",
@@ -1540,9 +1540,7 @@ def listar_tecnicos():
         return jsonify(error="No tienes acceso a esta información."), 403
     with conexion().cursor() as cur:
         cur.execute(
-            """SELECT u.id, u.nombre, (u.telefono IS NOT NULL AND u.telefono <> '') AS tiene_whatsapp,
-                      (SELECT COUNT(*) FROM tickets t
-                        WHERE t.tecnico_id = u.id AND t.estado IN ('Abierto', 'En proceso')) AS activos
+            """SELECT u.id, u.nombre, (u.telefono IS NOT NULL AND u.telefono <> '') AS tiene_whatsapp
                  FROM users u
                 WHERE u.empresa_id = %s AND u.rol = %s AND u.activo = 1
                 ORDER BY u.nombre""",
@@ -1565,7 +1563,7 @@ def historial_reciente():
         cur.execute(
             f"""SELECT h.id, h.ticket_id, v.codigo, h.tipo, h.estado_anterior, h.estado_nuevo,
                       h.tecnico_anterior, h.tecnico_nuevo, h.comentario, h.usuario,
-                      h.usuario_rol, h.created_at, h.minutos_desde
+                      h.usuario_rol, h.created_at
                  FROM {V_TICKET_TIMELINE} h
                  JOIN {V_TICKETS} v ON v.id = h.ticket_id
                 WHERE h.empresa_id = %s

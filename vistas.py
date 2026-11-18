@@ -65,8 +65,7 @@ V_TICKETS = """(
 V_TICKET_TIMELINE = """(
     SELECT h.id, h.ticket_id, t.empresa_id, h.tipo, h.estado_anterior, h.estado_nuevo,
            ta.nombre AS tecnico_anterior, tn.nombre AS tecnico_nuevo,
-           h.comentario, h.usuario_id, u.nombre AS usuario, u.rol AS usuario_rol,
-           h.created_at, TIMESTAMPDIFF(MINUTE, h.created_at, NOW()) AS minutos_desde
+           h.comentario, u.nombre AS usuario, u.rol AS usuario_rol, h.created_at
       FROM ticket_historial h
       JOIN tickets t     ON t.id  = h.ticket_id
       JOIN users u       ON u.id  = h.usuario_id

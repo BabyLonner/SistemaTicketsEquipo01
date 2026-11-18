@@ -34,8 +34,8 @@ import urllib.request
 
 from flask import Blueprint, current_app, g, jsonify, request
 
-import config  # noqa: F401  (carga el archivo .env)
 from db import conexion, consultar
+from equipos import url_publica
 from tickets import ROL_ADMIN, login_requerido
 from vistas import V_TICKETS
 
@@ -66,13 +66,10 @@ def _cfg():
         "api_key": (os.getenv("VONAGE_API_KEY") or "").strip(),
         "api_secret": (os.getenv("VONAGE_API_SECRET") or "").strip(),
         "canal": "sms" if canal == "sms" else "whatsapp",
-        # VONAGE_URL solo se usa para pruebas locales (simulador); normalmente queda vacío
-        "url": (os.getenv("VONAGE_URL") or "").strip()
-        or (URL_SANDBOX if sandbox and canal != "sms" else URL_PRODUCCION),
+        "url": URL_SANDBOX if sandbox and canal != "sms" else URL_PRODUCCION,
         "from_whatsapp": (os.getenv("VONAGE_WHATSAPP_FROM") or "14157386102").strip(),
         "from_sms": (os.getenv("VONAGE_SMS_FROM") or "MesaTI").strip(),
         "webhook_token": (os.getenv("VONAGE_WEBHOOK_TOKEN") or "").strip(),
-        "app_url": (os.getenv("APP_URL_PUBLICA") or "").strip().rstrip("/"),
     }
 
 
@@ -183,14 +180,13 @@ def _registrar(empresa_id, ticket_id, tecnico_id, enviado_por, motivo, telefono,
     return mensaje_id
 
 
-def _marcar(mensaje_id, estado, proveedor_id=None, error=None, sumar_intento=False):
+def _marcar(mensaje_id, estado, proveedor_id=None, error=None):
     con = conexion()
     with con.cursor() as cur:
         cur.execute(
-            f"""UPDATE mensajes_externos
-                   SET estado = %s, proveedor_id = COALESCE(%s, proveedor_id), error_detalle = %s
-                       {', intentos = intentos + 1' if sumar_intento else ''}
-                 WHERE id = %s""",
+            """UPDATE mensajes_externos
+                  SET estado = %s, proveedor_id = COALESCE(%s, proveedor_id), error_detalle = %s
+                WHERE id = %s""",
             (estado, proveedor_id, error, mensaje_id),
         )
     con.commit()
@@ -214,21 +210,6 @@ def _enviar_y_registrar(mensaje_id, telefono, texto, referencia):
 # =====================================================================
 #  Texto del mensaje
 # =====================================================================
-def _enlace_ticket(ticket_id):
-    base = _cfg()["app_url"]
-    try:
-        actual = request.host_url.rstrip("/")
-    except RuntimeError:
-        actual = ""
-    # Una dirección local (127.0.0.1, 192.168.x.x, 10.x.x.x) cambia con cada red:
-    # se usa la dirección con la que se abrió el sistema. Un dominio real (PythonAnywhere) se respeta.
-    local = re.compile(r"^https?://(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+"
-                       r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?(/|$)")
-    if actual and (not base or local.match(base)):
-        base = actual
-    return f"{base}/detalle_ticket?id={ticket_id}"
-
-
 def armar_texto(ticket, tecnico, reasignacion):
     primer_nombre = (tecnico["nombre"] or "").split()[0] if tecnico.get("nombre") else ""
     accion = "te reasignaron" if reasignacion else "te asignaron"
@@ -236,7 +217,7 @@ def armar_texto(ticket, tecnico, reasignacion):
         f"*MesaTI – {ticket['empresa']}*\n"
         f"Hola {primer_nombre}, {accion} el ticket *{ticket['codigo']}* (prioridad {ticket['prioridad']}).\n"
         f"{ticket['asunto']}\n"
-        f"Revísalo aquí: {_enlace_ticket(ticket['id'])}"
+        f"Revísalo aquí: {url_publica()}/detalle_ticket?id={ticket['id']}"
     )
 
 
@@ -274,13 +255,10 @@ def avisar_asignacion(ticket_id, tecnico_id, reasignacion, empresa_id, enviado_p
 def ver_mi_whatsapp():
     fila = consultar("SELECT telefono FROM users WHERE id = %s", (g.usuario["id"],), uno=True)
     numero = fila["telefono"] if fila else None
-    c = _cfg()
     return jsonify(
         telefono=numero,
         telefono_visible=f"+{numero}" if numero else None,
-        canal=c["canal"],
-        sandbox=c["url"] == URL_SANDBOX,
-        numero_sandbox=f"+{c['from_whatsapp']}",
+        numero_sandbox=f"+{_cfg()['from_whatsapp']}",
         configurado=vonage_configurado(),
     )
 
@@ -298,8 +276,7 @@ def guardar_mi_whatsapp():
     con.commit()
     return jsonify(
         mensaje="Número guardado. Te llegarán los avisos de tickets asignados." if numero
-        else "Número eliminado. Ya no recibirás avisos por WhatsApp.",
-        telefono=numero, telefono_visible=f"+{numero}" if numero else None,
+        else "Número eliminado. Ya no recibirás avisos por WhatsApp."
     )
 
 
@@ -318,8 +295,8 @@ def probar_mi_whatsapp():
                             usuario["telefono"], texto)
     resultado = _enviar_y_registrar(mensaje_id, usuario["telefono"], texto, f"prueba-{usuario['id']}")
     if resultado["estado"] == "FALLIDO":
-        return jsonify(error=resultado["error"], aviso=resultado), 502
-    return jsonify(mensaje="Mensaje de prueba enviado. Revisa tu WhatsApp.", aviso=resultado)
+        return jsonify(error=resultado["error"]), 502
+    return jsonify(mensaje="Mensaje de prueba enviado. Revisa tu WhatsApp.")
 
 
 # =====================================================================
@@ -342,8 +319,8 @@ def listar_avisos():
     except ValueError:
         limite = 15
     filas = consultar(
-        f"""SELECT m.id, m.ticket_id, v.codigo, m.tecnico_id, u.nombre AS tecnico, m.canal, m.motivo,
-                   m.telefono, m.estado, m.error_detalle, m.intentos, m.created_at, m.updated_at
+        f"""SELECT m.id, m.ticket_id, v.codigo, u.nombre AS tecnico, m.canal, m.motivo,
+                   m.telefono, m.estado, m.error_detalle, m.intentos, m.created_at
               FROM mensajes_externos m
               JOIN users u ON u.id = m.tecnico_id
               LEFT JOIN {V_TICKETS} v ON v.id = m.ticket_id
@@ -358,13 +335,11 @@ def listar_avisos():
         (g.usuario["empresa_id"],), uno=True)
     for f in filas:
         f["telefono"] = ocultar_telefono(f["telefono"])
-        f["created_at"] = f["created_at"].isoformat(timespec="seconds") if f["created_at"] else None
-        f["updated_at"] = f["updated_at"].isoformat(timespec="seconds") if f["updated_at"] else None
+        f["created_at"] = f["created_at"].isoformat(timespec="seconds")
     return jsonify(
         avisos=filas,
         resumen={k: int(resumen[k] or 0) for k in ("enviados", "fallidos", "total")},
         configurado=vonage_configurado(),
-        canal=_cfg()["canal"],
     )
 
 
@@ -390,8 +365,8 @@ def reintentar_aviso(mensaje_id):
     con.commit()
     resultado = _enviar_y_registrar(mensaje_id, fila["telefono"], fila["mensaje"], f"ticket-{fila['ticket_id']}")
     if resultado["estado"] == "FALLIDO":
-        return jsonify(error=resultado["error"], aviso=resultado), 502
-    return jsonify(mensaje="Aviso reenviado.", aviso=resultado)
+        return jsonify(error=resultado["error"]), 502
+    return jsonify(mensaje="Aviso reenviado.")
 
 
 # =====================================================================
@@ -424,13 +399,4 @@ def webhook_estado():
         # Los webhooks pueden llegar desordenados: nunca retrocedemos (LEIDO no vuelve a ENTREGADO)
         if estado == "FALLIDO" or ORDEN_ESTADOS.get(estado, 0) > ORDEN_ESTADOS.get(fila["estado"], -1):
             _marcar(fila["id"], estado, error=error)
-    return "", 200
-
-
-@avisos_bp.post("/webhooks/vonage/entrante")
-def webhook_entrante():
-    """Mensajes que el técnico escribe al número del Sandbox. Solo respondemos 200
-    (si respondiéramos error, Vonage reintentaría durante 24 horas)."""
-    if not _token_valido():
-        return jsonify(error="token inválido"), 401
     return "", 200

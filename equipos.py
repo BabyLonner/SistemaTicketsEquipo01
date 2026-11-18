@@ -69,18 +69,14 @@ RED_LOCAL = re.compile(r"^https?://(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\
                        r"|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?(/|$)")
 
 
-def _es_local(url):
-    return RED_LOCAL.match(url or "") is not None
-
-
 def url_publica():
-    """Dirección del sistema que va dentro del QR (la misma variable del módulo 4).
+    """Dirección del sistema que va dentro del QR y en el enlace del WhatsApp (módulo 4).
     APP_URL_PUBLICA solo se usa si es un dominio real (PythonAnywhere, ngrok).
     Si está vacía o es una dirección local (127.0.0.1, 192.168.x.x, 10.x.x.x), se usa la
     dirección con la que se abrió el sistema: así funciona aunque cambies de WiFi o hotspot."""
     base = (os.getenv("APP_URL_PUBLICA") or "").strip().rstrip("/")
     actual = request.host_url.rstrip("/")
-    if not base or _es_local(base):
+    if not base or RED_LOCAL.match(base):
         return actual
     return base
 
@@ -281,20 +277,16 @@ def listar_equipos():
     sin_permiso = _solo(ROL_ADMIN, ROL_TECNICO)
     if sin_permiso:
         return sin_permiso
-    ver_bajas = request.args.get("bajas") == "1"
-    filas = consultar(
-        SQL_EQUIPOS + " WHERE q.empresa_id = %s" + ("" if ver_bajas else " AND q.activo = 1")
-        + " ORDER BY q.activo DESC, q.codigo",
-        (g.usuario["empresa_id"],),
-    )
-    empresa = consultar("SELECT nombre, prefijo_ticket FROM empresas WHERE id = %s",
+    filas = consultar(SQL_EQUIPOS + " WHERE q.empresa_id = %s AND q.activo = 1 ORDER BY q.codigo",
+                      (g.usuario["empresa_id"],))
+    empresa = consultar("SELECT prefijo_ticket FROM empresas WHERE id = %s",
                         (g.usuario["empresa_id"],), uno=True)
     return jsonify(
         equipos=[_equipo_json(e) for e in filas],
         tipos=TIPOS,
         areas=consultar("SELECT id, nombre FROM areas WHERE empresa_id = %s AND activo = 1 ORDER BY nombre",
                         (g.usuario["empresa_id"],)),
-        empresa={"nombre": empresa["nombre"], "prefijo": empresa["prefijo_ticket"]},
+        empresa={"prefijo": empresa["prefijo_ticket"]},
         puede_editar=g.usuario["rol"] == ROL_ADMIN,
     )
 
@@ -345,7 +337,7 @@ def editar_equipo(equipo_id):
         with con.cursor() as cur:
             cur.execute(
                 """UPDATE equipos SET area_id = %s, codigo = %s, nombre = %s, tipo = %s, marca = %s,
-                          modelo = %s, serie = %s, ubicacion = %s, activo = 1
+                          modelo = %s, serie = %s, ubicacion = %s
                     WHERE id = %s AND empresa_id = %s""",
                 (datos["area_id"], datos["codigo"], datos["nombre"], datos["tipo"], datos["marca"],
                  datos["modelo"], datos["serie"], datos["ubicacion"], equipo_id, g.usuario["empresa_id"]),
