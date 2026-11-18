@@ -24,7 +24,7 @@ from vistas import V_TICKET_TIMELINE, V_TICKETS, aplicar_sla, aplicar_sla_lista
 
 tickets_bp = Blueprint("tickets", __name__)
 
-
+MENSAJE_SIN_ACCESO = "Usted no tiene acceso a este ticket o no existe en esta empresa."
 class Catalogo:
     @staticmethod
     def categorias(empresa_id):
@@ -878,16 +878,19 @@ def ticket_de_chat(ticket_id):
         )
     return ticket, None
 
+def ticket_visible(ticket_id, usuario, empresa_id):
+    if not ticket_id or not empresa_id:
+        return None
+    ticket = Ticket.obtener(ticket_id, empresa_id)
+    if ticket is None or not puede_ver(usuario, ticket):
+        return None
+    return ticket
+
 
 def _ticket_o_error(ticket_id):
-    ticket = Ticket.obtener(ticket_id, g.usuario["empresa_id"])
-    if ticket is None or not puede_ver(g.usuario, ticket):
-        return None, (
-            jsonify(
-                error="Usted no tiene acceso a este ticket o no existe en esta empresa."
-            ),
-            403,
-        )
+    ticket = ticket_visible(ticket_id, g.usuario, g.usuario["empresa_id"])
+    if ticket is None:
+        return None, (jsonify(error=MENSAJE_SIN_ACCESO), 403)
     return ticket, None
 
 
