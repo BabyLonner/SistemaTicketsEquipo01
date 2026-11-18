@@ -453,10 +453,8 @@ function escaparHTML(texto) {
 
 async function cargarListaTickets() {
 	try {
-		const res = await fetch('/api/tickets?mios=0&limite=200', {
-			method: 'GET',
-			headers: obtenerHeadersAuth()
-		});
+		const res = await fetch('/api/tickets?mios=0&limite=200');
+		
 		if (!res.ok) {
 			document.getElementById('page-message').textContent =
 				'Modo demostración: El servidor no devolvió tickets.';
