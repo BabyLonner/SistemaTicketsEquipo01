@@ -3,9 +3,9 @@
    ========================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const idTicket = new URLSearchParams(window.location.search).get('id');
-    cargarDetalleTicket(idTicket);
-    configurarEventosPanelDerecho(idTicket);
+	const idTicket = new URLSearchParams(window.location.search).get('id');
+	cargarDetalleTicket(idTicket);
+	configurarEventosPanelDerecho(idTicket);
 });
 
 function formatearFecha(isoStr) {
@@ -55,48 +55,46 @@ const CLASE_ESTADO_DET = {
    CARGAR DATOS DESDE LA API
    ========================================================================= */
 async function cargarDetalleTicket(id) {
-    try {
-        const res = await fetch(`/api/tickets/${id}`, { method: 'GET', headers: obtenerHeadersAuth() });
-        if (!res.ok) {
-            document.getElementById('ticket-subject').textContent = 'Error al cargar el ticket';
-            return;
-        }
+	try {
+		const res = await fetch(`/api/tickets/${id}`);
+		if (!res.ok) {
+			document.getElementById('ticket-subject').textContent = 'Error al cargar el ticket';
+			return;
+		}
 
 		const data = await res.json();
 		const t = data.ticket;
 		if (!t) return;
 
-        // 1. Cabecera y Título
-        document.getElementById('breadcrumb-code').textContent = escaparHTML(t.codigo);
-        document.getElementById('ticket-code').textContent = escaparHTML(t.codigo);
-        document.getElementById('ticket-subject').textContent = escaparHTML(t.asunto);
+        document.getElementById('breadcrumb-code').textContent = t.codigo;
+        document.getElementById('ticket-code').textContent = t.codigo;
+        document.getElementById('ticket-subject').textContent = t.asunto;
 
-        // 2. Etiquetas (Tags) Superiores
-        document.getElementById('ticket-priority-tag').className = `badge ${CLASE_PRIORIDAD_DET[t.prioridad] || ''}`;
-        document.getElementById('ticket-priority-tag').textContent = `▥ ${escaparHTML(t.prioridad)}`;
+		document.getElementById('ticket-priority-tag').className =
+			`badge ${CLASE_PRIORIDAD_DET[t.prioridad] || ''}`;
+        document.getElementById('ticket-priority-tag').textContent = `▥ ${t.prioridad}`;
 
-        document.getElementById('ticket-status-tag').className = `badge ${CLASE_ESTADO_DET[t.estado] || ''}`;
-        document.getElementById('ticket-status-tag').textContent = `▤ ${escaparHTML(t.estado)}`;
+		document.getElementById('ticket-status-tag').className =
+			`badge ${CLASE_ESTADO_DET[t.estado] || ''}`;
+        document.getElementById('ticket-status-tag').textContent = `▤ ${t.estado}`;
 
-        const tagCategoria = document.querySelectorAll('.ticket-tags .category-tag')[0];
-        const tagEmpresa = document.querySelectorAll('.ticket-tags .category-tag')[1];
-        if (tagCategoria) tagCategoria.textContent = `◉ ${escaparHTML(t.categoria)}`;
-        if (tagEmpresa) tagEmpresa.textContent = `▦ ${escaparHTML(t.empresa)}`;
+		const tagCategoria = document.querySelectorAll('.ticket-tags .category-tag')[0];
+		const tagEmpresa = document.querySelectorAll('.ticket-tags .category-tag')[1];
+        if (tagCategoria) tagCategoria.textContent = `◉ ${t.categoria}`;
+        if (tagEmpresa) tagEmpresa.textContent = `▦ ${t.empresa}`;
 
 		calcularSlaDetalleTicket(t);
 
-        // 3. Descripción y Metadatos (Panel Izquierdo)
-        document.getElementById('ticket-description').textContent = escaparHTML(t.descripcion);
+        document.getElementById('ticket-description').textContent = t.descripcion;
 
-        const metadataItems = document.querySelectorAll('.metadata-item strong');
-        if (metadataItems.length >= 4) {
-            metadataItems[0].textContent = escaparHTML(t.solicitante);
-            metadataItems[1].textContent = escaparHTML(t.area);
-            metadataItems[2].textContent = escaparHTML(t.empresa);
-            metadataItems[3].textContent = formatearFecha(t.created_at);
-        }
+		const metadataItems = document.querySelectorAll('.metadata-item strong');
+		if (metadataItems.length >= 4) {
+            metadataItems[0].textContent = t.solicitante;
+            metadataItems[1].textContent = t.area;
+            metadataItems[2].textContent = t.empresa;
+			metadataItems[3].textContent = formatearFecha(t.created_at);
+		}
 
-		// 4. Panel Lateral Derecho (Estado y Configuración)
 		const selEstado = document.getElementById('property-status');
 		const selPrio = document.getElementById('property-priority');
 		const selCat = document.getElementById('property-category');
@@ -115,7 +113,6 @@ async function cargarDetalleTicket(id) {
 			selTec.value = tecValue;
 		}
 
-		// MÓDULO 3: recordar el estado y técnico actuales y cargar los técnicos reales
 		ticketDetalleActual = {
 			id: t.id,
 			codigo: t.codigo,
@@ -125,7 +122,6 @@ async function cargarDetalleTicket(id) {
 		cargarTecnicosDetalle(t.tecnico);
 		document.dispatchEvent(new CustomEvent('ticket:cargado', { detail: t }));
 
-		// --- NUEVO 5: PROYECTAR EVIDENCIAS (IMÁGENES) ---
 		const contenedorEvidencias = document.getElementById('contenedor-evidencias');
 		if (contenedorEvidencias) {
 			contenedorEvidencias.innerHTML = ''; // Limpiamos los datos de prueba
@@ -701,12 +697,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			.join('');
 	}
 
-    async function pedir(url, opciones = {}) {
-        const res = await fetch(url, { credentials: 'same-origin', headers: obtenerHeadersAuth(), ...opciones });
-        const datos = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(datos.error || 'No se pudo completar la acción.');
-        return datos;
-    }
+	async function pedir(url, opciones = {}) {
+		const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opciones });
+		const datos = await res.json().catch(() => ({}));
+		if (!res.ok) throw new Error(datos.error || 'No se pudo completar la acción.');
+		return datos;
+	}
 
 	async function cargar() {
 		try {
