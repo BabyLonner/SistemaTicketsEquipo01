@@ -1,5 +1,5 @@
 """
-MÓDULO 6 — Exportación de reportes con los mismos filtros de la pantalla Reportes.
+MÓDULO 8 — Exportación de reportes con los mismos filtros de la pantalla Reportes.
 
   GET /reportes/exportar/excel   -> .xlsx (openpyxl)
   GET /reportes/exportar/pdf     -> .pdf  (ReportLab) con código QR de verificación (Módulo 8)
