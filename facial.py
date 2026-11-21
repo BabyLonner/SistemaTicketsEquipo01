@@ -15,7 +15,7 @@ from vistas import V_USUARIOS_SESION
 facial_bp = Blueprint("facial", __name__)
 
 UMBRAL = float(os.getenv("UMBRAL_FACIAL", "0.45"))
-UMBRAL_MISMA_PERSONA_REGISTRO = 0.45   # las 3 capturas del registro deben parecerse entre sí
+UMBRAL_MISMA_PERSONA_REGISTRO = 0.45
 MAX_INTENTOS = 5
 MINUTOS_BLOQUEO = 15
 MAX_INTENTOS_IP = 20
