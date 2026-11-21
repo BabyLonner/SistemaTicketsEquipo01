@@ -42,7 +42,7 @@ from notificaciones import notificaciones_bp
 from reportes import reportes_bp
 from sla_push import sla_push_bp
 from tareas import tareas_bp
-from tickets import Ticket, puede_ver, tickets_bp
+from tickets import MENSAJE_SIN_ACCESO, ticket_visible, tickets_bp
 from usuarios import usuarios_bp
 from utils import ordenar_por_urgencia
 from verificacion import verificacion_bp
@@ -259,6 +259,7 @@ def api_login():
 def api_logout():
     revocar_token_actual()
     return jsonify(status=1, message="Token invalidado")
+
 
 def _comparar(sql, params):
     """sql debe devolver columnas mes_actual_<x> y mes_anterior_<x>."""
@@ -496,26 +497,23 @@ def pantalla(pagina):
         return error
 
     if pagina == "detalle_ticket":
-        ticket_id = request.args.get("id", type=int)
-        emp_id = empresa_actual()
-
-        ticket = Ticket.obtener(ticket_id, emp_id) if (ticket_id and emp_id) else None
-
-        usuario_eval = dict(g.usuario_token) if g.get("usuario_token") else {}
-        if es_super():
-            usuario_eval["rol"] = "Administrador"
-
-        if not ticket or not puede_ver(usuario_eval, ticket):
-            return render_template(
-                "error.html",
-                codigo=403,
-                mensaje="Usted no tiene acceso a este ticket o no existe en esta empresa.",
-            ), 403
+        error = _validar_detalle_ticket()
+        if error:
+            return error
 
     try:
         return render_template(f"{pagina}.html")
     except TemplateNotFound:
         abort(404)
+
+
+def _validar_detalle_ticket():
+    ticket_id = request.args.get("id", type=int)
+    if not ticket_id or ticket_id < 1:
+        return _error(404, "El enlace no indica un ticket válido.")
+    if not ticket_visible(ticket_id, g.usuario_token, empresa_actual()):
+        return _error(403, MENSAJE_SIN_ACCESO)
+    return None
 
 
 @app.get("/salud")

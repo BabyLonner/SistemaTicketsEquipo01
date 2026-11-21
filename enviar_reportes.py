@@ -13,7 +13,7 @@ los días y revisa la programación de cada empresa (Configuración → Reporte 
 """
 import sys
 
-import sys
+
 
 from envios import procesar_envios_programados
 from run import app

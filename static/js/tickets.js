@@ -437,13 +437,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	cargarListaTickets();
 });
 
-function obtenerHeadersAuth() {
-	const headers = { 'Content-Type': 'application/json' };
-	const token = localStorage.getItem('token');
-	if (token) headers['Authorization'] = `Bearer ${token}`;
-	return headers;
-}
-
 function escaparHTML(texto) {
 	return String(texto ?? '').replace(
 		/[&<>"']/g,
@@ -453,10 +446,8 @@ function escaparHTML(texto) {
 
 async function cargarListaTickets() {
 	try {
-		const res = await fetch('/api/tickets?mios=0&limite=200', {
-			method: 'GET',
-			headers: obtenerHeadersAuth()
-		});
+		const res = await fetch('/api/tickets?mios=0&limite=200');
+		
 		if (!res.ok) {
 			document.getElementById('page-message').textContent =
 				'Modo demostración: El servidor no devolvió tickets.';

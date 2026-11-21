@@ -529,9 +529,9 @@ def api_insertar_notificacion():
     return ok({"id": nuevo}, "Notificación insertada correctamente")
 
 
-@api_postman_bp.get("/api_obtenernotificaciones")
+@api_postman_bp.get("/api_obtener_notificaciones")
 @login_requerido
-def api_obtenernotificaciones():
+def api_obtener_notificaciones():
     filas = consultar(
         """SELECT id, usuario_id, tipo, referencia_ticket, titulo, mensaje, leido, leido_at, created_at
              FROM notificaciones WHERE usuario_id = %s ORDER BY created_at DESC""",

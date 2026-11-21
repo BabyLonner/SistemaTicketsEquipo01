@@ -52,8 +52,7 @@ lo sube y el servidor recalcula la huella; si cambió un solo byte, el resultado
 
 **Configuración**
 - `.env` → `URL_BASE=http://127.0.0.1:5000` en tu PC, `URL_BASE=https://grupo01.pythonanywhere.com` en el servidor.
-- Base de datos: si partes de cero, `python inicializar_bd.py` ya crea las tablas. Si ya tienes datos (PythonAnywhere),
-  ejecuta solo `python3.13 migrar_modulo8.py`, que **no borra nada**.
+- Base de datos: si partes de cero, `python inicializar_bd.py` ya crea las tablas. Si ya tienes datos (PythonAnywhere).
 - No requiere librerías nuevas: el QR lo dibuja ReportLab, el hash es `hashlib` y el correo es `smtplib` de Python.
 
 **Cómo probarlo**
