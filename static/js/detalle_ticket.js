@@ -786,3 +786,187 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	cargar();
 });
+
+// =========================================================================
+// RELOJ SLA EN VIVO EN DETALLE DE TICKET (1s visual + 15s sincronización)
+// =========================================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const ticketId = params.get("id");
+  const barraSla = document.getElementById("sla-progress-bar");
+  if (!ticketId || !barraSla) return;
+
+  let ticketEnVivo = null;
+
+  const headersSla = () => {
+    const headers = { "Content-Type": "application/json" };
+    const token = localStorage.getItem("token");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  };
+
+  const formatearSegundosSla = (segTotales) => {
+    const s = Math.max(0, Math.floor(segTotales));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}h ${m}m ${sec}s`;
+    if (m > 0) return `${m}m ${sec}s`;
+    return `${sec}s`;
+  };
+
+  const pintarSlaDetalleVivo = (t) => {
+    if (!t || !t.created_at || !t.fecha_limite) return;
+
+    const creadoMs = Date.parse(t.created_at);
+    const limiteMs = Date.parse(t.fecha_limite);
+    if (isNaN(creadoMs) || isNaN(limiteMs)) return;
+
+    const ahoraMs = Date.now();
+    const plazoSeg = Math.max((limiteMs - creadoMs) / 1000, 1);
+    const transcurridoSeg = Math.max((ahoraMs - creadoMs) / 1000, 0);
+    const pct = Math.min(Math.round((transcurridoSeg / plazoSeg) * 100), 100);
+
+    const elLimit = document.getElementById("sla-limit");
+    if (elLimit) {
+      const minsTot = t.sla_minutos || Math.round(plazoSeg / 60);
+      const hLim = Math.floor(minsTot / 60);
+      const mLim = minsTot % 60;
+      elLimit.textContent = mLim > 0 ? `${hLim}h ${mLim}m` : `${hLim}h`;
+    }
+
+    const elElapsed = document.querySelector(".sla-stats .time-danger span");
+    if (elElapsed && t.estado !== "Resuelto" && t.estado !== "Cerrado") {
+      elElapsed.textContent = formatearSegundosSla(Math.min(transcurridoSeg, plazoSeg));
+    }
+
+    barraSla.style.width = `${pct}%`;
+    const elPercent = document.getElementById("sla-percent");
+    if (elPercent) elPercent.textContent = `${pct}%`;
+
+    const elTitle = document.getElementById("sla-title");
+    const elSmall = elTitle ? elTitle.parentElement.querySelector("small") : null;
+    const elNote = document.getElementById("sla-note");
+    const box = document.querySelector(".sla-warning-box");
+    const icono = box ? box.querySelector("span") : null;
+
+    if (t.estado === "Resuelto" || t.estado === "Cerrado") {
+      const cumplido = t.semaforo === "cumplido";
+      if (elTitle) elTitle.textContent = cumplido ? "SLA Cumplido" : "Resuelto fuera de plazo";
+      if (elSmall) elSmall.textContent = cumplido ? "Se resolvió dentro del plazo" : "Se resolvió después del plazo";
+      barraSla.style.background = cumplido ? "#14b88a" : "#f04452";
+      if (box) {
+        box.style.background = cumplido ? "#e8f7ef" : "#fdecec";
+        box.style.color = cumplido ? "#12805c" : "#b42318";
+      }
+      if (icono) {
+        icono.textContent = cumplido ? "✓" : "!";
+        icono.style.background = cumplido ? "#12805c" : "#b42318";
+      }
+      return;
+    }
+
+    if (ahoraMs > limiteMs) {
+      const excesoSeg = (ahoraMs - limiteMs) / 1000;
+      if (elTitle) elTitle.textContent = "SLA Vencido";
+      if (elSmall) elSmall.textContent = `Venció hace ${formatearSegundosSla(excesoSeg)}`;
+      if (elNote) elNote.textContent = `Plazo superado hace ${formatearSegundosSla(excesoSeg)}.`;
+      barraSla.style.background = "#f04452";
+      if (box) {
+        box.style.background = "#fdecec";
+        box.style.color = "#b42318";
+      }
+      if (icono) {
+        icono.textContent = "!";
+        icono.style.background = "#b42318";
+      }
+    } else if (transcurridoSeg >= plazoSeg * 0.75) {
+      const restanteSeg = (limiteMs - ahoraMs) / 1000;
+      if (elTitle) elTitle.textContent = "SLA Por vencer";
+      if (elSmall) elSmall.textContent = `Quedan ${formatearSegundosSla(restanteSeg)}`;
+      if (elNote) elNote.textContent = `Quedan ${formatearSegundosSla(restanteSeg)} para el vencimiento.`;
+      barraSla.style.background = "#f0a500";
+      if (box) {
+        box.style.background = "#fff6e0";
+        box.style.color = "#9a6700";
+      }
+      if (icono) {
+        icono.textContent = "!";
+        icono.style.background = "#9a6700";
+      }
+    } else {
+      const restanteSeg = (limiteMs - ahoraMs) / 1000;
+      if (elTitle) elTitle.textContent = "SLA En tiempo";
+      if (elSmall) elSmall.textContent = `Quedan ${formatearSegundosSla(restanteSeg)}`;
+      if (elNote) elNote.textContent = `Quedan ${formatearSegundosSla(restanteSeg)} dentro del plazo.`;
+      barraSla.style.background = "#14b88a";
+      if (box) {
+        box.style.background = "#e8f7ef";
+        box.style.color = "#12805c";
+      }
+      if (icono) {
+        icono.textContent = "✓";
+        icono.style.background = "#12805c";
+      }
+    }
+  };
+
+  const sincronizarDetalleSla = async () => {
+    try {
+      const resAlertas = await fetch("/api/sla/verificar-alertas", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: headersSla(),
+      });
+      if (resAlertas.ok) {
+        const dataAlertas = await resAlertas.json();
+        const huboEventos = (dataAlertas.escalados?.length > 0) || (dataAlertas.alertados?.length > 0);
+        if (huboEventos) {
+          if ("Notification" in window && Notification.permission === "granted") {
+            dataAlertas.escalados?.forEach((t) => {
+              new Notification(`🚨 SLA Vencido y Escalado: ${t.codigo}`, {
+                body: `${t.asunto} superó el plazo y subió a prioridad Alta.`,
+                tag: `sla-vencido-${t.id}`,
+              });
+            });
+            dataAlertas.alertados?.forEach((t) => {
+              new Notification(`⚠️ SLA por vencer: ${t.codigo}`, {
+                body: `Quedan ${t.restantes} min para resolver «${t.asunto}».`,
+                tag: `sla-por-vencer-${t.id}`,
+              });
+            });
+          }
+          if (typeof cargarHistorial === "function") cargarHistorial(ticketId);
+        }
+      }
+
+      const resp = await fetch(`/api/tickets/${ticketId}`, {
+        credentials: "same-origin",
+        headers: headersSla(),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        ticketEnVivo = data.ticket;
+        pintarSlaDetalleVivo(ticketEnVivo);
+
+        const tagPrio = document.getElementById("ticket-priority-tag");
+        if (tagPrio && ticketEnVivo?.prioridad) {
+          tagPrio.textContent = `▥ ${ticketEnVivo.prioridad}`;
+        }
+        const selectPrio = document.getElementById("property-priority");
+        if (selectPrio && ticketEnVivo?.prioridad) {
+          selectPrio.value = ticketEnVivo.prioridad;
+        }
+      }
+    } catch (e) {
+      console.warn("Error sincronizando SLA del detalle:", e);
+    }
+  };
+
+  setInterval(() => {
+    if (ticketEnVivo) pintarSlaDetalleVivo(ticketEnVivo);
+  }, 1000);
+
+  setInterval(sincronizarDetalleSla, 15000);
+  sincronizarDetalleSla();
+});

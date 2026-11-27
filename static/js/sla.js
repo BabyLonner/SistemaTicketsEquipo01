@@ -9,7 +9,7 @@ const pageSizeSla = 10;
 let currentSlaFilter = "all";
 
 // Variables para el panel de configuración
-let categoriaSeleccionada = null; 
+let categoriaSeleccionada = null;
 let prioridadesDisponibles = [];
 
 const CLASE_PRIORIDAD = { Alta: 'priority-high', Media: 'priority-medium', Baja: 'priority-low' };
@@ -28,6 +28,115 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     cargarConfiguracionCategoriasSla();
     inicializarEventosSlaConfig();
+
+  // =========================================================================
+  // MOTOR EN TIEMPO REAL SLA (1s visual local + 15s verificación/escalamiento)
+  // =========================================================================
+  const tbodySla = document.getElementById("tickets-tbody");
+
+  if (tbodySla) {
+    const formatearTiempoVivo = (segundosTotales) => {
+      const s = Math.max(0, Math.floor(segundosTotales));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (h > 0) return `${h}h ${m}m ${sec}s`;
+      if (m > 0) return `${m}m ${sec}s`;
+      return `${sec}s`;
+    };
+
+    const actualizarRelojesSlaEnVivo = () => {
+      const ahoraMs = Date.now();
+      let enTiempo = 0, porVencer = 0, vencidos = 0;
+
+      tbodySla.querySelectorAll("tr[data-created]").forEach((row) => {
+        const estado = row.dataset.status || "";
+        const creadoMs = Date.parse(row.dataset.created);
+        const limiteMs = Date.parse(row.dataset.limitIso);
+        if (isNaN(creadoMs) || isNaN(limiteMs)) return;
+
+        const plazoSeg = Math.max((limiteMs - creadoMs) / 1000, 1);
+        const transcurridoSeg = Math.max((ahoraMs - creadoMs) / 1000, 0);
+        const pct = Math.min(Math.round((transcurridoSeg / plazoSeg) * 100), 100);
+
+        const spanElapsed = row.querySelector(".elapsed span");
+        const track = row.querySelector(".time-track");
+        const bar = row.querySelector(".time-track i");
+        const badge = row.querySelector(".sla-badge");
+
+        if (estado !== "Resuelto" && estado !== "Cerrado") {
+          if (spanElapsed) spanElapsed.textContent = formatearTiempoVivo(Math.min(transcurridoSeg, plazoSeg));
+          if (bar) bar.style.width = `${pct}%`;
+
+          let nuevoSla = "En tiempo";
+          let colorTrack = "green";
+          let claseBadge = "ontime";
+
+          if (ahoraMs > limiteMs) {
+            nuevoSla = "Vencido";
+            colorTrack = "red";
+            claseBadge = "overdue";
+            vencidos++;
+          } else if (transcurridoSeg >= plazoSeg * 0.75) {
+            nuevoSla = "Por vencer";
+            colorTrack = "amber";
+            claseBadge = "due";
+            porVencer++;
+          } else {
+            enTiempo++;
+          }
+
+          row.dataset.sla = nuevoSla;
+          if (track) track.className = `time-track ${colorTrack}`;
+          if (badge) {
+            badge.className = `sla-badge ${claseBadge}`;
+            badge.innerHTML = `<i></i>${nuevoSla}`;
+          }
+        }
+      });
+
+      const elOntime = document.getElementById("ontime-count");
+      const elDue = document.getElementById("due-count");
+      const elOverdue = document.getElementById("overdue-count");
+      if (elOntime) elOntime.textContent = enTiempo;
+      if (elDue) elDue.textContent = porVencer;
+      if (elOverdue) elOverdue.textContent = vencidos;
+    };
+
+    const sincronizarSlaServidor = async () => {
+      try {
+        const resAlertas = await fetch("/api/sla/verificar-alertas", { method: "POST" });
+        if (resAlertas.ok) {
+          const dataAlertas = await resAlertas.json();
+          if ((dataAlertas.escalados?.length > 0 || dataAlertas.alertados?.length > 0) &&
+              "Notification" in window && Notification.permission === "granted") {
+            dataAlertas.escalados?.forEach((t) => {
+              new Notification(`🚨 SLA Vencido y Escalado: ${t.codigo}`, {
+                body: `${t.asunto} superó el plazo y subió a prioridad Alta.`,
+                tag: `sla-vencido-${t.id}`,
+              });
+            });
+            dataAlertas.alertados?.forEach((t) => {
+              new Notification(`⚠️ SLA por vencer: ${t.codigo}`, {
+                body: `Quedan ${t.restantes} min para resolver «${t.asunto}».`,
+                tag: `sla-por-vencer-${t.id}`,
+              });
+            });
+          }
+        }
+        // Recarga los datos actualizados (prioridades escaladas, nuevos tickets) usando tu función existente
+        if (typeof cargarTicketsSla === "function") {
+          await cargarTicketsSla();
+        }
+      } catch (err) {
+        console.warn("Sincronización SLA en segundo plano:", err);
+      }
+    };
+
+    setInterval(actualizarRelojesSlaEnVivo, 1000);
+    setInterval(sincronizarSlaServidor, 15000);
+    sincronizarSlaServidor();
+  }
 });
 
 function escaparHTML(texto) {
@@ -70,7 +179,7 @@ async function cargarTicketsSla() {
         if (!res.ok) return;
         const data = await res.json();
         ticketsGlobales = data.tickets || [];
-        
+
         poblarFiltrosDinamicosSla(ticketsGlobales);
         aplicarFiltrosSla();
     } catch (e) {
@@ -174,8 +283,8 @@ function actualizarGraficoBarrasSla(enTiempo, porVencer, vencidos) {
         const labelNumero = col.querySelector('b');
         const barraVisual = col.querySelector('.bar');
         if (labelNumero) labelNumero.textContent = item.valor;
-        
-        const alturaFinal = item.valor > 0 ? Math.max(Math.round((item.valor / valorMaximo) * escalaAltura), 8) : 4; 
+
+        const alturaFinal = item.valor > 0 ? Math.max(Math.round((item.valor / valorMaximo) * escalaAltura), 8) : 4;
         if (barraVisual) {
             barraVisual.style.height = `${alturaFinal}%`;
             barraVisual.style.setProperty('--bar-height', `${alturaFinal}%`);
@@ -209,7 +318,7 @@ function renderizarSla() {
         const plazo = calcularPlazoVisualSla(t);
         const tecnico = t.tecnico || 'Sin asignar';
         const urlDetalle = `/detalle_ticket?id=${t.id}`;
-        
+
         let clasePill = 'ok';
         if (plazo.nivel === 'por-vencer') clasePill = 'warning';
         if (plazo.nivel === 'vencidos') clasePill = 'danger';
@@ -270,7 +379,7 @@ function formatearFechaSla(iso) {
 function renderizarPaginacionSla(totalPaginas) {
     const pagContainer = document.querySelector('.pagination');
     if (!pagContainer) return;
-    
+
     let htmlPag = `<button id="prev-page" type="button" aria-label="Anterior" ${paginaActualSla === 1 ? 'disabled' : ''}>‹</button>`;
     for (let i = 1; i <= totalPaginas; i++) {
         htmlPag += `<button class="page-number ${i === paginaActualSla ? 'active' : ''}" type="button" data-page="${i}">${i}</button>`;
@@ -331,18 +440,18 @@ function mensajeSla(texto) {
 function mostrarConfirmacionSla(mensaje, alConfirmar) {
     const modal = document.getElementById('modal-confirm-sla');
     if (!modal) return;
-    
+
     document.getElementById('texto-confirm-sla').textContent = mensaje;
     modal.style.display = 'flex';
-    
+
     const btnOk = document.getElementById('btn-confirmar-sla-ok');
     const btnCancel = document.getElementById('btn-confirmar-sla-cancel');
-    
+
     const nuevoBtnOk = btnOk.cloneNode(true);
     const nuevoBtnCancel = btnCancel.cloneNode(true);
     btnOk.parentNode.replaceChild(nuevoBtnOk, btnOk);
     btnCancel.parentNode.replaceChild(nuevoBtnCancel, btnCancel);
-    
+
     nuevoBtnCancel.addEventListener('click', () => { modal.style.display = 'none'; });
     nuevoBtnOk.addEventListener('click', () => {
         modal.style.display = 'none';
@@ -364,7 +473,7 @@ async function cargarConfiguracionCategoriasSla() {
     try {
         const res = await fetch('/api/configuracion/categorias-prioridad', { credentials: 'same-origin' });
         if (!res.ok) throw new Error("Error en red");
-        
+
         const data = await res.json();
         const categorias = data.categorias || [];
         prioridadesDisponibles = data.prioridades || [];
@@ -380,7 +489,7 @@ async function cargarConfiguracionCategoriasSla() {
             const prio = prioridadesDisponibles.find(p => Number(p.id) === Number(cat.prioridad_id)) || { nombre: 'No asignada' };
             const prioLower = (prio.nombre || '').toLowerCase();
             const prioClase = prioLower === 'alta' ? 'high' : (prioLower === 'media' ? 'medium' : 'low');
-            
+
             const h = cat.tiempo_horas !== undefined ? cat.tiempo_horas : (prio.sla_horas || 0);
             const m = cat.tiempo_minutos || 0;
             const tiempoFormateado = formatearTiempoPersonalizado(h, m);
@@ -400,13 +509,13 @@ async function cargarConfiguracionCategoriasSla() {
             `;
         });
         contenedor.innerHTML = html;
-        
+
         const filas = document.querySelectorAll('.fila-categoria');
         filas.forEach(fila => {
             fila.addEventListener('click', () => {
                 filas.forEach(f => f.style.backgroundColor = 'transparent');
-                fila.style.backgroundColor = '#e2e8f0'; 
-                
+                fila.style.backgroundColor = '#e2e8f0';
+
                 categoriaSeleccionada = {
                     id: fila.getAttribute('data-id'),
                     nombre: fila.getAttribute('data-nombre'),
@@ -431,12 +540,12 @@ function abrirModal(modo) {
     const inputHoras = document.getElementById('modal-sla-horas');
     const inputMinutos = document.getElementById('modal-sla-minutos');
 
-    selectPrioridad.innerHTML = prioridadesDisponibles.map(p => 
+    selectPrioridad.innerHTML = prioridadesDisponibles.map(p =>
         `<option value="${p.id}">${p.nombre}</option>`
     ).join('');
 
     if (modo === 'agregar') {
-        categoriaSeleccionada = null; 
+        categoriaSeleccionada = null;
         document.querySelectorAll('.fila-categoria').forEach(f => f.style.backgroundColor = 'transparent');
         titulo.textContent = 'Agregar Categoría';
         inputNombre.value = '';
@@ -454,7 +563,7 @@ function abrirModal(modo) {
         inputHoras.value = categoriaSeleccionada.horas;
         inputMinutos.value = categoriaSeleccionada.minutos;
     }
-    
+
     modal.style.display = 'flex';
 }
 
@@ -467,13 +576,13 @@ function inicializarEventosSlaConfig() {
     document.getElementById('btn-agregar-sla')?.addEventListener('click', () => abrirModal('agregar'));
     document.getElementById('btn-editar-sla')?.addEventListener('click', () => abrirModal('editar'));
     document.getElementById('btn-cancelar-sla')?.addEventListener('click', cerrarModal);
-    
+
     document.getElementById('btn-eliminar-sla')?.addEventListener('click', () => {
         if (!categoriaSeleccionada) {
             mensajeSla("Selecciona una categoría de la tabla primero.");
             return;
         }
-        
+
         mostrarConfirmacionSla(
             `¿Estás seguro de que deseas eliminar la categoría "${categoriaSeleccionada.nombre}"?`,
             async () => {
@@ -484,8 +593,8 @@ function inicializarEventosSlaConfig() {
                     });
                     if (res.ok) {
                         mensajeSla(`Categoría "${categoriaSeleccionada.nombre}" eliminada.`);
-                        categoriaSeleccionada = null; 
-                        cargarConfiguracionCategoriasSla(); 
+                        categoriaSeleccionada = null;
+                        cargarConfiguracionCategoriasSla();
                     } else {
                         mensajeSla("Error al eliminar en la base de datos.");
                     }
@@ -500,7 +609,7 @@ function inicializarEventosSlaConfig() {
     if (btnGuardarModal) {
         btnGuardarModal.addEventListener('click', async () => {
             console.log("Botón Guardar clickeado.");
-            
+
             const nombreInput = document.getElementById('modal-sla-nombre');
             const prioridadSelect = document.getElementById('modal-sla-prioridad');
             const horasInput = document.getElementById('modal-sla-horas');
@@ -510,12 +619,12 @@ function inicializarEventosSlaConfig() {
             const prioridad = prioridadSelect ? prioridadSelect.value : '';
             const horas = horasInput ? horasInput.value : '0';
             const minutos = minutosInput ? minutosInput.value : '0';
-            
+
             if (!nombre) {
                 mensajeSla("El nombre de la categoría es obligatorio.");
                 return;
             }
-            
+
             const payload = {
                 categoria_id: categoriaSeleccionada ? parseInt(categoriaSeleccionada.id, 10) : null,
                 nombre: nombre,
@@ -534,7 +643,7 @@ function inicializarEventosSlaConfig() {
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                
+
                 if (res.ok) {
                     mensajeSla("Configuración guardada exitosamente.");
                     cerrarModal();

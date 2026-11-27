@@ -26,6 +26,9 @@ VAPID_CLAIMS = {"sub": "mailto:soporte@mesadeayuda.pe"}
 
 def _obtener_usuario_id():
     """Obtiene de forma segura el ID del usuario actual desde g o session."""
+    token_user = getattr(g, "usuario_token", None)
+    if isinstance(token_user, dict) and token_user.get("id"):
+        return token_user["id"]
     usuario = getattr(g, "usuario", None) or getattr(g, "user", None)
     if usuario:
         if isinstance(usuario, dict):
@@ -91,7 +94,7 @@ def suscribir_push():
     return jsonify(ok=True, mensaje="Notificaciones Push activadas en este navegador.")
 
 
-def _enviar_webpush_usuario(cur, usuario_id, titulo, cuerpo, url="/sla"):
+def _enviar_webpush_usuario(cur, usuario_id, titulo, cuerpo, url="/sla", tag=None):
     """Envía Web Push real si hay VAPID_PRIVATE_KEY configurada."""
     cur.execute(
         "SELECT id, endpoint, p256dh, auth FROM push_suscripciones WHERE usuario_id = %s AND activo = 1",
@@ -105,7 +108,7 @@ def _enviar_webpush_usuario(cur, usuario_id, titulo, cuerpo, url="/sla"):
     try:
         from pywebpush import webpush, WebPushException
 
-        payload = json.dumps({"title": titulo, "body": cuerpo, "url": url})
+        payload = json.dumps({"title": titulo, "body": cuerpo, "url": url, "tag": tag or f"sla-notif-{usuario_id}"})
         for sub in suscripciones:
             try:
                 webpush(
@@ -185,21 +188,25 @@ def verificar_y_escalar_sla():
         for t in tickets_activos:
             codigo = f"{t['prefijo_ticket']}-{t['numero']:04d}"
             cur.execute(
-                """SELECT TIMESTAMPDIFF(MINUTE, %s, NOW()) AS transcurridos,
-                          TIMESTAMPDIFF(MINUTE, NOW(), %s) AS restantes""",
-                (t["created_at"], t["fecha_limite"]),
+                """SELECT TIMESTAMPDIFF(SECOND, %s, NOW()) AS transcurridos_seg,
+                          TIMESTAMPDIFF(SECOND, NOW(), %s) AS restantes_seg,
+                          TIMESTAMPDIFF(SECOND, %s, %s) AS plazo_total_seg""",
+                (t["created_at"], t["fecha_limite"], t["created_at"], t["fecha_limite"]),
             )
             tiempos = cur.fetchone()
-            restantes = tiempos["restantes"] or 0
-            transcurridos = tiempos["transcurridos"] or 0
-            umbral_amarillo = t["sla_horas"] * 60 * 0.75
+            restantes_seg = tiempos["restantes_seg"] if tiempos["restantes_seg"] is not None else 0
+            transcurridos_seg = tiempos["transcurridos_seg"] or 0
+            plazo_total_seg = max(tiempos["plazo_total_seg"] or (t["sla_horas"] * 3600), 1)
+            umbral_amarillo_seg = plazo_total_seg * 0.75
+            restantes_min = max(1, round(restantes_seg / 60))
 
             destinatarios = set(admins_ids)
             if t["tecnico_id"]:
                 destinatarios.add(t["tecnico_id"])
+            usuario_hist = usuario_actual_id or t["tecnico_id"] or next(iter(admins_ids), None)
 
-            # CASO 1: TICKET VENCIDO -> Escalamiento automático
-            if restantes < 0 and not t["escalado_sla"]:
+            # CASO 1: TICKET VENCIDO (100%) -> Escalamiento automático
+            if restantes_seg < 0 and not t["escalado_sla"]:
                 nueva_prio = 1 if t["prioridad_id"] != 1 else t["prioridad_id"]
                 cur.execute(
                     """UPDATE tickets
@@ -211,15 +218,16 @@ def verificar_y_escalar_sla():
                     (nueva_prio, t["id"]),
                 )
                 comentario_esc = (
-                    f"Escalamiento automático por SLA vencido. Prioridad elevada a Alta."
+                    "Escalamiento automático por SLA vencido. Prioridad elevada a Alta."
                     if t["prioridad_id"] != 1
                     else "Escalamiento automático por SLA vencido (Ticket ya en prioridad Alta)."
                 )
-                cur.execute(
-                    """INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, comentario, created_at)
-                       VALUES (%s, %s, 'COMENTARIO', %s, NOW())""",
-                    (t["id"], usuario_actual_id, comentario_esc),
-                )
+                if usuario_hist:
+                    cur.execute(
+                        """INSERT INTO ticket_historial (ticket_id, usuario_id, tipo, comentario, created_at)
+                           VALUES (%s, %s, 'COMENTARIO', %s, NOW())""",
+                        (t["id"], usuario_hist, comentario_esc),
+                    )
                 titulo = f"🚨 SLA Vencido y Escalado: {codigo}"
                 mensaje = f"{t['asunto']} superó el tiempo límite. {comentario_esc}"
                 for uid in destinatarios:
@@ -229,7 +237,12 @@ def verificar_y_escalar_sla():
                         (uid, t["id"], titulo[:150], mensaje[:255]),
                     )
                     _enviar_webpush_usuario(
-                        cur, uid, titulo, mensaje, f"/detalle_ticket?id={t['id']}"
+                        cur,
+                        uid,
+                        titulo,
+                        mensaje,
+                        f"/detalle_ticket?id={t['id']}",
+                        tag=f"sla-vencido-{t['id']}",
                     )
                 escalados.append(
                     {"id": t["id"], "codigo": codigo, "asunto": t["asunto"]}
@@ -237,8 +250,8 @@ def verificar_y_escalar_sla():
 
             # CASO 2: TICKET POR VENCER (>= 75% del plazo) -> Alerta preventiva
             elif (
-                restantes >= 0
-                and transcurridos >= umbral_amarillo
+                restantes_seg >= 0
+                and transcurridos_seg >= umbral_amarillo_seg
                 and not t["alerta_sla_enviada"]
             ):
                 cur.execute(
@@ -246,7 +259,7 @@ def verificar_y_escalar_sla():
                     (t["id"],),
                 )
                 titulo = f"⚠️ SLA por vencer: {codigo}"
-                mensaje = f"Quedan {restantes} min para resolver «{t['asunto']}»."
+                mensaje = f"Quedan {restantes_min} min para resolver «{t['asunto']}»."
                 for uid in destinatarios:
                     cur.execute(
                         """INSERT INTO notificaciones (usuario_id, tipo, referencia_ticket, titulo, mensaje)
@@ -254,14 +267,19 @@ def verificar_y_escalar_sla():
                         (uid, t["id"], titulo[:150], mensaje[:255]),
                     )
                     _enviar_webpush_usuario(
-                        cur, uid, titulo, mensaje, f"/detalle_ticket?id={t['id']}"
+                        cur,
+                        uid,
+                        titulo,
+                        mensaje,
+                        f"/detalle_ticket?id={t['id']}",
+                        tag=f"sla-por-vencer-{t['id']}",
                     )
                 alertados.append(
                     {
                         "id": t["id"],
                         "codigo": codigo,
                         "asunto": t["asunto"],
-                        "restantes": restantes,
+                        "restantes": restantes_min,
                     }
                 )
 
